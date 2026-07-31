@@ -324,7 +324,7 @@ export default function Home() {
                     )}
                   </div>
                   <div className="text-center pt-6 mt-6 border-t border-stone-500/10">
-                    <a href="#" className="text-xs font-bold tracking-wider uppercase text-stone-400 hover:text-amber-500 transition-colors duration-300 flex items-center justify-center gap-1 group-hover:gap-2">
+                    <a href="/stories" className="text-xs font-bold tracking-wider uppercase text-stone-400 hover:text-amber-500 transition-colors duration-300 flex items-center justify-center gap-1 group-hover:gap-2">
                       Ver Semblanza <span>→</span>
                     </a>
                   </div>
