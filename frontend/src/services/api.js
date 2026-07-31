@@ -45,6 +45,32 @@ export async function uploadCover(file) {
   }
 }
 
+export async function uploadProfilePhoto(file) {
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${baseUrl}/upload/profile-photo`, {
+      method: 'POST',
+      body: formData,
+      credentials: 'include',
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+
+    const data = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      throw new Error(data?.message || `Error HTTP ${response.status}`);
+    }
+
+    return data.url;
+  } catch (error) {
+    throw new Error(`Error al subir foto de perfil: ${error.message}`);
+  }
+}
+
 export async function uploadPdf(file) {
   try {
     const formData = new FormData();

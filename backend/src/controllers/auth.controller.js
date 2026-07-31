@@ -93,6 +93,14 @@ function validateAndSanitizeProfile(profile) {
     sanitized.genero = profile.genero;
   }
 
+  if (profile.photoURL && typeof profile.photoURL === 'string') {
+    sanitized.photoURL = profile.photoURL.trim();
+  }
+
+  if (profile.descripcion && typeof profile.descripcion === 'string') {
+    sanitized.descripcion = profile.descripcion.trim().slice(0, 500);
+  }
+
   return sanitized;
 }
 

@@ -1,4 +1,4 @@
-import { uploadImage, uploadPdf } from '../services/upload.service.js';
+import { uploadImage, uploadProfilePhoto as uploadProfilePhotoService, uploadPdf } from '../services/upload.service.js';
 
 export async function uploadCover(req, res) {
   if (!req.file) {
@@ -18,6 +18,28 @@ export async function uploadCover(req, res) {
     return res.json({ ok: true, url: result.url });
   } catch (error) {
     console.error('Error uploadCover:', error);
+    return res.status(500).json({ ok: false, message: error.message });
+  }
+}
+
+export async function uploadProfilePhoto(req, res) {
+  if (!req.file) {
+    return res.status(400).json({ ok: false, message: 'No se recibió archivo' });
+  }
+
+  if (!req.file.mimetype.startsWith('image/')) {
+    return res.status(400).json({ ok: false, message: 'El archivo debe ser una imagen' });
+  }
+
+  if (req.file.size > 5 * 1024 * 1024) {
+    return res.status(400).json({ ok: false, message: 'La imagen no puede pesar más de 5MB' });
+  }
+
+  try {
+    const result = await uploadProfilePhotoService(req.file);
+    return res.json({ ok: true, url: result.url });
+  } catch (error) {
+    console.error('Error uploadProfilePhoto:', error);
     return res.status(500).json({ ok: false, message: error.message });
   }
 }

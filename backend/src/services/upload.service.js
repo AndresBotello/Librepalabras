@@ -40,6 +40,41 @@ export async function uploadImage(file, folder = 'covers') {
   }
 }
 
+export async function uploadProfilePhoto(file) {
+  try {
+    return new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          folder: 'librepalaras/profile-photos',
+          resource_type: 'auto',
+          transformation: [
+            {
+              width: 300,
+              height: 300,
+              crop: 'fill',
+              gravity: 'face',
+              quality: 'auto',
+              fetch_format: 'auto',
+            },
+          ],
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else
+            resolve({
+              url: result.secure_url,
+              publicId: result.public_id,
+            });
+        }
+      );
+
+      stream.end(file.buffer);
+    });
+  } catch (error) {
+    throw new Error(`Error al subir foto de perfil: ${error.message}`);
+  }
+}
+
 export async function uploadPdf(file, folder = 'pdfs') {
   try {
     return new Promise((resolve, reject) => {

@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import CollaboratorSidebar from '../../components/CollaboratorSidebar';
-import { updateUserById, uploadCover } from '../../services/api';
+import { updateUserById, uploadProfilePhoto } from '../../services/api';
 
 export default function Profile() {
   const { isDark } = useContext(ThemeContext);
@@ -18,6 +18,7 @@ export default function Profile() {
     telefono: user?.telefono || '',
     genero: user?.genero || '',
     fechaNacimiento: user?.fechaNacimiento || '',
+    descripcion: user?.descripcion || '',
   });
 
   const fullName = `${user?.nombres || ''} ${user?.apellidos || ''}`.trim() || 'Usuario';
@@ -41,11 +42,12 @@ export default function Profile() {
 
     setLoading(true);
     try {
-      const imageUrl = await uploadCover(file);
+      const imageUrl = await uploadProfilePhoto(file);
       setProfileImage(imageUrl);
+      alert('Foto de perfil subida correctamente');
     } catch (err) {
       console.error('Error al subir imagen:', err);
-      alert('Error al subir la imagen');
+      alert('Error al subir la imagen: ' + (err.message || 'Intenta de nuevo'));
     } finally {
       setLoading(false);
     }
@@ -212,6 +214,23 @@ export default function Profile() {
                           }`}
                         />
 
+                        <textarea
+                          name="descripcion"
+                          placeholder="Descripción personal (máx. 500 caracteres)"
+                          value={formData.descripcion}
+                          onChange={handleInputChange}
+                          maxLength="500"
+                          rows="4"
+                          className={`w-full px-4 py-2 rounded-lg border transition-colors resize-none ${
+                            isDark
+                              ? 'bg-gray-800 border-gray-700 text-gray-100'
+                              : 'bg-white border-gray-300 text-gray-900'
+                          }`}
+                        />
+                        <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                          {formData.descripcion.length}/500
+                        </p>
+
                         <div className="flex gap-3">
                           <button
                             onClick={handleSaveProfile}
@@ -272,6 +291,16 @@ export default function Profile() {
                               {profile.edad} años
                             </span>
                           </div>
+                          {user?.descripcion && (
+                            <div className="mt-4 pt-4 border-t" style={{borderColor: isDark ? '#2d2d2d' : '#e0e0e0'}}>
+                              <span className="text-sm font-semibold transition-colors" style={{color: isDark ? '#9CA3AF' : '#4B5563'}}>
+                                Descripción:
+                              </span>
+                              <p className={`text-sm transition-colors mt-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                                {user.descripcion}
+                              </p>
+                            </div>
+                          )}
                         </div>
 
                         <button

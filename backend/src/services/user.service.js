@@ -92,11 +92,11 @@ export async function updateUserProfile(uid, updateData) {
   }
 
   const now = new Date().toISOString();
-  const allowedFields = ['nombres', 'apellidos', 'telefono', 'genero', 'fechaNacimiento', 'photoURL'];
+  const allowedFields = ['nombres', 'apellidos', 'telefono', 'genero', 'fechaNacimiento', 'photoURL', 'descripcion'];
 
   const safeUpdate = {};
   for (const key of allowedFields) {
-    if (key in updateData) {
+    if (key in updateData && updateData[key] !== undefined && updateData[key] !== null) {
       safeUpdate[key] = updateData[key];
     }
   }
