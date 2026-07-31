@@ -124,8 +124,8 @@ export default function LiteraryComments({ workId, comments = [], isDark, onComm
                     </p>
                     <div className="flex items-center gap-3 mt-2">
                       <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                        {new Date(comment.createdAt).toLocaleDateString('es-CO', {
-                          day: 'short',
+                        {new Date(comment.createdAt).toLocaleString('es-CO', {
+                          day: 'numeric',
                           month: 'short',
                           year: 'numeric',
                           hour: '2-digit',
