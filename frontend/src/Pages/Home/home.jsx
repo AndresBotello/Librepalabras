@@ -144,11 +144,11 @@ export default function Home() {
               </span>
             </h1>
 
-            <p className="text-stone-300 text-lg sm:text-xl md:text-2xl mb-16 max-w-2xl mx-auto font-light leading-relaxed tracking-wide">
+            <p className="text-stone-300 text-lg sm:text-xl md:text-2xl mb-20 max-w-2xl mx-auto font-light leading-relaxed tracking-wide">
               Un portal para explorar la memoria, el ensayo y la narrativa viva de Valledupar y el Caribe colombiano.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mt-8">
+            <div className="flex flex-col sm:flex-row gap-8 justify-center items-center mt-12">
               <button className="group relative w-full sm:w-auto bg-amber-600 hover:bg-amber-500 text-stone-950 font-bold px-10 py-4 rounded-xl transition-all duration-300 shadow-lg shadow-amber-600/20 hover:shadow-amber-500/40 hover:-translate-y-1 overflow-hidden">
                 <span className="relative z-10 flex items-center justify-center gap-2">
                   Explorar Publicaciones
