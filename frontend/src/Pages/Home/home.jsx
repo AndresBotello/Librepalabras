@@ -26,6 +26,7 @@ export default function Home() {
               name: work.author,
               role: work.genre ? work.genre.charAt(0).toUpperCase() + work.genre.slice(1) : 'Autor',
               bio: `Creador de "${work.title}" y ${response.works.filter(w => w.authorId === work.authorId).length} obra(s) más.`,
+              description: work.authorDescription || null,
               img: work.authorPhotoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(work.author)}&background=random&size=300`
             };
           }
@@ -316,6 +317,11 @@ export default function Home() {
                     <p className={`text-sm text-center leading-relaxed italic ${isDark ? 'text-stone-400' : 'text-stone-600'}`}>
                       {author.bio}
                     </p>
+                    {author.description && (
+                      <p className={`text-sm text-center leading-relaxed mt-4 pt-4 border-t border-stone-500/20 ${isDark ? 'text-stone-300' : 'text-stone-700'}`}>
+                        {author.description}
+                      </p>
+                    )}
                   </div>
                   <div className="text-center pt-6 mt-6 border-t border-stone-500/10">
                     <a href="#" className="text-xs font-bold tracking-wider uppercase text-stone-400 hover:text-amber-500 transition-colors duration-300 flex items-center justify-center gap-1 group-hover:gap-2">

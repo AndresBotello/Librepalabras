@@ -281,6 +281,7 @@ export async function getApprovedWorks(req, res) {
           return {
             ...work,
             authorPhotoURL: userData.photoURL || null,
+            authorDescription: userData.descripcion || null,
           };
         }
       } catch (err) {
