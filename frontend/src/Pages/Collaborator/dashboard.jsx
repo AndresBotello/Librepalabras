@@ -1,35 +1,52 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { ThemeContext } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import CollaboratorSidebar from '../../components/CollaboratorSidebar';
+import { getMyWorks } from '../../services/api';
 
 export default function CollaboratorDashboard() {
   const { isDark } = useContext(ThemeContext);
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('resumen');
+  const [publications, setPublications] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const stats = [
-    { label: 'TOTAL PUBLICACIONES', value: '24', icon: '📚' },
-    { label: 'VISITAS TOTALES', value: '12.4k', icon: '👁️' },
-    { label: 'PENDIENTES', value: '3', icon: '⏳', subtitle: 'De revisión editorial' },
-    { label: 'DÍAS ACTIVO', value: '342', icon: '📅' },
-  ];
+  useEffect(() => {
+    loadPublications();
+  }, []);
 
-  const publications = [
-    {
-      id: 1,
-      title: 'El realismo mágico en Valledupar',
-      author: 'Diego Rosado',
-      cover: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=300&h=400&fit=crop',
-      description: 'Exploración de la influencia de Gabo en la narrativa contemporánea del Valle. Un análisis profundo sobre cómo el realismo mágico influye...',
-      comments: 5,
-      reads: 234
-    },
-  ];
+  const loadPublications = async () => {
+    try {
+      const response = await getMyWorks();
+      if (response.ok && response.works) {
+        setPublications(response.works);
+      }
+    } catch (err) {
+      console.error('Error cargando publicaciones:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  const calculateStats = () => {
+    const totalWorks = publications.length;
+    const totalViews = publications.reduce((sum, work) => sum + (work.views || 0), 0);
+    const pendingWorks = publications.filter(w => w.status === 'pending_review').length;
+    const approvedWorks = publications.filter(w => w.status === 'approved').length;
+
+    return [
+      { label: 'TOTAL PUBLICACIONES', value: totalWorks.toString(), icon: '📚' },
+      { label: 'VISITAS TOTALES', value: totalViews > 999 ? `${(totalViews / 1000).toFixed(1)}k` : totalViews.toString(), icon: '👁️' },
+      { label: 'PENDIENTES', value: pendingWorks.toString(), icon: '⏳', subtitle: 'De revisión editorial' },
+      { label: 'APROBADAS', value: approvedWorks.toString(), icon: '✅' },
+    ];
+  };
+
+  const stats = calculateStats();
   const editorialComments = [
-    { name: 'Secretaría de la Revista Novela', text: 'Texto poema sugerencia sobre los títu...' },
-    { name: 'Coordinador del Río Romanqueri', text: 'Publicado en revistas inscritas o es una...' },
+    { name: 'Sistema', text: 'Tus publicaciones aparecerán aquí cuando sean revisadas por el equipo editorial.' },
   ];
 
   return (
@@ -119,60 +136,80 @@ export default function CollaboratorDashboard() {
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Main Publication */}
                     <div className={`lg:col-span-2 rounded-lg p-8 transition-colors ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'}`}>
-                      <div className="flex flex-col md:flex-row gap-6">
-                        {/* Cover Image */}
-                        <div className="md:w-48 flex-shrink-0">
-                          <img
-                            src={publications[0].cover}
-                            alt={publications[0].title}
-                            className="w-full h-64 md:h-72 object-cover rounded-lg"
-                          />
-                        </div>
-
-                        {/* Content */}
-                        <div className="flex-1">
-                          <p className={`text-sm font-semibold tracking-widest uppercase mb-2 transition-colors ${isDark ? 'text-yellow-400' : 'text-yellow-600'}`}>
-                            Destacado
-                          </p>
-                          <h3 className={`text-2xl font-bold mb-2 transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                            {publications[0].title}
-                          </h3>
-                          <p className={`text-sm mb-4 transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                            Por <span className="font-semibold">{publications[0].author}</span>
-                          </p>
-                          <p className={`text-sm mb-6 leading-relaxed transition-colors ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                            {publications[0].description}
-                          </p>
-
-                          <div className="flex gap-4 mb-6">
-                            <button className="px-6 py-2 rounded-lg font-semibold transition-colors text-sm bg-[#5D4037] text-white hover:bg-[#4A302A]">
-                              ✏️ Continuar Editando
-                            </button>
-                            <button className={`px-6 py-2 rounded-lg font-semibold transition-colors text-sm ${
-                              isDark
-                                ? 'border border-gray-600 text-gray-300 hover:bg-gray-800'
-                                : 'border border-gray-300 text-gray-700 hover:bg-gray-100'
-                            }`}>
-                              Ver Previa
-                            </button>
+                      {publications.length > 0 ? (
+                        <div className="flex flex-col md:flex-row gap-6">
+                          {/* Cover Image */}
+                          <div className="md:w-48 flex-shrink-0">
+                            {publications[0].cover ? (
+                              <img
+                                src={publications[0].cover}
+                                alt={publications[0].title}
+                                className="w-full h-64 md:h-72 object-cover rounded-lg"
+                              />
+                            ) : (
+                              <div className={`w-full h-64 md:h-72 rounded-lg flex items-center justify-center ${isDark ? 'bg-gray-800' : 'bg-gray-200'}`}>
+                                <span className="text-4xl">📚</span>
+                              </div>
+                            )}
                           </div>
 
-                          <div className="flex gap-6 text-sm">
-                            <div className={`transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                              <p className={`font-semibold transition-colors ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
-                                {publications[0].reads}
-                              </p>
-                              <p>Lecturas</p>
+                          {/* Content */}
+                          <div className="flex-1">
+                            <p className={`text-sm font-semibold tracking-widest uppercase mb-2 transition-colors ${isDark ? 'text-yellow-400' : 'text-yellow-600'}`}>
+                              {publications[0].status === 'approved' ? 'Publicado' : 'Pendiente'}
+                            </p>
+                            <h3 className={`text-2xl font-bold mb-2 transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                              {publications[0].title}
+                            </h3>
+                            <p className={`text-sm mb-4 transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                              Por <span className="font-semibold">{publications[0].author}</span>
+                            </p>
+                            <p className={`text-sm mb-6 leading-relaxed transition-colors ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                              {publications[0].description}
+                            </p>
+
+                            <div className="flex gap-4 mb-6">
+                              <button className="px-6 py-2 rounded-lg font-semibold transition-colors text-sm bg-[#5D4037] text-white hover:bg-[#4A302A]">
+                                ✏️ Editar
+                              </button>
+                              <button className={`px-6 py-2 rounded-lg font-semibold transition-colors text-sm ${
+                                isDark
+                                  ? 'border border-gray-600 text-gray-300 hover:bg-gray-800'
+                                  : 'border border-gray-300 text-gray-700 hover:bg-gray-100'
+                              }`}>
+                                👁️ Ver Previa
+                              </button>
                             </div>
-                            <div className={`transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                              <p className={`font-semibold transition-colors ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
-                                {publications[0].comments}
-                              </p>
-                              <p>Comentarios</p>
+
+                            <div className="flex gap-6 text-sm">
+                              <div className={`transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                                <p className={`font-semibold transition-colors ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
+                                  {publications[0].views || 0}
+                                </p>
+                                <p>Lecturas</p>
+                              </div>
+                              <div className={`transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                                <p className={`font-semibold transition-colors ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
+                                  {publications[0].totalComments || 0}
+                                </p>
+                                <p>Comentarios</p>
+                              </div>
+                              <div className={`transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                                <p className={`font-semibold transition-colors ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
+                                  {publications[0].totalRatings || 0}
+                                </p>
+                                <p>Calificaciones</p>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
+                      ) : (
+                        <div className="text-center py-12">
+                          <p className={`text-lg transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                            No tienes publicaciones aún. ¡Crea tu primera obra!
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     {/* Editorial Comments */}
@@ -203,10 +240,76 @@ export default function CollaboratorDashboard() {
                 )}
 
                 {activeTab === 'mis-publicaciones' && (
-                  <div className={`rounded-lg p-8 transition-colors ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'} text-center py-12`}>
-                    <p className={`transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Tus publicaciones aparecerán aquí
-                    </p>
+                  <div>
+                    {loading ? (
+                      <div className={`rounded-lg p-8 text-center py-12 ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'}`}>
+                        <p className={`transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                          Cargando tus publicaciones...
+                        </p>
+                      </div>
+                    ) : publications.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {publications.map((work) => (
+                          <div key={work.id} className={`rounded-lg overflow-hidden transition-colors ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'} hover:shadow-lg transition-shadow`}>
+                            {/* Cover */}
+                            <div className={`h-48 overflow-hidden ${isDark ? 'bg-gray-800' : 'bg-gray-200'}`}>
+                              {work.cover ? (
+                                <img
+                                  src={work.cover}
+                                  alt={work.title}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-3xl">📚</div>
+                              )}
+                            </div>
+                            {/* Content */}
+                            <div className="p-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <h4 className={`font-bold text-sm line-clamp-2 transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                                  {work.title}
+                                </h4>
+                                <span className={`text-xs px-2 py-1 rounded ${
+                                  work.status === 'approved'
+                                    ? isDark ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-800'
+                                    : work.status === 'pending_review'
+                                    ? isDark ? 'bg-yellow-900 text-yellow-200' : 'bg-yellow-100 text-yellow-800'
+                                    : isDark ? 'bg-red-900 text-red-200' : 'bg-red-100 text-red-800'
+                                }`}>
+                                  {work.status === 'approved' ? '✓' : work.status === 'pending_review' ? '⏳' : '✕'}
+                                </span>
+                              </div>
+                              <p className={`text-xs mb-3 transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                                {new Date(work.createdAt).toLocaleDateString('es-CO')}
+                              </p>
+                              <div className="flex gap-3 text-xs mb-4">
+                                <div className={`transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                                  <p className={`font-bold ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>{work.views || 0}</p>
+                                  <p>Lecturas</p>
+                                </div>
+                                <div className={`transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                                  <p className={`font-bold ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>{work.totalComments || 0}</p>
+                                  <p>Comentarios</p>
+                                </div>
+                                <div className={`transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                                  <p className={`font-bold ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>{work.totalRatings || 0}</p>
+                                  <p>Votos</p>
+                                </div>
+                              </div>
+                              <button className="w-full px-3 py-2 rounded text-sm font-semibold bg-[#5D4037] text-white hover:bg-[#4A302A] transition-colors">
+                                ✏️ Editar
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className={`rounded-lg p-8 text-center py-12 ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'}`}>
+                        <p className={`transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                          No tienes publicaciones aún
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
