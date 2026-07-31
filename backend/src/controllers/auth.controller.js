@@ -1,0 +1,113 @@
+import { adminAuth, authSessionMaxAgeMs, firebaseAdminReady } from '../config/firebaseAdmin.js';
+import { upsertUserProfile } from '../services/user.service.js';
+
+const sessionCookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  path: '/',
+  maxAge: authSessionMaxAgeMs,
+};
+
+export async function createSession(req, res) {
+  try {
+    if (!firebaseAdminReady || !adminAuth) {
+      return res.status(503).json({
+        ok: false,
+        message: 'Firebase Admin no está configurado todavía.',
+      });
+    }
+
+    const { idToken, profile } = req.body;
+
+    if (!idToken) {
+      return res.status(400).json({
+        ok: false,
+        message: 'idToken es obligatorio',
+      });
+    }
+
+    const decodedClaims = await adminAuth.verifyIdToken(idToken);
+    const sessionCookie = await adminAuth.createSessionCookie(idToken, {
+      expiresIn: authSessionMaxAgeMs,
+    });
+
+    res.cookie('session', sessionCookie, sessionCookieOptions);
+
+    let additionalData = {};
+    if (profile) {
+      additionalData = validateAndSanitizeProfile(profile);
+    }
+
+    const userProfile = await upsertUserProfile(decodedClaims, additionalData);
+
+    return res.json({
+      ok: true,
+      message: 'Sesión creada correctamente',
+      user: userProfile || {
+        uid: decodedClaims.uid,
+        email: decodedClaims.email || null,
+        photoURL: decodedClaims.picture || null,
+        role: 'collaborator',
+      },
+    });
+  } catch (error) {
+    return res.status(401).json({
+      ok: false,
+      message: 'No se pudo crear la sesión',
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+function validateAndSanitizeProfile(profile) {
+  const sanitized = {};
+
+  if (profile.nombres && typeof profile.nombres === 'string') {
+    sanitized.nombres = profile.nombres.trim().slice(0, 50);
+  }
+
+  if (profile.apellidos && typeof profile.apellidos === 'string') {
+    sanitized.apellidos = profile.apellidos.trim().slice(0, 50);
+  }
+
+  if (profile.telefono && typeof profile.telefono === 'string') {
+    const cleanPhone = profile.telefono.replace(/\D/g, '');
+    if (/^\d{7,15}$/.test(cleanPhone)) {
+      sanitized.telefono = `+57${cleanPhone}`;
+    }
+  }
+
+  if (profile.fechaNacimiento && typeof profile.fechaNacimiento === 'string') {
+    const date = new Date(profile.fechaNacimiento);
+    if (!isNaN(date.getTime()) && date < new Date()) {
+      sanitized.fechaNacimiento = profile.fechaNacimiento;
+    }
+  }
+
+  if (typeof profile.edad === 'number' && profile.edad >= 13 && profile.edad <= 120) {
+    sanitized.edad = profile.edad;
+  }
+
+  if (profile.genero && ['masculino', 'femenino', 'otro'].includes(profile.genero)) {
+    sanitized.genero = profile.genero;
+  }
+
+  return sanitized;
+}
+
+export async function getCurrentUser(req, res) {
+  return res.json({
+    ok: true,
+    user: req.user,
+  });
+}
+
+export async function logout(req, res) {
+  res.clearCookie('session', sessionCookieOptions);
+
+  return res.json({
+    ok: true,
+    message: 'Sesión cerrada correctamente',
+  });
+}
