@@ -60,6 +60,11 @@ export default function Profile() {
   };
 
   const handleSaveProfile = async () => {
+    if (!user?.uid) {
+      alert('Error: Usuario no identificado');
+      return;
+    }
+
     setLoading(true);
     try {
       const updateData = {
@@ -73,7 +78,7 @@ export default function Profile() {
       alert('Perfil actualizado exitosamente');
     } catch (err) {
       console.error('Error actualizando perfil:', err);
-      alert('Error al actualizar el perfil');
+      alert('Error al actualizar el perfil: ' + (err.message || 'Intenta de nuevo'));
     } finally {
       setLoading(false);
     }
