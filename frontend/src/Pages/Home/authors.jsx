@@ -7,7 +7,6 @@ import { getAllAuthors } from '../../services/api';
 
 export default function Authors() {
   const { isDark } = useContext(ThemeContext);
-  const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [authors, setAuthors] = useState([]);
@@ -31,27 +30,18 @@ export default function Authors() {
     }
   };
 
-  // Obtener categorías dinámicamente
-  const uniqueCategories = [...new Set(authors.map(a => a.category))];
-  const allCategories = ['Todos', ...uniqueCategories];
-
-  // Filtrar autores
+  // Filtrar autores solo por búsqueda (sin filtro por categoría)
   const filteredAuthors = authors.filter(author => {
-    const matchesCategory = selectedCategory === 'Todos' || author.category === selectedCategory;
     const matchesSearch = author.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         author.role.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesCategory && matchesSearch;
+                         author.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (author.description && author.description.toLowerCase().includes(searchTerm.toLowerCase()));
+    return matchesSearch;
   });
 
   // Paginación
   const totalPages = Math.ceil(filteredAuthors.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedAuthors = filteredAuthors.slice(startIndex, startIndex + itemsPerPage);
-
-  const handleCategoryChange = (category) => {
-    setSelectedCategory(category);
-    setCurrentPage(1);
-  };
 
   return (
     <div className={`min-h-screen flex flex-col transition-colors ${isDark ? 'bg-gray-950' : 'bg-white'}`}>
@@ -112,35 +102,6 @@ export default function Authors() {
       {/* Main Content */}
       <main className={`flex-1 px-4 sm:px-8 py-16 transition-colors ${isDark ? 'bg-gray-950' : 'bg-white'}`}>
         <div className="max-w-7xl mx-auto">
-          {/* Category Filter */}
-          <div className="mb-10">
-            <nav
-              className="flex gap-2 overflow-x-auto pb-4"
-              role="tablist"
-              aria-label="Filtrar autores por categoría"
-            >
-              {allCategories.map(category => (
-                <button
-                  key={category}
-                  role="tab"
-                  aria-selected={selectedCategory === category}
-                  onClick={() => handleCategoryChange(category)}
-                  className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all focus:outline-none focus:ring-2 focus:ring-yellow-400 ${
-                    selectedCategory === category
-                      ? isDark
-                        ? 'bg-[#5D4037] text-white'
-                        : 'bg-[#5D4037] text-white'
-                      : isDark
-                        ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {category}
-                </button>
-              ))}
-            </nav>
-          </div>
-
           {/* Search Bar */}
           <div className="mb-12 flex flex-col sm:flex-row gap-4">
             <div className={`flex-1 relative transition-colors ${isDark ? 'bg-gray-900 border border-gray-800 rounded-lg' : 'bg-gray-100 rounded-lg'}`}>
