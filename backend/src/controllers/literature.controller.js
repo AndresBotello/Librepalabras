@@ -272,6 +272,23 @@ export async function getApprovedWorks(req, res) {
       works = works.filter(w => w.genre === genre.toLowerCase());
     }
 
+    // Enriquecer con información del usuario
+    works = await Promise.all(works.map(async (work) => {
+      try {
+        const userDoc = await adminDb.collection('users').doc(work.authorId).get();
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          return {
+            ...work,
+            authorPhotoURL: userData.photoURL || null,
+          };
+        }
+      } catch (err) {
+        console.error(`Error fetching user ${work.authorId}:`, err);
+      }
+      return work;
+    }));
+
     works.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     return res.json({

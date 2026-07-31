@@ -26,7 +26,7 @@ export default function Home() {
               name: work.author,
               role: work.genre ? work.genre.charAt(0).toUpperCase() + work.genre.slice(1) : 'Autor',
               bio: `Creador de "${work.title}" y ${response.works.filter(w => w.authorId === work.authorId).length} obra(s) más.`,
-              img: work.cover || `https://ui-avatars.com/api/?name=${encodeURIComponent(work.author)}&background=random&size=300`
+              img: work.authorPhotoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(work.author)}&background=random&size=300`
             };
           }
         });
