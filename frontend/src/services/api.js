@@ -224,3 +224,7 @@ export function toggleWorkLike(workId) {
     method: 'POST',
   });
 }
+
+export function getAllAuthors() {
+  return request('/literature/authors/all');
+}

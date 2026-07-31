@@ -636,3 +636,62 @@ export async function toggleWorkLike(req, res) {
     });
   }
 }
+
+export async function getAllAuthors(req, res) {
+  try {
+    // Obtener todos los usuarios
+    const usersSnapshot = await adminDb.collection('users').get();
+
+    // Obtener todas las obras aprobadas
+    const worksSnapshot = await adminDb.collection('literature').where('status', '==', 'approved').get();
+    const works = worksSnapshot.docs.map(doc => doc.data());
+
+    // Construir mapa de autores con estadísticas
+    const authorsMap = {};
+
+    for (const userDoc of usersSnapshot.docs) {
+      const userData = userDoc.data();
+      const userId = userDoc.id;
+
+      // Filtrar obras de este autor
+      const authorWorks = works.filter(w => w.authorId === userId);
+
+      if (authorWorks.length > 0) {
+        // Calcular estadísticas
+        const totalLikes = authorWorks.reduce((sum, work) => sum + (work.likesCount || 0), 0);
+        const primaryGenre = authorWorks[0]?.genre || 'Autor';
+        const genreInfo = genresData.genres.find(g => g.value === primaryGenre);
+
+        authorsMap[userId] = {
+          id: userId,
+          name: `${userData.nombres || ''} ${userData.apellidos || ''}`.trim() || 'Anónimo',
+          email: userData.email,
+          description: userData.descripcion || null,
+          photoURL: userData.photoURL || null,
+          role: genreInfo?.label || 'Autor',
+          category: primaryGenre,
+          publications: authorWorks.length,
+          totalLikes: totalLikes,
+          tags: [...new Set(authorWorks.map(w => w.genre))].slice(0, 3),
+        };
+      }
+    }
+
+    // Convertir a array y ordenar por publicaciones
+    const authors = Object.values(authorsMap)
+      .sort((a, b) => b.publications - a.publications);
+
+    return res.json({
+      ok: true,
+      authors,
+      total: authors.length,
+    });
+  } catch (error) {
+    console.error('Error al obtener autores:', error);
+    return res.status(500).json({
+      ok: false,
+      message: 'Error al obtener autores',
+      error: error.message,
+    });
+  }
+}

@@ -1,15 +1,36 @@
-import React, { useState, useContext } from 'react';
-import { Search, Bookmark, MessageCircle, ChevronRight, ChevronLeft } from 'lucide-react';
+import React, { useState, useContext, useEffect } from 'react';
+import { Search, Bookmark, MessageCircle, ChevronRight, ChevronLeft, Heart } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { ThemeContext } from '../../context/ThemeContext';
+import { getAllAuthors } from '../../services/api';
 
 export default function Authors() {
   const { isDark } = useContext(ThemeContext);
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [authors, setAuthors] = useState([]);
+  const [loading, setLoading] = useState(true);
   const itemsPerPage = 6;
+
+  useEffect(() => {
+    loadAuthors();
+  }, []);
+
+  const loadAuthors = async () => {
+    try {
+      const response = await getAllAuthors();
+      if (response.ok && response.authors) {
+        setAuthors(response.authors);
+      }
+    } catch (err) {
+      console.error('Error cargando autores:', err);
+      setAuthors([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const categories = [
     'Todos',
@@ -18,10 +39,10 @@ export default function Authors() {
     'Crítica',
     'Ensayo',
     'Crónica',
-    'Infantil'
+    'Drama'
   ];
 
-  const authors = [
+  const staticAuthors = [
     {
       id: 1,
       name: 'Gabriel Mendoza',
@@ -113,7 +134,11 @@ export default function Authors() {
   ];
 
   // Filtrar autores
-  const filteredAuthors = authors.filter(author => {
+  const displayAuthors = authors.length > 0 ? authors : staticAuthors;
+  const uniqueGenres = [...new Set(displayAuthors.map(a => a.category))];
+  const allCategories = ['Todos', ...uniqueGenres];
+
+  const filteredAuthors = displayAuthors.filter(author => {
     const matchesCategory = selectedCategory === 'Todos' || author.category === selectedCategory;
     const matchesSearch = author.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          author.role.toLowerCase().includes(searchTerm.toLowerCase());
@@ -196,7 +221,7 @@ export default function Authors() {
               role="tablist"
               aria-label="Filtrar autores por categoría"
             >
-              {categories.map(category => (
+              {allCategories.map(category => (
                 <button
                   key={category}
                   role="tab"
@@ -254,7 +279,13 @@ export default function Authors() {
               Directorio de Perfiles
             </h2>
 
-            {paginatedAuthors.length > 0 ? (
+            {loading ? (
+              <div className={`text-center py-12 rounded-lg ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+                <p className={`text-lg transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Cargando autores...
+                </p>
+              </div>
+            ) : paginatedAuthors.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {paginatedAuthors.map(author => (
                   <article
@@ -292,21 +323,22 @@ export default function Authors() {
 
                       {/* Stats */}
                       <div className="flex gap-6 mb-6 pb-6 border-b" role="group" aria-label="Estadísticas">
-                        <div className="text-center">
+                        <div className="text-center flex-1">
                           <p className={`text-lg font-bold transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                            {author.publications}
+                            {author.publications || 0}
                           </p>
                           <p className={`text-xs transition-colors ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
                             Publicaciones
                           </p>
                         </div>
                         <div className="w-px bg-gray-300"></div>
-                        <div className="text-center">
-                          <p className={`text-lg font-bold transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                            {author.followers}
+                        <div className="text-center flex-1">
+                          <p className={`text-lg font-bold flex items-center justify-center gap-1 transition-colors ${isDark ? 'text-red-400' : 'text-red-600'}`}>
+                            <Heart size={16} />
+                            {author.totalLikes || author.followers || 0}
                           </p>
                           <p className={`text-xs transition-colors ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                            Seguidores
+                            {author.totalLikes !== undefined ? 'Me gusta' : 'Seguidores'}
                           </p>
                         </div>
                       </div>
@@ -348,6 +380,13 @@ export default function Authors() {
               <div className={`text-center py-12 rounded-lg ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
                 <p className={`text-lg transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                   No hay autores que coincidan con tu búsqueda.
+                </p>
+              </div>
+            )}
+            ) : (
+              <div className={`text-center py-12 rounded-lg ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+                <p className={`text-lg transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  No hay autores disponibles.
                 </p>
               </div>
             )}

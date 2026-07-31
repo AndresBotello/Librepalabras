@@ -112,20 +112,30 @@ export default function Home() {
 
         {/* ================= HERO SECTION ================= */}
         <section className="relative w-full min-h-[90vh] flex items-center justify-center overflow-hidden py-16 px-4 sm:px-8">
+          {/* Video de Fondo Cinematográfico */}
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover z-0 scale-105 pointer-events-none"
+          >
+            <source 
+              src="https://res.cloudinary.com/j7q2huvz/video/upload/v1785478212/caa61411-add7-47ea-a133-35291b096b68_fk6fan.mp4" 
+              type="video/mp4" 
+            />
+            Tu navegador no soporta el formato de video.
+          </video>
+
+          {/* Oscurecimiento de contraste sobre el video */}
+          <div className="absolute inset-0 z-0 bg-gradient-to-b from-stone-950/75 via-stone-950/80 to-stone-950/95 pointer-events-none" />
+
           {/* Elementos de fondo con blur y animación de flotación */}
           <div className="absolute top-1/4 left-10 w-96 h-96 bg-amber-600/10 rounded-full blur-[100px] pointer-events-none animate-float" />
           <div className="absolute bottom-10 right-10 w-[500px] h-[500px] bg-yellow-700/10 rounded-full blur-[120px] pointer-events-none animate-float" style={{ animationDelay: '2s' }} />
 
           {/* Capa de textura de ruido para sensación táctil */}
           <div className="absolute inset-0 bg-noise pointer-events-none opacity-40 z-10" />
-
-          {/* Imagen de fondo con overlay mejorado */}
-          <div 
-            className="absolute inset-0 z-0 bg-cover bg-center scale-105 transition-transform duration-[2000ms] ease-out"
-            style={{
-              backgroundImage: `linear-gradient(to bottom, rgba(12, 10, 9, 0.75), rgba(12, 10, 9, 0.95)), url('https://res.cloudinary.com/dtuyckctv/image/upload/v1785045359/69478894-7be6-4384-be37-40fc593636eb_xuegr6.webp')`,
-            }}
-          />
 
           {/* Contenido del Hero */}
           <div className="relative z-20 max-w-5xl mx-auto text-center px-4">

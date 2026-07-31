@@ -16,6 +16,7 @@ import {
   updateWork,
   toggleCommentLike,
   toggleWorkLike,
+  getAllAuthors,
 } from '../controllers/literature.controller.js';
 
 const router = Router();
@@ -23,6 +24,7 @@ const router = Router();
 // Rutas públicas - PRIMERO las más específicas
 router.get('/genres', getGenres);
 router.get('/approved', getApprovedWorks);
+router.get('/authors/all', getAllAuthors);
 
 // Rutas autenticadas - RUTAS ESPECÍFICAS ANTES DE PARÁMETROS
 router.post('/', authenticateRequest, createWork);
