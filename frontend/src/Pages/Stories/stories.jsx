@@ -295,6 +295,10 @@ export default function Stories() {
                       {/* Estadísticas */}
                       <div className={`flex gap-2 text-xs pt-0.5 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
                         <div className="flex items-center gap-0.5">
+                          <Eye className="w-2.5 h-2.5" />
+                          <span>{work.views || 0}</span>
+                        </div>
+                        <div className="flex items-center gap-0.5">
                           <Heart className="w-2.5 h-2.5" />
                           <span>{work.totalRatings || 0}</span>
                         </div>
