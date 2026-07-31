@@ -148,7 +148,7 @@ export default function Home() {
               Un portal para explorar la memoria, el ensayo y la narrativa viva de Valledupar y el Caribe colombiano.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-8 justify-center items-center mt-12">
+            <div className="flex flex-col gap-4 sm:flex-row sm:gap-12 justify-center items-center mt-12 w-full px-4">
               <button className="group relative w-full sm:w-auto bg-amber-600 hover:bg-amber-500 text-stone-950 font-bold px-10 py-4 rounded-xl transition-all duration-300 shadow-lg shadow-amber-600/20 hover:shadow-amber-500/40 hover:-translate-y-1 overflow-hidden">
                 <span className="relative z-10 flex items-center justify-center gap-2">
                   Explorar Publicaciones
