@@ -26,119 +26,17 @@ export default function Authors() {
       }
     } catch (err) {
       console.error('Error cargando autores:', err);
-      setAuthors([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const categories = [
-    'Todos',
-    'Narrativa',
-    'Poesía',
-    'Crítica',
-    'Ensayo',
-    'Crónica',
-    'Drama'
-  ];
-
-  const staticAuthors = [
-    {
-      id: 1,
-      name: 'Gabriel Mendoza',
-      role: 'Novelista & Ensayista',
-      category: 'Narrativa',
-      image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=350&fit=crop',
-      description: 'Explorador de las narrativas caribeñas y la herencia cultural de Valledupar. Autor del libro "Ecos del Outsipador".',
-      publications: 12,
-      followers: 450,
-      tags: ['Narrativa', 'Historia']
-    },
-    {
-      id: 2,
-      name: 'Elena Solano',
-      role: 'Poeta & Editora',
-      category: 'Poesía',
-      image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300&h=350&fit=crop',
-      description: 'Sus versos capturan la esencia del realismo mágico inspirado en la Revista Poliversia. Especialista en prosa poética.',
-      publications: 28,
-      followers: 1200,
-      tags: ['Poesía', 'Edición']
-    },
-    {
-      id: 3,
-      name: 'Dr. Arturo Vives',
-      role: 'Crítico Literario',
-      category: 'Crítica',
-      image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&h=350&fit=crop',
-      description: 'Especialista en literatura latinoamericana contemporánea con más de 20 años de trayectoria académica.',
-      publications: 45,
-      followers: 890,
-      tags: ['Crítica', 'Ensayo']
-    },
-    {
-      id: 4,
-      name: 'Laura Martínez',
-      role: 'Novelista',
-      category: 'Narrativa',
-      image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=300&h=350&fit=crop',
-      description: 'Autora de historias que entrelazan identidad, diáspora y tradición. Ganadora de premios literarios regionales.',
-      publications: 19,
-      followers: 650,
-      tags: ['Narrativa', 'Identidad']
-    },
-    {
-      id: 5,
-      name: 'Carlos Ruiz',
-      role: 'Ensayista & Moderador',
-      category: 'Ensayo',
-      image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=350&fit=crop',
-      description: 'Experto en debates literarios y análisis crítico de la cultura vallecaucana. Moderador de grupos focales.',
-      publications: 35,
-      followers: 920,
-      tags: ['Ensayo', 'Debate']
-    },
-    {
-      id: 6,
-      name: 'Piedad Bonnett',
-      role: 'Poeta & Memorialista',
-      category: 'Poesía',
-      image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300&h=350&fit=crop',
-      description: 'Sus versos son testimonios de la complejidad humana. Autora de memorias poéticas que tocan el alma.',
-      publications: 22,
-      followers: 1100,
-      tags: ['Poesía', 'Memoria']
-    },
-    {
-      id: 7,
-      name: 'Manuel González',
-      role: 'Cronista',
-      category: 'Crónica',
-      image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&h=350&fit=crop',
-      description: 'Cronista de la vida cotidiana en Valledupar. Sus textos capturan historias que merecen ser contadas.',
-      publications: 56,
-      followers: 780,
-      tags: ['Crónica', 'Periodismo']
-    },
-    {
-      id: 8,
-      name: 'Sofía Reyes',
-      role: 'Autora Infantil',
-      category: 'Infantil',
-      image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=300&h=350&fit=crop',
-      description: 'Crea historias mágicas para niños que despiertan la imaginación y celebran la diversidad cultural.',
-      publications: 14,
-      followers: 520,
-      tags: ['Infantil', 'Fantasía']
-    }
-  ];
+  // Obtener categorías dinámicamente
+  const uniqueCategories = [...new Set(authors.map(a => a.category))];
+  const allCategories = ['Todos', ...uniqueCategories];
 
   // Filtrar autores
-  const displayAuthors = authors.length > 0 ? authors : staticAuthors;
-  const uniqueGenres = [...new Set(displayAuthors.map(a => a.category))];
-  const allCategories = ['Todos', ...uniqueGenres];
-
-  const filteredAuthors = displayAuthors.filter(author => {
+  const filteredAuthors = authors.filter(author => {
     const matchesCategory = selectedCategory === 'Todos' || author.category === selectedCategory;
     const matchesSearch = author.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          author.role.toLowerCase().includes(searchTerm.toLowerCase());
@@ -297,7 +195,7 @@ export default function Authors() {
                     {/* Image Container */}
                     <div className="relative overflow-hidden h-56">
                       <img
-                        src={author.image}
+                        src={author.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(author.name)}&background=random&size=300`}
                         alt={`Foto de perfil de ${author.name}, ${author.role}`}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
@@ -318,7 +216,7 @@ export default function Authors() {
                       </p>
 
                       <p className={`text-sm leading-relaxed mb-6 transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                        {author.description}
+                        {author.description || 'Sin descripción disponible'}
                       </p>
 
                       {/* Stats */}
@@ -335,25 +233,27 @@ export default function Authors() {
                         <div className="text-center flex-1">
                           <p className={`text-lg font-bold flex items-center justify-center gap-1 transition-colors ${isDark ? 'text-red-400' : 'text-red-600'}`}>
                             <Heart size={16} />
-                            {author.totalLikes || author.followers || 0}
+                            {author.totalLikes || 0}
                           </p>
                           <p className={`text-xs transition-colors ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                            {author.totalLikes !== undefined ? 'Me gusta' : 'Seguidores'}
+                            Me gusta
                           </p>
                         </div>
                       </div>
 
                       {/* Tags */}
-                      <div className="flex gap-2 mb-6 flex-wrap">
-                        {author.tags.map(tag => (
-                          <span
-                            key={tag}
-                            className={`text-xs px-3 py-1 rounded-full transition-colors ${isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-700'}`}
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
+                      {author.tags && author.tags.length > 0 && (
+                        <div className="flex gap-2 mb-6 flex-wrap">
+                          {author.tags.map(tag => (
+                            <span
+                              key={tag}
+                              className={`text-xs px-3 py-1 rounded-full transition-colors ${isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-700'}`}
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
 
                       {/* Actions */}
                       <div className="flex gap-3">
