@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { Search, Heart } from 'lucide-react';
+import { Search, Bookmark, MessageCircle, ChevronRight, ChevronLeft, Heart } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { ThemeContext } from '../../context/ThemeContext';
@@ -8,8 +8,10 @@ import { getApprovedWorks } from '../../services/api';
 export default function Authors() {
   const { isDark } = useContext(ThemeContext);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [authors, setAuthors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const itemsPerPage = 6;
 
   useEffect(() => {
     loadAuthors();
@@ -27,10 +29,12 @@ export default function Authors() {
               id: work.authorId,
               name: work.author,
               role: work.genre ? work.genre.charAt(0).toUpperCase() + work.genre.slice(1) : 'Autor',
+              category: work.genre || 'Autor',
+              photoURL: work.authorPhotoURL,
               description: work.authorDescription || null,
-              photoURL: work.authorPhotoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(work.author)}&background=random&size=300`,
               publications: response.works.filter(w => w.authorId === work.authorId).length,
               totalLikes: response.works.filter(w => w.authorId === work.authorId).reduce((sum, w) => sum + (w.likesCount || 0), 0),
+              tags: [...new Set(response.works.filter(w => w.authorId === work.authorId).map(w => w.genre))].slice(0, 3),
             };
           }
         });
@@ -51,132 +55,265 @@ export default function Authors() {
     return matchesSearch;
   });
 
+  // Paginación
+  const totalPages = Math.ceil(filteredAuthors.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedAuthors = filteredAuthors.slice(startIndex, startIndex + itemsPerPage);
+
   return (
-    <div className={`min-h-screen flex flex-col transition-colors ${isDark ? 'bg-stone-950' : 'bg-white'}`}>
+    <div className={`min-h-screen flex flex-col transition-colors ${isDark ? 'bg-gray-950' : 'bg-white'}`}>
       <Navbar />
 
       {/* Hero Section */}
-      <section className={`relative py-24 px-4 sm:px-8 border-b transition-colors ${
-        isDark ? 'bg-stone-950 border-stone-800' : 'bg-[#F4F0EA] border-stone-200'
-      }`}>
-        <div className="max-w-7xl mx-auto text-center">
-          <span className="text-xs font-bold tracking-[0.2em] uppercase text-amber-600 dark:text-amber-400">
-            Comunidad Literaria
-          </span>
-          <h1 className={`text-4xl sm:text-5xl font-serif font-bold mt-3 mb-6 ${isDark ? 'text-stone-100' : 'text-stone-900'}`}>
-            Todos Nuestros Autores
-          </h1>
-          <p className={`text-lg leading-relaxed max-w-2xl mx-auto ${isDark ? 'text-stone-400' : 'text-stone-600'}`}>
-            Conoce a los creadores, investigadores y pensadores que tejen la memoria literaria de nuestra región.
-          </p>
+      <section className={`px-4 sm:px-8 py-16 sm:py-20 transition-colors ${isDark ? 'bg-gray-900' : 'bg-gradient-to-b from-white to-gray-50'}`}>
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            {/* Left Content */}
+            <div>
+              <p className={`text-sm font-semibold tracking-widest uppercase mb-4 transition-colors ${isDark ? 'text-yellow-400' : 'text-yellow-600'}`}>
+                Comunidad Literaria
+              </p>
+              <h1 className={`text-4xl md:text-5xl font-bold mb-6 leading-tight transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                Nuestros Autores &
+                <br />
+                <span className="italic font-playfair">Colaboradores</span>
+              </h1>
+              <p className={`text-lg mb-8 leading-relaxed transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                Conoce a las mentes brillantes que dan vida a Liberapalabras. Desde novelistas consagrados hasta poetas emergentes, exploramos la diversidad literaria de nuestra región.
+              </p>
+
+              <div className="flex gap-4 flex-wrap">
+                <button className="bg-[#5D4037] hover:bg-[#4A302A] text-white px-8 py-3 rounded-lg font-semibold transition-colors flex items-center gap-2">
+                  👤 Unirse como Colaborador
+                </button>
+                <button className={`px-8 py-3 rounded-lg font-semibold transition-colors border-2 ${isDark ? 'border-gray-600 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}>
+                  Conoce al Proceso
+                </button>
+              </div>
+            </div>
+
+            {/* Right Image */}
+            <div className="relative">
+              <div className={`rounded-2xl overflow-hidden h-96 shadow-2xl transition-colors ${isDark ? 'bg-gray-800' : 'bg-gray-200'}`}>
+                <img
+                  src="https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=500&h=500&fit=crop"
+                  alt="Biblioteca con autores leyendo sus obras"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              {/* Badge */}
+              <div className="absolute -bottom-4 -right-4 bg-yellow-400 text-gray-900 rounded-full p-6 font-bold text-center shadow-lg w-24 h-24 flex items-center justify-center">
+                <span className="text-sm">+100 OBRAS</span>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* Main Content */}
-      <main className={`flex-1 px-4 sm:px-8 py-16 transition-colors ${isDark ? 'bg-stone-950' : 'bg-white'}`}>
+      <main className={`flex-1 px-4 sm:px-8 py-16 transition-colors ${isDark ? 'bg-gray-950' : 'bg-white'}`}>
         <div className="max-w-7xl mx-auto">
           {/* Search Bar */}
-          <div className="mb-16 max-w-2xl mx-auto">
-            <div className={`relative transition-colors ${isDark ? 'bg-stone-900 border border-stone-800 rounded-lg' : 'bg-gray-100 rounded-lg'}`}>
+          <div className="mb-12 flex flex-col sm:flex-row gap-4">
+            <div className={`flex-1 relative transition-colors ${isDark ? 'bg-gray-900 border border-gray-800 rounded-lg' : 'bg-gray-100 rounded-lg'}`}>
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 type="text"
-                placeholder="Busca por nombre, rol o descripción..."
+                placeholder="Busca por nombre o categoría..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className={`w-full pl-12 pr-4 py-3 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-amber-400 ${isDark ? 'bg-stone-900 text-stone-100 placeholder-stone-500' : 'bg-gray-100 text-stone-900 placeholder-gray-600'}`}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className={`w-full pl-12 pr-4 py-3 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-yellow-400 ${isDark ? 'bg-gray-900 text-gray-100 placeholder-gray-500' : 'bg-gray-100 text-gray-900 placeholder-gray-600'}`}
                 aria-label="Buscar autores"
               />
             </div>
+
+            <button
+              className={`px-6 py-3 rounded-lg font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400 ${isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+              aria-label="Abrir opciones de filtro"
+            >
+              🔽 Filtros
+            </button>
           </div>
 
           {/* Authors Grid */}
-          {loading ? (
-            <div className="text-center py-12">
-              <p className={isDark ? 'text-stone-400' : 'text-stone-600'}>Cargando autores...</p>
-            </div>
-          ) : filteredAuthors.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              {filteredAuthors.map((author) => (
-                <div
-                  key={author.id}
-                  className={`group relative p-8 rounded-3xl border transition-all duration-500 hover:-translate-y-2 flex flex-col justify-between shimmer-card ${
-                    isDark ? 'bg-stone-900/30 border-stone-800/80 hover:bg-stone-900/80 hover:border-amber-500/30' : 'bg-white border-stone-200 hover:shadow-2xl hover:shadow-stone-300/50'
-                  }`}
-                >
-                  {/* Comilla decorativa */}
-                  <div className={`absolute top-4 right-6 text-6xl font-serif leading-none select-none pointer-events-none opacity-20 ${isDark ? 'text-amber-500' : 'text-amber-600'}`}>
-                    "
-                  </div>
+          <div id="authors-list" className="mb-12" role="list" aria-label="Lista de autores">
+            <h2 className={`text-3xl font-bold mb-8 transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+              Directorio de Perfiles
+            </h2>
 
-                  <div>
-                    {/* Foto redonda con glow */}
-                    <div className="relative w-28 h-28 mx-auto mb-8">
-                      <div className={`absolute inset-0 rounded-full blur-md opacity-40 group-hover:opacity-60 transition-opacity duration-500 ${isDark ? 'bg-amber-500/30' : 'bg-amber-400/40'}`} />
+            {loading ? (
+              <div className={`text-center py-12 rounded-lg ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+                <p className={`text-lg transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Cargando autores...
+                </p>
+              </div>
+            ) : paginatedAuthors.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {paginatedAuthors.map(author => (
+                  <article
+                    key={author.id}
+                    className={`rounded-2xl overflow-hidden transition-all hover:shadow-lg focus-within:ring-2 focus-within:ring-yellow-400 cursor-pointer group ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'}`}
+                    role="listitem"
+                    aria-label={`${author.name}, ${author.role}`}
+                  >
+                    {/* Image Container */}
+                    <div className="relative overflow-hidden h-56">
                       <img
                         src={author.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(author.name)}&background=random&size=300`}
-                        alt={author.name}
-                        className="relative w-full h-full object-cover rounded-full ring-2 ring-amber-500/30 group-hover:ring-amber-500 transition-all duration-500 grayscale group-hover:grayscale-0"
+                        alt={`Foto de perfil de ${author.name}, ${author.role}`}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
+                      <div className="absolute top-4 left-4">
+                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider transition-colors ${isDark ? 'bg-yellow-400 text-gray-900' : 'bg-yellow-400 text-gray-900'}`}>
+                          {author.category}
+                        </span>
+                      </div>
                     </div>
 
-                    {/* Información */}
-                    <span className="block text-center text-[10px] font-bold tracking-[0.2em] uppercase text-amber-600 dark:text-amber-400 mb-3">
-                      {author.role}
-                    </span>
-                    <h3 className={`text-xl font-serif font-bold text-center mb-4 ${isDark ? 'text-stone-100' : 'text-stone-900'}`}>
-                      {author.name}
-                    </h3>
-
-                    {/* Descripción */}
-                    {author.description && (
-                      <p className={`text-sm text-center leading-relaxed mb-4 ${isDark ? 'text-stone-300' : 'text-stone-700'}`}>
-                        {author.description}
+                    {/* Content */}
+                    <div className="p-6">
+                      <h3 className={`text-xl font-bold mb-1 transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                        {author.name}
+                      </h3>
+                      <p className={`text-sm font-semibold mb-4 transition-colors ${isDark ? 'text-yellow-400' : 'text-yellow-600'}`}>
+                        {author.role}
                       </p>
-                    )}
 
-                    {/* Stats */}
-                    <div className="flex gap-4 justify-center text-center py-4 border-t border-stone-500/20">
-                      <div>
-                        <p className={`text-lg font-bold ${isDark ? 'text-stone-100' : 'text-stone-900'}`}>
-                          {author.publications || 0}
-                        </p>
-                        <p className={`text-xs ${isDark ? 'text-stone-500' : 'text-stone-600'}`}>
-                          Publicaciones
-                        </p>
+                      <p className={`text-sm leading-relaxed mb-6 transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {author.description || 'Sin descripción disponible'}
+                      </p>
+
+                      {/* Stats */}
+                      <div className="flex gap-6 mb-6 pb-6 border-b" role="group" aria-label="Estadísticas">
+                        <div className="text-center flex-1">
+                          <p className={`text-lg font-bold transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                            {author.publications || 0}
+                          </p>
+                          <p className={`text-xs transition-colors ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                            Publicaciones
+                          </p>
+                        </div>
+                        <div className="w-px bg-gray-300"></div>
+                        <div className="text-center flex-1">
+                          <p className={`text-lg font-bold flex items-center justify-center gap-1 transition-colors ${isDark ? 'text-red-400' : 'text-red-600'}`}>
+                            <Heart size={16} />
+                            {author.totalLikes || 0}
+                          </p>
+                          <p className={`text-xs transition-colors ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                            Me gusta
+                          </p>
+                        </div>
                       </div>
-                      <div className="w-px bg-stone-500/20"></div>
-                      <div>
-                        <p className={`text-lg font-bold flex items-center justify-center gap-1 ${isDark ? 'text-red-400' : 'text-red-600'}`}>
-                          <Heart size={14} />
-                          {author.totalLikes || 0}
-                        </p>
-                        <p className={`text-xs ${isDark ? 'text-stone-500' : 'text-stone-600'}`}>
-                          Me gusta
-                        </p>
+
+                      {/* Tags */}
+                      {author.tags && author.tags.length > 0 && (
+                        <div className="flex gap-2 mb-6 flex-wrap">
+                          {author.tags.map(tag => (
+                            <span
+                              key={tag}
+                              className={`text-xs px-3 py-1 rounded-full transition-colors ${isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-700'}`}
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Actions */}
+                      <div className="flex gap-3">
+                        <button
+                          aria-label={`Guardar perfil de ${author.name}`}
+                          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-yellow-400 ${isDark ? 'border border-gray-700 text-gray-300 hover:bg-gray-800' : 'border border-gray-300 text-gray-700 hover:bg-gray-100'}`}
+                        >
+                          <Bookmark size={18} />
+                          <span className="hidden sm:inline text-sm font-semibold">Guardar</span>
+                        </button>
+                        <button
+                          aria-label={`Contactar a ${author.name}`}
+                          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-yellow-400 ${isDark ? 'bg-[#5D4037] text-white hover:bg-[#4A302A]' : 'bg-[#5D4037] text-white hover:bg-[#4A302A]'}`}
+                        >
+                          <MessageCircle size={18} />
+                          <span className="hidden sm:inline text-sm font-semibold">Contactar</span>
+                        </button>
                       </div>
                     </div>
-                  </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className={`text-center py-12 rounded-lg ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+                <p className={`text-lg transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  No hay autores que coincidan con tu búsqueda.
+                </p>
+              </div>
+            )}
 
-                  {/* Botón */}
-                  <div className="text-center pt-4 mt-4 border-t border-stone-500/10">
-                    <a
-                      href="/stories"
-                      className="text-xs font-bold tracking-wider uppercase text-stone-400 hover:text-amber-500 transition-colors duration-300 flex items-center justify-center gap-1 group-hover:gap-2"
-                    >
-                      Ver obras <span>→</span>
-                    </a>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <p className={isDark ? 'text-stone-400' : 'text-stone-600'}>
-                No hay autores que coincidan con tu búsqueda.
-              </p>
-            </div>
-          )}
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-4 mt-12">
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  aria-label="Página anterior"
+                  className={`p-2 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed ${isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+                >
+                  <ChevronLeft size={20} />
+                </button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    aria-current={currentPage === page ? 'page' : undefined}
+                    className={`w-10 h-10 rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-yellow-400 ${
+                      currentPage === page
+                        ? 'bg-[#5D4037] text-white'
+                        : isDark
+                          ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+
+                <button
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                  aria-label="Página siguiente"
+                  className={`p-2 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed ${isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+                >
+                  <ChevronRight size={20} />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* CTA Section */}
+          <section
+            className={`text-center py-16 px-8 rounded-2xl transition-colors ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-gray-50 border border-gray-200'}`}
+            aria-labelledby="cta-heading"
+          >
+            <div className="text-4xl mb-4">📖</div>
+            <h2
+              id="cta-heading"
+              className={`text-3xl font-bold mb-4 transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}
+            >
+              ¿Quieres compartir tu obra con nuestra comunidad?
+            </h2>
+            <p className={`text-lg mb-8 max-w-2xl mx-auto transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              Buscamos constantemente voces frescas y perspectivas únicas de la región del César y el Caribe colombiano. Únete a nuestro panel de colaboradores.
+            </p>
+            <button
+              className="bg-[#5D4037] hover:bg-[#4A302A] text-white px-10 py-4 rounded-lg font-bold text-lg transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400"
+            >
+              Enviar Propuesta Editorial
+            </button>
+          </section>
         </div>
       </main>
 
