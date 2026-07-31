@@ -174,7 +174,7 @@ export function getUserById(uid) {
 }
 
 export function updateUserById(uid, userData) {
-  return request(`/admin/users/${uid}`, {
+  return request('/auth/profile', {
     method: 'PATCH',
     body: JSON.stringify(userData),
   });

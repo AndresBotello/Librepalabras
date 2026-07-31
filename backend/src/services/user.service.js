@@ -86,6 +86,29 @@ export async function setUserRole(uid, role) {
   return getUserProfile(uid);
 }
 
+export async function updateUserProfile(uid, updateData) {
+  if (!adminDb) {
+    return null;
+  }
+
+  const now = new Date().toISOString();
+  const allowedFields = ['nombres', 'apellidos', 'telefono', 'genero', 'fechaNacimiento', 'photoURL'];
+
+  const safeUpdate = {};
+  for (const key of allowedFields) {
+    if (key in updateData) {
+      safeUpdate[key] = updateData[key];
+    }
+  }
+
+  safeUpdate.updatedAt = now;
+
+  const docRef = usersCollection().doc(uid);
+  await docRef.set(safeUpdate, { merge: true });
+
+  return getUserProfile(uid);
+}
+
 export async function listUsers() {
   if (!adminDb) {
     return [];

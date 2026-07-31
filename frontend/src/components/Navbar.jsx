@@ -1,11 +1,20 @@
 import React, { useContext, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { ThemeContext } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 
 export default function Navbar() {
   const { isDark, toggleTheme } = useContext(ThemeContext);
+  const { user, logout, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/');
+    setIsMenuOpen(false);
+  };
 
   return (
     <>
@@ -34,6 +43,9 @@ export default function Navbar() {
             <Link to="/stories" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037]'}`}>
               Historias
             </Link>
+            <Link to="/authors" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037]'}`}>
+              Autores
+            </Link>
             <Link to="#" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037]'}`}>
               Sobre
             </Link>
@@ -48,20 +60,42 @@ export default function Navbar() {
             >
               {isDark ? '☀️' : '🌙'}
             </button>
-            <Link
-              to="/login"
-              className={`text-xs sm:text-sm font-medium transition-colors hidden sm:inline ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037] hover:text-[#4A302A]'}`}
-            >
-              Iniciar Sesión
-            </Link>
-            <button
-              className="text-xs sm:text-sm font-medium text-white px-2 sm:px-4 py-1 sm:py-2 rounded-lg transition-colors hidden sm:inline"
-              style={{backgroundColor: '#5D4037'}}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#4A302A'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#5D4037'}
-            >
-              Crear Cuenta
-            </button>
+            {isAuthenticated ? (
+              <>
+                <div className="hidden sm:flex items-center gap-3">
+                  <span className={`text-xs sm:text-sm font-medium transition-colors ${isDark ? 'text-gray-300' : 'text-[#5D4037]'}`}>
+                    {user?.name || user?.email}
+                  </span>
+                  <button
+                    onClick={handleLogout}
+                    className="text-xs sm:text-sm font-medium text-white px-4 py-2 rounded-lg transition-colors"
+                    style={{backgroundColor: '#5D4037'}}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#4A302A'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = '#5D4037'}
+                  >
+                    Cerrar Sesión
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className={`text-xs sm:text-sm font-medium transition-colors hidden sm:inline ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037] hover:text-[#4A302A]'}`}
+                >
+                  Iniciar Sesión
+                </Link>
+                <Link
+                  to="/register"
+                  className="text-xs sm:text-sm font-medium text-white px-2 sm:px-4 py-1 sm:py-2 rounded-lg transition-colors hidden sm:inline"
+                  style={{backgroundColor: '#5D4037'}}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#4A302A'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = '#5D4037'}
+                >
+                  Crear Cuenta
+                </Link>
+              </>
+            )}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className={`md:hidden p-2 transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037] hover:text-gray-900'}`}
@@ -85,25 +119,46 @@ export default function Navbar() {
             <Link to="/stories" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037] hover:text-gray-900'}`}>
               Historias
             </Link>
-            <Link to="#" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037] hover:text-gray-900'}`}>
-              Sobre
+            <Link to="/authors" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037] hover:text-gray-900'}`}>
+              Autores
             </Link>
             <div className="pt-4 space-y-3 border-t" style={{borderColor: isDark ? '#374151' : '#e5e7eb'}}>
-              <Link
-                to="/login"
-                onClick={() => setIsMenuOpen(false)}
-                className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037] hover:text-gray-900'}`}
-              >
-                Iniciar Sesión
-              </Link>
-              <button
-                className="w-full text-sm font-medium text-white px-4 py-2 rounded-lg transition-colors"
-                style={{backgroundColor: '#5D4037'}}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#4A302A'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#5D4037'}
-              >
-                Crear Cuenta
-              </button>
+              {isAuthenticated ? (
+                <>
+                  <p className={`text-sm font-medium transition-colors ${isDark ? 'text-gray-300' : 'text-[#5D4037]'}`}>
+                    {user?.name || user?.email}
+                  </p>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-sm font-medium text-white px-4 py-2 rounded-lg transition-colors"
+                    style={{backgroundColor: '#5D4037'}}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#4A302A'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = '#5D4037'}
+                  >
+                    Cerrar Sesión
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    to="/login"
+                    onClick={() => setIsMenuOpen(false)}
+                    className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037] hover:text-gray-900'}`}
+                  >
+                    Iniciar Sesión
+                  </Link>
+                  <Link
+                    to="/register"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="w-full text-sm font-medium text-white px-4 py-2 rounded-lg transition-colors text-center"
+                    style={{backgroundColor: '#5D4037'}}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#4A302A'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = '#5D4037'}
+                  >
+                    Crear Cuenta
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>

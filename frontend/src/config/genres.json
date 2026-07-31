@@ -1,0 +1,64 @@
+{
+  "genres": [
+    {
+      "value": "cuento",
+      "label": "Cuento",
+      "emoji": "📖",
+      "description": "Narrativa breve con inicio, nudo y desenlace"
+    },
+    {
+      "value": "poesía",
+      "label": "Poesía",
+      "emoji": "✨",
+      "description": "Expresión lírica y emotiva a través de versos"
+    },
+    {
+      "value": "novela",
+      "label": "Novela",
+      "emoji": "📚",
+      "description": "Narrativa larga con trama compleja y personajes profundos"
+    },
+    {
+      "value": "ensayo",
+      "label": "Ensayo",
+      "emoji": "📝",
+      "description": "Texto argumentativo y reflexivo sobre un tema"
+    },
+    {
+      "value": "drama",
+      "label": "Drama",
+      "emoji": "🎭",
+      "description": "Obra teatral con diálogos y acción escénica"
+    },
+    {
+      "value": "crónica",
+      "label": "Crónica",
+      "emoji": "📰",
+      "description": "Relato detallado de hechos ordenados cronológicamente"
+    },
+    {
+      "value": "biografía",
+      "label": "Biografía",
+      "emoji": "👤",
+      "description": "Relato de la vida de una persona"
+    },
+    {
+      "value": "microrrelato",
+      "label": "Microrrelato",
+      "emoji": "⚡",
+      "description": "Historia muy breve con máximo impacto"
+    },
+    {
+      "value": "cuaderno",
+      "label": "Cuaderno Digital",
+      "emoji": "📔",
+      "description": "Pensamientos, reflexiones y notas personales"
+    },
+    {
+      "value": "otro",
+      "label": "Otro",
+      "emoji": "🎨",
+      "description": "Otros géneros literarios no especificados"
+    }
+  ]
+}

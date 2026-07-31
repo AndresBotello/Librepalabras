@@ -1,0 +1,17 @@
+[
+  {
+    "value": "masculino",
+    "label": "Masculino",
+    "icon": "♂️"
+  },
+  {
+    "value": "femenino",
+    "label": "Femenino",
+    "icon": "♀️"
+  },
+  {
+    "value": "otro",
+    "label": "Otro",
+    "icon": "⚧️"
+  }
+]

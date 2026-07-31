@@ -1,5 +1,5 @@
 import { adminAuth, authSessionMaxAgeMs, firebaseAdminReady } from '../config/firebaseAdmin.js';
-import { upsertUserProfile } from '../services/user.service.js';
+import { upsertUserProfile, updateUserProfile } from '../services/user.service.js';
 
 const sessionCookieOptions = {
   httpOnly: true,
@@ -110,4 +110,33 @@ export async function logout(req, res) {
     ok: true,
     message: 'Sesión cerrada correctamente',
   });
+}
+
+export async function updateProfile(req, res) {
+  try {
+    if (!req.user || !req.user.uid) {
+      return res.status(401).json({
+        ok: false,
+        message: 'No autorizado',
+      });
+    }
+
+    const { uid } = req.user;
+    const updateData = validateAndSanitizeProfile(req.body);
+
+    const updatedUser = await updateUserProfile(uid, updateData);
+
+    return res.json({
+      ok: true,
+      message: 'Perfil actualizado correctamente',
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error('Error al actualizar perfil:', error);
+    return res.status(500).json({
+      ok: false,
+      message: 'Error al actualizar el perfil',
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 }

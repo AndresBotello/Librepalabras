@@ -1,6 +1,7 @@
 import React, { useContext, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ThemeContext } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 
 const IconModeration = ({ active, isDark }) => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -47,8 +48,15 @@ const IconNotifications = ({ active, isDark }) => (
 
 export default function AdminSidebar() {
   const { isDark } = useContext(ThemeContext);
+  const { user, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(true);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/');
+  };
 
   const menuItems = [
     { icon: IconModeration, label: 'Moderación', path: '/admin/moderation' },
@@ -180,23 +188,33 @@ export default function AdminSidebar() {
           </div>
         </div>
 
-        {/* User Info Section (Optional) */}
-        <div className={`border-t px-6 py-6 ${isDark ? 'border-gray-800 bg-gray-800 bg-opacity-50' : 'border-gray-200 bg-gray-50'}`}>
+        {/* User Info Section */}
+        <div className={`border-t px-6 py-6 space-y-4 ${isDark ? 'border-gray-800 bg-gray-800 bg-opacity-50' : 'border-gray-200 bg-gray-50'}`}>
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold flex-shrink-0 ${
               isDark ? 'bg-[#5D4037] text-white' : 'bg-yellow-100 text-[#5D4037]'
             }`}>
-              A
+              {(user?.name || user?.email || 'A')[0].toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
               <p className={`text-sm font-semibold transition-colors ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
-                Administrador
+                {user?.name || 'Administrador'}
               </p>
               <p className={`text-xs truncate transition-colors ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                admin@liberapalabras.com
+                {user?.email || 'admin@liberapalabras.com'}
               </p>
             </div>
           </div>
+          <button
+            onClick={handleLogout}
+            className={`w-full py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+              isDark
+                ? 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+                : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+            }`}
+          >
+            Cerrar Sesión
+          </button>
         </div>
       </div>
 

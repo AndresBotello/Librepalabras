@@ -1,17 +1,42 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { ThemeContext } from '../../context/ThemeContext';
+import { loginWithEmail, loginWithGoogle, registerWithEmail } from '../../services/auth';
+import { useAuth } from '../../context/AuthContext.jsx';
+import gendersData from '../../config/genders.json';
 
-export default function Login() {
-  const [isLogin, setIsLogin] = useState(true);
+export default function Login({ initialMode = 'login' }) {
+  const navigate = useNavigate();
+  const { refreshAuth } = useAuth();
+  const [isLogin, setIsLogin] = useState(initialMode !== 'register');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [statusMessage, setStatusMessage] = useState('');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
+    nombres: '',
+    apellidos: '',
+    telefono: '',
+    fechaNacimiento: '',
+    genero: '',
   });
+
+  const edad = useMemo(() => {
+    if (!formData.fechaNacimiento) return null;
+    const hoy = new Date();
+    const nacimiento = new Date(formData.fechaNacimiento);
+    let edadCalculada = hoy.getFullYear() - nacimiento.getFullYear();
+    const mes = hoy.getMonth() - nacimiento.getMonth();
+    if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
+      edadCalculada--;
+    }
+    return edadCalculada;
+  }, [formData.fechaNacimiento]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -21,12 +46,115 @@ export default function Login() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const validateForm = () => {
+    if (!formData.email || !formData.password) {
+      setStatusMessage('Por favor completa todos los campos');
+      return false;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      setStatusMessage('Por favor ingresa un correo válido');
+      return false;
+    }
+
+    if (formData.password.length < 6) {
+      setStatusMessage('La contraseña debe tener al menos 6 caracteres');
+      return false;
+    }
+
+    if (!isLogin) {
+      if (!formData.nombres || !formData.apellidos) {
+        setStatusMessage('Nombres y Apellidos son obligatorios');
+        return false;
+      }
+
+      if (formData.nombres.length < 2 || formData.apellidos.length < 2) {
+        setStatusMessage('Nombres y Apellidos deben tener al menos 2 caracteres');
+        return false;
+      }
+
+      if (!formData.telefono || !/^\d{7,15}$/.test(formData.telefono)) {
+        setStatusMessage('Ingresa un teléfono válido (7-15 dígitos)');
+        return false;
+      }
+
+      if (!formData.fechaNacimiento) {
+        setStatusMessage('La fecha de nacimiento es obligatoria');
+        return false;
+      }
+
+      if (edad === null || edad < 13) {
+        setStatusMessage('Debes tener al menos 13 años para registrarte');
+        return false;
+      }
+
+      if (!formData.genero) {
+        setStatusMessage('Por favor selecciona un género');
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
+    setStatusMessage('');
+
+    if (!validateForm()) return;
+
+    setIsSubmitting(true);
+
+    try {
+      if (isLogin) {
+        await loginWithEmail(formData.email, formData.password, rememberMe);
+      } else {
+        const profileData = {
+          nombres: formData.nombres,
+          apellidos: formData.apellidos,
+          telefono: formData.telefono,
+          fechaNacimiento: formData.fechaNacimiento,
+          edad: edad,
+          genero: formData.genero,
+        };
+
+        await registerWithEmail(formData.email, formData.password, profileData, rememberMe);
+      }
+
+      const sessionUser = await refreshAuth();
+      const role = sessionUser?.role || 'collaborator';
+
+      navigate(role === 'admin' ? '/admin/dashboard' : '/collaborator/dashboard');
+    } catch (error) {
+      setStatusMessage(error.message || 'No se pudo conectar con el backend.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setIsSubmitting(true);
+    setStatusMessage('');
+
+    try {
+      const user = await loginWithGoogle(rememberMe);
+      const sessionUser = await refreshAuth();
+      const role = sessionUser?.role || user?.role || 'collaborator';
+      setStatusMessage('Google conectado correctamente.');
+      console.log('Authenticated user:', user);
+      navigate(role === 'admin' ? '/admin/dashboard' : '/collaborator/dashboard');
+    } catch (error) {
+      setStatusMessage(error.message || 'No se pudo iniciar sesión con Google.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const { isDark } = useContext(ThemeContext);
+
+  const goToMode = (mode) => {
+    navigate(mode === 'login' ? '/login' : '/register');
+  };
 
   return (
     <div className={`min-h-screen flex flex-col transition-colors ${isDark ? 'bg-gray-950' : 'bg-gray-100'}`}>
@@ -54,7 +182,8 @@ export default function Login() {
           {/* Tabs */}
           <div className={`flex gap-4 mb-8 border-b transition-colors ${isDark ? 'border-gray-700' : 'border-gray-300'}`}>
             <button
-              onClick={() => setIsLogin(true)}
+              type="button"
+              onClick={() => goToMode('login')}
               className={`pb-3 font-semibold text-sm flex-1 transition-colors ${
                 isLogin
                   ? isDark ? 'text-gray-100 border-b-2 border-gray-100 -mb-px' : 'text-[#5D4037] border-b-2 border-gray-900 -mb-px'
@@ -64,7 +193,8 @@ export default function Login() {
               Iniciar Sesión
             </button>
             <button
-              onClick={() => setIsLogin(false)}
+              type="button"
+              onClick={() => goToMode('register')}
               className={`pb-3 font-semibold text-sm flex-1 transition-colors ${
                 !isLogin
                   ? isDark ? 'text-gray-100 border-b-2 border-gray-100 -mb-px' : 'text-[#5D4037] border-b-2 border-gray-900 -mb-px'
@@ -77,6 +207,112 @@ export default function Login() {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
+            {statusMessage ? (
+              <div className={`rounded-lg px-4 py-3 text-sm border ${isDark ? 'border-gray-700 bg-gray-800 text-gray-200' : 'border-gray-300 bg-white text-[#5D4037]'}`}>
+                {statusMessage}
+              </div>
+            ) : null}
+
+            {/* Campos de Registro */}
+            {!isLogin && (
+              <>
+                {/* Nombres y Apellidos */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={`block text-xs font-semibold mb-2 tracking-wider uppercase transition-colors ${isDark ? 'text-gray-300' : 'text-[#5D4037]'}`}>
+                      Nombres
+                    </label>
+                    <input
+                      type="text"
+                      name="nombres"
+                      value={formData.nombres}
+                      onChange={handleInputChange}
+                      placeholder="Juan Carlos"
+                      className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-1 transition-all text-sm ${isDark ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-500 focus:ring-gray-500 focus:border-gray-500' : 'bg-gray-50 border-gray-300 text-[#5D4037] placeholder-gray-400 focus:ring-gray-900 focus:border-gray-900'}`}
+                    />
+                  </div>
+                  <div>
+                    <label className={`block text-xs font-semibold mb-2 tracking-wider uppercase transition-colors ${isDark ? 'text-gray-300' : 'text-[#5D4037]'}`}>
+                      Apellidos
+                    </label>
+                    <input
+                      type="text"
+                      name="apellidos"
+                      value={formData.apellidos}
+                      onChange={handleInputChange}
+                      placeholder="García López"
+                      className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-1 transition-all text-sm ${isDark ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-500 focus:ring-gray-500 focus:border-gray-500' : 'bg-gray-50 border-gray-300 text-[#5D4037] placeholder-gray-400 focus:ring-gray-900 focus:border-gray-900'}`}
+                    />
+                  </div>
+                </div>
+
+                {/* Teléfono */}
+                <div>
+                  <label className={`block text-xs font-semibold mb-2 tracking-wider uppercase transition-colors ${isDark ? 'text-gray-300' : 'text-[#5D4037]'}`}>
+                    Teléfono
+                  </label>
+                  <div className="relative flex items-center">
+                    <span className={`absolute left-3 font-semibold text-sm transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      +57
+                    </span>
+                    <input
+                      type="tel"
+                      name="telefono"
+                      value={formData.telefono}
+                      onChange={handleInputChange}
+                      placeholder="3001234567"
+                      maxLength="15"
+                      className={`w-full pl-14 pr-4 py-2.5 border rounded-lg focus:outline-none focus:ring-1 transition-all text-sm ${isDark ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-500 focus:ring-gray-500 focus:border-gray-500' : 'bg-gray-50 border-gray-300 text-[#5D4037] placeholder-gray-400 focus:ring-gray-900 focus:border-gray-900'}`}
+                    />
+                  </div>
+                </div>
+
+                {/* Fecha de Nacimiento y Edad */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={`block text-xs font-semibold mb-2 tracking-wider uppercase transition-colors ${isDark ? 'text-gray-300' : 'text-[#5D4037]'}`}>
+                      Fecha de Nacimiento
+                    </label>
+                    <input
+                      type="date"
+                      name="fechaNacimiento"
+                      value={formData.fechaNacimiento}
+                      onChange={handleInputChange}
+                      className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-1 transition-all text-sm ${isDark ? 'bg-gray-700 border-gray-600 text-gray-100 focus:ring-gray-500 focus:border-gray-500' : 'bg-gray-50 border-gray-300 text-[#5D4037] focus:ring-gray-900 focus:border-gray-900'}`}
+                    />
+                  </div>
+                  <div>
+                    <label className={`block text-xs font-semibold mb-2 tracking-wider uppercase transition-colors ${isDark ? 'text-gray-300' : 'text-[#5D4037]'}`}>
+                      Edad
+                    </label>
+                    <div className={`w-full px-4 py-2.5 border rounded-lg flex items-center transition-colors ${isDark ? 'bg-gray-700 border-gray-600 text-gray-300' : 'bg-gray-100 border-gray-300 text-[#5D4037]'}`}>
+                      {edad !== null ? <span className="font-semibold">{edad} años</span> : <span className="text-gray-500">Selecciona fecha</span>}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Género */}
+                <div>
+                  <label className={`block text-xs font-semibold mb-2 tracking-wider uppercase transition-colors ${isDark ? 'text-gray-300' : 'text-[#5D4037]'}`}>
+                    Género
+                  </label>
+                  <select
+                    name="genero"
+                    value={formData.genero}
+                    onChange={handleInputChange}
+                    className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-1 transition-all text-sm ${isDark ? 'bg-gray-700 border-gray-600 text-gray-100 focus:ring-gray-500 focus:border-gray-500' : 'bg-gray-50 border-gray-300 text-[#5D4037] focus:ring-gray-900 focus:border-gray-900'}`}
+                  >
+                    <option value="">Selecciona un género</option>
+                    {gendersData.map((gender) => (
+                      <option key={gender.value} value={gender.value}>
+                        {gender.icon} {gender.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
+
             {/* Email Field */}
             <div>
               <label className={`block text-xs font-semibold mb-2 tracking-wider uppercase transition-colors ${isDark ? 'text-gray-300' : 'text-[#5D4037]'}`}>
@@ -140,12 +376,13 @@ export default function Login() {
             {/* Submit Button */}
             <button
               type="submit"
+              disabled={isSubmitting}
               className="w-full text-white font-semibold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 mt-6 text-sm tracking-wide uppercase"
               style={{backgroundColor: '#5D4037'}}
               onMouseEnter={(e) => e.target.style.backgroundColor = '#4A302A'}
               onMouseLeave={(e) => e.target.style.backgroundColor = '#5D4037'}
             >
-              {isLogin ? 'Iniciar Sesión' : 'Crear mi Cuenta'}
+              {isSubmitting ? 'Conectando...' : isLogin ? 'Iniciar Sesión' : 'Crear mi Cuenta'}
               <span>→</span>
             </button>
 
@@ -165,16 +402,19 @@ export default function Login() {
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
+                onClick={handleGoogleLogin}
+                disabled={isSubmitting}
                 className={`flex items-center justify-center gap-2 px-4 py-2.5 border rounded-lg transition-colors text-sm ${isDark ? 'border-gray-700 hover:bg-gray-700 text-gray-300' : 'border-gray-300 hover:bg-gray-50 text-[#5D4037]'}`}
               >
-                <span className="text-lg">🔍</span>
+                <span className="text-lg">🔴</span>
                 <span className="font-medium">Google</span>
               </button>
               <button
                 type="button"
+                disabled={isSubmitting}
                 className={`flex items-center justify-center gap-2 px-4 py-2.5 border rounded-lg transition-colors text-sm ${isDark ? 'border-gray-700 hover:bg-gray-700 text-gray-300' : 'border-gray-300 hover:bg-gray-50 text-[#5D4037]'}`}
               >
-                <span className="text-lg">🐙</span>
+                <span className="text-lg">⚫</span>
                 <span className="font-medium">GitHub</span>
               </button>
             </div>
@@ -184,9 +424,13 @@ export default function Login() {
           <div className="mt-6 text-center text-xs">
             <span className={`transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
               {isLogin ? '¿No eres miembro? ' : '¿Ya tienes cuenta? '}
-              <a href="#" className={`font-semibold transition-colors ${isDark ? 'text-gray-200 hover:text-gray-100' : 'text-[#5D4037] hover:text-[#5D4037]'}`}>
+              <button
+                type="button"
+                onClick={() => goToMode(isLogin ? 'register' : 'login')}
+                className={`font-semibold transition-colors underline-offset-2 hover:underline ${isDark ? 'text-gray-200 hover:text-gray-100' : 'text-[#5D4037] hover:text-[#5D4037]'}`}
+              >
                 {isLogin ? 'Solicita acceso aquí' : 'Inicia sesión'}
-              </a>
+              </button>
             </span>
           </div>
         </div>

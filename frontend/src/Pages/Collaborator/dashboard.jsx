@@ -65,12 +65,9 @@ export default function CollaboratorDashboard() {
                   Panel de Colaborador
                 </h1>
                 <p className={`text-base transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Bienvenido de nuevo, Camila. Aquí puedes gestionar tus textos literarios, revisar estadísticas y enviar nuevas obras para curación editorial.
+                  Bienvenido de nuevo. Aquí puedes gestionar tus textos literarios, revisar estadísticas y enviar nuevas obras para curación editorial.
                 </p>
               </div>
-              <button className="px-6 py-2 rounded-lg font-semibold transition-colors text-sm bg-[#5D4037] text-white hover:bg-[#4A302A] whitespace-nowrap">
-                📝 Nueva Publicación
-              </button>
             </div>
 
             {/* Stats Grid */}
