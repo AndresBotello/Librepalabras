@@ -383,13 +383,6 @@ export default function Authors() {
                 </p>
               </div>
             )}
-            ) : (
-              <div className={`text-center py-12 rounded-lg ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
-                <p className={`text-lg transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  No hay autores disponibles.
-                </p>
-              </div>
-            )}
 
             {/* Pagination */}
             {totalPages > 1 && (
