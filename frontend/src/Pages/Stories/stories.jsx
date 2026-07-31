@@ -1,10 +1,10 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { Heart, MessageCircle, Share2, Download, ChevronLeft, ChevronRight, BookOpen } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Download, ChevronLeft, ChevronRight, BookOpen, Eye } from 'lucide-react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { ThemeContext } from '../../context/ThemeContext';
-import { getApprovedWorks, toggleWorkLike } from '../../services/api';
+import { getApprovedWorks, toggleWorkLike, getWorkById } from '../../services/api';
 import genresData from '../../config/genres.json';
 import LiteraryComments from '../../components/LiteraryComments';
 import LiteraryRatings from '../../components/LiteraryRatings';
@@ -94,6 +94,18 @@ export default function Stories() {
       ...prev,
       averageRating: newAverage,
     }));
+  };
+
+  const handleSelectWork = async (work) => {
+    try {
+      const response = await getWorkById(work.id);
+      if (response.ok) {
+        setSelectedWork(response.work);
+      }
+    } catch (err) {
+      console.error('Error cargando obra:', err);
+      setSelectedWork(work);
+    }
   };
 
   const handleDownload = () => {
@@ -226,7 +238,7 @@ export default function Stories() {
                   <button
                     key={work.id}
                     onClick={() => {
-                      setSelectedWork(work);
+                      handleSelectWork(work);
                       setCurrentPdfPage(1);
                     }}
                     className={`group cursor-pointer transition-all duration-200 hover:scale-105 text-left`}
@@ -362,6 +374,10 @@ export default function Stories() {
 
               {/* Acciones literarias */}
               <div className={`flex justify-center gap-6 mb-8 pb-6 border-b-2 border-double ${isDark ? 'border-amber-900' : 'border-amber-700'}`}>
+                <div className={`flex flex-col items-center gap-1 text-xs font-serif ${isDark ? 'text-amber-300' : 'text-amber-900'}`}>
+                  <Eye className="w-4 h-4" />
+                  <span className="text-xs">{story?.views || 0} lecturas</span>
+                </div>
                 <button className={`flex flex-col items-center gap-1 text-xs font-serif transition-all group ${isDark ? 'text-amber-300 hover:text-amber-200' : 'text-amber-900 hover:text-amber-700'}`}>
                   <Heart className="w-4 h-4 group-hover:scale-110 transition-transform" />
                   <span className="text-xs">{story?.totalRatings || 0}</span>
