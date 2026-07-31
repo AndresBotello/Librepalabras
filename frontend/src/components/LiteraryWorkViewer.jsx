@@ -23,10 +23,10 @@ export default function LiteraryWorkViewer({ work, isDark, onUpdate }) {
         comments: prev.comments.filter(c => c.id !== commentId),
         totalComments: (prev.totalComments || 0) - 1,
       }));
-    } else if (action === 'like') {
+    } else if (action === 'like' && comment) {
       setWorkData(prev => ({
         ...prev,
-        comments: prev.comments.map(c => c.id === commentId ? { ...c, likedBy: toggleArrayItem(c.likedBy || [], user?.uid), likesCount: c.likesCount || 0 } : c),
+        comments: prev.comments.map(c => c.id === commentId ? comment : c),
       }));
     } else {
       setWorkData(prev => ({
@@ -35,14 +35,6 @@ export default function LiteraryWorkViewer({ work, isDark, onUpdate }) {
         totalComments: (prev.totalComments || 0) + 1,
       }));
     }
-  };
-
-  const toggleArrayItem = (arr, item) => {
-    const index = arr.indexOf(item);
-    if (index !== -1) {
-      return arr.filter((_, i) => i !== index);
-    }
-    return [...arr, item];
   };
 
   const handleToggleLike = async () => {

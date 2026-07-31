@@ -44,10 +44,22 @@ export default function LiteraryComments({ workId, comments = [], isDark, onComm
       return;
     }
 
+    const comment = comments.find(c => c.id === commentId);
+    if (!comment) return;
+
     setLikeLoading(prev => ({ ...prev, [commentId]: true }));
     try {
-      await toggleCommentLike(workId, commentId);
-      if (onCommentAdded) onCommentAdded(null, 'like', commentId);
+      const response = await toggleCommentLike(workId, commentId);
+      if (response.ok) {
+        const updatedComment = {
+          ...comment,
+          likesCount: response.likesCount,
+          likedBy: response.liked
+            ? [...(comment.likedBy || []), userId]
+            : (comment.likedBy || []).filter(id => id !== userId),
+        };
+        if (onCommentAdded) onCommentAdded(updatedComment, 'like', commentId);
+      }
     } catch (err) {
       console.error('Error al dar like:', err);
     } finally {
