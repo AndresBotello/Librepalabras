@@ -21,6 +21,21 @@ export default function Profile() {
     descripcion: user?.descripcion || '',
   });
 
+  useEffect(() => {
+    if (user?.photoURL) setProfileImage(user.photoURL);
+  }, [user?.photoURL]);
+
+  useEffect(() => {
+    setFormData({
+      nombres: user?.nombres || '',
+      apellidos: user?.apellidos || '',
+      telefono: user?.telefono || '',
+      genero: user?.genero || '',
+      fechaNacimiento: user?.fechaNacimiento || '',
+      descripcion: user?.descripcion || '',
+    });
+  }, [user?.nombres, user?.apellidos, user?.telefono, user?.genero, user?.fechaNacimiento, user?.descripcion]);
+
   const fullName = `${user?.nombres || ''} ${user?.apellidos || ''}`.trim() || 'Usuario';
   const initials = `${user?.nombres?.[0] || ''}${user?.apellidos?.[0] || ''}`.toUpperCase() || 'U';
   const createdDate = user?.createdAt ? new Date(user.createdAt).getFullYear() : new Date().getFullYear();
@@ -75,9 +90,9 @@ export default function Profile() {
       };
 
       await updateUserById(user.uid, updateData);
-      await refreshAuth();
       setIsEditing(false);
       alert('Perfil actualizado exitosamente');
+      await refreshAuth();
     } catch (err) {
       console.error('Error actualizando perfil:', err);
       alert('Error al actualizar el perfil: ' + (err.message || 'Intenta de nuevo'));
@@ -235,14 +250,14 @@ export default function Profile() {
                           <button
                             onClick={handleSaveProfile}
                             disabled={loading}
-                            className="flex-1 px-6 py-2 rounded-lg font-semibold transition-colors text-sm bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+                            className="flex-1 px-6 py-2 rounded-lg font-semibold transition-colors text-sm bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            ✅ Guardar
+                            {loading ? '⏳ Guardando...' : '✅ Guardar'}
                           </button>
                           <button
                             onClick={() => setIsEditing(false)}
                             disabled={loading}
-                            className="flex-1 px-6 py-2 rounded-lg font-semibold transition-colors text-sm border border-gray-400 hover:bg-gray-100 disabled:opacity-50"
+                            className="flex-1 px-6 py-2 rounded-lg font-semibold transition-colors text-sm border border-gray-400 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             ❌ Cancelar
                           </button>

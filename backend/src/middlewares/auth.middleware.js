@@ -1,6 +1,13 @@
 import { adminAuth, firebaseAdminReady } from '../config/firebaseAdmin.js';
 import { getUserProfile } from '../services/user.service.js';
 
+const userCache = new Map();
+const CACHE_TTL = 30000;
+
+export function invalidateUserCache(uid) {
+  userCache.delete(uid);
+}
+
 export async function authenticateRequest(req, res, next) {
   try {
     if (!firebaseAdminReady || !adminAuth) {
@@ -20,7 +27,17 @@ export async function authenticateRequest(req, res, next) {
     }
 
     const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true);
-    const userProfile = await getUserProfile(decodedClaims.uid);
+
+    let userProfile = null;
+    const now = Date.now();
+    const cached = userCache.get(decodedClaims.uid);
+
+    if (cached && now - cached.timestamp < CACHE_TTL) {
+      userProfile = cached.data;
+    } else {
+      userProfile = await getUserProfile(decodedClaims.uid);
+      userCache.set(decodedClaims.uid, { data: userProfile, timestamp: now });
+    }
 
     req.auth = decodedClaims;
     req.user = userProfile || {
@@ -57,7 +74,17 @@ export async function attachUserIfPresent(req, res, next) {
     }
 
     const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true);
-    const userProfile = await getUserProfile(decodedClaims.uid);
+
+    let userProfile = null;
+    const now = Date.now();
+    const cached = userCache.get(decodedClaims.uid);
+
+    if (cached && now - cached.timestamp < CACHE_TTL) {
+      userProfile = cached.data;
+    } else {
+      userProfile = await getUserProfile(decodedClaims.uid);
+      userCache.set(decodedClaims.uid, { data: userProfile, timestamp: now });
+    }
 
     req.auth = decodedClaims;
     req.user = userProfile || {

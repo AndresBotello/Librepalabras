@@ -1,5 +1,6 @@
 import { adminAuth, authSessionMaxAgeMs, firebaseAdminReady } from '../config/firebaseAdmin.js';
 import { upsertUserProfile, updateUserProfile } from '../services/user.service.js';
+import { invalidateUserCache } from '../middlewares/auth.middleware.js';
 
 const sessionCookieOptions = {
   httpOnly: true,
@@ -133,6 +134,7 @@ export async function updateProfile(req, res) {
     const updateData = validateAndSanitizeProfile(req.body);
 
     const updatedUser = await updateUserProfile(uid, updateData);
+    invalidateUserCache(uid);
 
     return res.json({
       ok: true,

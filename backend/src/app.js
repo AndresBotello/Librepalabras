@@ -6,6 +6,7 @@ import storyRoutes from './routes/story.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import literatureRoutes from './routes/literature.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
+import promotionalBooksRoutes from './routes/promotionalBooks.routes.js';
 
 const app = express();
 const allowedOrigins = (process.env.CORS_ORIGIN || process.env.CLIENT_URL || 'http://localhost:5173')
@@ -44,6 +45,7 @@ app.use('/api/stories', storyRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/literature', literatureRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/promotional-books', promotionalBooksRoutes);
 
 console.log('✓ Rutas registradas correctamente');
 

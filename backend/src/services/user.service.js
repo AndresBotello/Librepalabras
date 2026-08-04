@@ -38,13 +38,13 @@ export async function upsertUserProfile(decodedClaims, additionalData = {}) {
   const baseProfile = {
     uid,
     email: email || null,
-    photoURL: picture || null,
     updatedAt: now,
   };
 
   if (!existing.exists) {
     const profile = {
       ...baseProfile,
+      photoURL: picture || null,
       ...additionalData,
       role: preferredRole || defaultUserRole,
       createdAt: now,
@@ -67,6 +67,10 @@ export async function upsertUserProfile(decodedClaims, additionalData = {}) {
     role: nextRole,
     lastLoginAt: now,
   };
+
+  if (picture) {
+    profile.photoURL = picture;
+  }
 
   await docRef.set(profile, { merge: true });
   return profile;

@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { Heart, MessageCircle, Share2, Download, ChevronLeft, ChevronRight, BookOpen, Eye } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Download, ChevronLeft, ChevronRight, BookOpen, Eye, ArrowLeft, Bookmark } from 'lucide-react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
@@ -137,10 +137,10 @@ export default function Stories() {
 
   if (loading) {
     return (
-      <div className={`min-h-screen flex flex-col ${isDark ? 'bg-gray-950' : 'bg-white'}`}>
+      <div className={`min-h-screen flex flex-col ${isDark ? 'bg-slate-950 text-slate-400' : 'bg-stone-50 text-stone-600'}`}>
         <Navbar />
         <div className="flex-1 flex items-center justify-center">
-          <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>Cargando...</p>
+          <p className="animate-pulse font-serif text-lg">Preparando la biblioteca...</p>
         </div>
         <Footer />
       </div>
@@ -149,14 +149,14 @@ export default function Stories() {
 
   if (error) {
     return (
-      <div className={`min-h-screen flex flex-col ${isDark ? 'bg-gray-950' : 'bg-white'}`}>
+      <div className={`min-h-screen flex flex-col ${isDark ? 'bg-slate-950' : 'bg-stone-50'}`}>
         <Navbar />
         <div className="flex-1 flex items-center justify-center px-4">
-          <div className={`p-8 rounded-lg text-center max-w-md ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-gray-50 border border-gray-200'}`}>
-            <p className={`text-lg font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+          <div className={`p-8 rounded-2xl text-center max-w-md shadow-xl border ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-stone-200'}`}>
+            <p className={`text-lg font-serif font-semibold mb-2 ${isDark ? 'text-stone-300' : 'text-stone-700'}`}>
               {error}
             </p>
-            <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+            <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-stone-500'}`}>
               Publica una obra para que aparezca aquí
             </p>
           </div>
@@ -170,39 +170,40 @@ export default function Stories() {
   const genreInfo = getGenreInfo(story?.genre);
 
   return (
-    <div className={`min-h-screen flex flex-col transition-colors ${isDark ? 'bg-gradient-to-br from-gray-950 via-blue-950 to-gray-950' : 'bg-gradient-to-br from-amber-50 via-white to-orange-50'}`}>
+    <div className={`min-h-screen flex flex-col transition-colors duration-300 ${
+      isDark ? 'bg-slate-950 text-slate-100' : 'bg-[#faf7f2] text-stone-900'
+    }`}>
       <Navbar />
 
       <main className="flex-1 w-full px-4 sm:px-6 py-8 sm:py-12">
         {!selectedWork ? (
-          // GALERÍA LITERARIA
+          /* =================================================================== */
+          /* GALERÍA LITERARIA (VISTA MOSAICO)                                  */
+          /* =================================================================== */
           <div className="max-w-6xl mx-auto">
-            {/* Encabezado elegante */}
-            <div className="mb-12 relative">
-              <div className={`absolute top-0 left-0 w-1 h-12 ${isDark ? 'bg-amber-600' : 'bg-amber-700'}`} />
-              <div className="pl-6">
-                <h1 className={`text-4xl sm:text-5xl font-serif font-bold mb-2 ${isDark ? 'text-amber-100' : 'text-amber-900'}`}>
-                  Biblioteca de Historias
-                </h1>
-                <p className={`text-sm italic ${isDark ? 'text-amber-200 opacity-75' : 'text-amber-800 opacity-75'}`}>
-                  Obras literarias que inspiran, emocionan y transforman
-                </p>
-              </div>
-            </div>
+            {/* Encabezado Principal */}
+            <header className="mb-10 text-center sm:text-left">
+              <h1 className={`text-4xl sm:text-5xl font-serif font-bold tracking-tight mb-3 ${isDark ? 'text-amber-100' : 'text-stone-900'}`}>
+                Biblioteca de Historias
+              </h1>
+              <p className={`text-base sm:text-lg max-w-2xl font-serif italic ${isDark ? 'text-slate-400' : 'text-stone-600'}`}>
+                Explora manuscritos, relatos y creaciones literarias de autores independientes.
+              </p>
+            </header>
 
-            {/* Filtros literarios */}
+            {/* Filtros por Género */}
             {uniqueGenres.length > 1 && (
-              <div className="mb-10 flex flex-wrap gap-2">
+              <nav className="mb-10 flex flex-wrap gap-2 border-b pb-4 border-stone-200 dark:border-slate-800">
                 <button
                   onClick={() => setSelectedGenre('all')}
-                  className={`px-4 py-2 rounded-sm text-sm font-serif font-semibold transition-all border-2 ${
+                  className={`px-4 py-2 rounded-full text-xs font-serif font-medium transition-all ${
                     selectedGenre === 'all'
                       ? isDark
-                        ? 'bg-amber-900 border-amber-600 text-amber-100'
-                        : 'bg-amber-100 border-amber-700 text-amber-900'
+                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                        : 'bg-stone-900 text-stone-50 shadow-md'
                       : isDark
-                      ? 'border-gray-700 text-gray-400 hover:border-amber-700 hover:text-amber-200'
-                      : 'border-gray-300 text-gray-700 hover:border-amber-700 hover:text-amber-900'
+                      ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                      : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/60'
                   }`}
                 >
                   Todas las obras
@@ -213,330 +214,316 @@ export default function Stories() {
                     <button
                       key={genre}
                       onClick={() => setSelectedGenre(genre)}
-                      className={`px-4 py-2 rounded-sm text-sm font-serif font-semibold transition-all border-2 ${
+                      className={`px-4 py-2 rounded-full text-xs font-serif font-medium transition-all ${
                         selectedGenre === genre
                           ? isDark
-                            ? 'bg-amber-900 border-amber-600 text-amber-100'
-                            : 'bg-amber-100 border-amber-700 text-amber-900'
+                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                            : 'bg-stone-900 text-stone-50 shadow-md'
                           : isDark
-                          ? 'border-gray-700 text-gray-400 hover:border-amber-700 hover:text-amber-200'
-                          : 'border-gray-300 text-gray-700 hover:border-amber-700 hover:text-amber-900'
+                          ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                          : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/60'
                       }`}
                     >
-                      {info?.label}
+                      {info?.label || genre}
                     </button>
                   );
                 })}
-              </div>
+              </nav>
             )}
 
-            {/* Grid literario - compacto */}
-            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+            {/* Grid de Libros / Portadas */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 sm:gap-8">
               {filteredWorks.map((work) => {
                 const genre = getGenreInfo(work.genre);
                 return (
-                  <button
+                  <div
                     key={work.id}
                     onClick={() => {
                       handleSelectWork(work);
                       setCurrentPdfPage(1);
                     }}
-                    className={`group cursor-pointer transition-all duration-200 hover:scale-105 text-left`}
+                    className="group cursor-pointer flex flex-col transition-transform duration-300 hover:-translate-y-1.5"
                   >
-                    {/* Portada estilo libro - compacta */}
-                    <div className={`relative rounded-sm overflow-hidden shadow-md group-hover:shadow-lg transition-all duration-200 border ${
-                      isDark
-                        ? 'border-amber-800 bg-gray-800'
-                        : 'border-amber-600 bg-gray-100'
-                    }`}
-                    style={{
-                      aspectRatio: '3/4'
-                    }}>
+                    {/* Estructura de Portada estilo Libro Impreso */}
+                    <div className={`relative rounded-md overflow-hidden shadow-md group-hover:shadow-2xl transition-all duration-300 border ${
+                      isDark ? 'border-slate-800 bg-slate-900' : 'border-stone-200 bg-stone-100'
+                    }`} style={{ aspectRatio: '2/3' }}>
+                      
+                      {/* Simulación del lomo de un libro (Sombra lateral izquierda) */}
+                      <div className="absolute inset-y-0 left-0 w-3 bg-gradient-to-r from-black/30 to-transparent z-10 pointer-events-none" />
+
                       {work.cover ? (
-                        <>
-                          <img
-                            src={work.cover}
-                            alt={work.title}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                          />
-                          {/* Overlay degradado */}
-                          <div className={`absolute inset-0 bg-gradient-to-t ${isDark ? 'from-black/80 to-transparent' : 'from-black/60 to-transparent'} opacity-0 group-hover:opacity-100 transition-opacity duration-300` }/>
-                        </>
+                        <img
+                          src={work.cover}
+                          alt={work.title}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
                       ) : (
-                        <div className={`w-full h-full bg-gradient-to-br ${isDark ? 'from-amber-900 to-yellow-900' : 'from-amber-200 to-orange-200'} flex flex-col items-center justify-center text-center p-4`}>
-                          <BookOpen className={`w-8 h-8 mb-2 ${isDark ? 'text-amber-300' : 'text-amber-700'} opacity-60`} />
-                          <span className={`text-xs font-serif italic ${isDark ? 'text-amber-200' : 'text-amber-900'}`}>
+                        <div className={`w-full h-full p-6 flex flex-col justify-between ${
+                          isDark ? 'bg-gradient-to-br from-slate-900 to-slate-800' : 'bg-gradient-to-br from-amber-100/50 to-stone-200'
+                        }`}>
+                          <BookOpen className={`w-8 h-8 ${isDark ? 'text-amber-400/60' : 'text-stone-700/60'}`} />
+                          <h3 className={`font-serif text-base font-bold line-clamp-3 leading-snug ${isDark ? 'text-slate-200' : 'text-stone-800'}`}>
                             {work.title}
-                          </span>
+                          </h3>
                         </div>
                       )}
 
-                      {/* Info en la portada */}
-                      <div className={`absolute bottom-0 left-0 right-0 p-1.5 ${isDark ? 'bg-gradient-to-t from-black/90' : 'bg-gradient-to-t from-black/70'}`}>
-                        <h3 className={`font-serif font-bold text-xs line-clamp-1 mb-0.5 ${isDark ? 'text-amber-100' : 'text-amber-50'}`}>
-                          {work.title}
-                        </h3>
-                        <p className={`text-xs opacity-70 ${isDark ? 'text-amber-200/70' : 'text-amber-50/70'}`}>
-                          {work.author || 'Anónimo'}
-                        </p>
+                      {/* Info emergente suave al pasar el mouse */}
+                      <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-4 flex flex-col justify-end text-white z-20">
+                        <span className="text-xs uppercase tracking-wider text-amber-300 font-sans mb-1">{genre?.label}</span>
+                        <h4 className="font-serif font-bold text-sm line-clamp-2">{work.title}</h4>
+                        <p className="text-xs text-slate-300 mt-1">{work.author || 'Anónimo'}</p>
                       </div>
                     </div>
 
-                    {/* Info bajo la portada */}
-                    <div className="mt-1">
-                      <span className={`inline-block text-xs font-serif px-1.5 py-0.5 rounded-sm mb-0.5 ${
-                        isDark
-                          ? 'bg-amber-900/50 text-amber-200'
-                          : 'bg-amber-100 text-amber-900'
+                    {/* Metadatos inferiores */}
+                    <div className="mt-3 flex flex-col gap-1">
+                      <h3 className={`font-serif font-semibold text-sm line-clamp-1 group-hover:text-amber-600 transition-colors ${
+                        isDark ? 'text-slate-200' : 'text-stone-900'
                       }`}>
-                        {genre?.label}
-                      </span>
-
-                      {/* Estadísticas */}
-                      <div className={`flex gap-2 text-xs pt-0.5 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                        <div className="flex items-center gap-0.5">
-                          <Eye className="w-2.5 h-2.5" />
-                          <span>{work.views || 0}</span>
-                        </div>
-                        <div className="flex items-center gap-0.5">
-                          <Heart className="w-2.5 h-2.5" />
-                          <span>{work.totalRatings || 0}</span>
-                        </div>
-                        <div className="flex items-center gap-0.5">
-                          <MessageCircle className="w-2.5 h-2.5" />
-                          <span>{work.totalComments || 0}</span>
-                        </div>
+                        {work.title}
+                      </h3>
+                      <p className={`text-xs font-serif italic ${isDark ? 'text-slate-400' : 'text-stone-500'}`}>
+                        {work.author || 'Anónimo'}
+                      </p>
+                      
+                      <div className={`flex items-center gap-3 text-xs mt-1 ${isDark ? 'text-slate-500' : 'text-stone-400'}`}>
+                        <span className="flex items-center gap-1"><Eye className="w-3.5 h-3.5" />{work.views || 0}</span>
+                        <span className="flex items-center gap-1"><Heart className="w-3.5 h-3.5" />{work.totalRatings || 0}</span>
+                        <span className="flex items-center gap-1"><MessageCircle className="w-3.5 h-3.5" />{work.totalComments || 0}</span>
                       </div>
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
           </div>
         ) : (
-          // LECTURA - VISTA LITERARIA
-          <div className="max-w-3xl mx-auto w-full">
-            <button
-              onClick={() => {
-                setSelectedWork(null);
-                setCurrentPdfPage(1);
-              }}
-              className={`mb-6 text-sm font-serif font-semibold transition-all ${
-                isDark
-                  ? 'text-amber-400 hover:text-amber-300'
-                  : 'text-amber-800 hover:text-amber-600'
-              }`}
-            >
-              ← Volver a la biblioteca
-            </button>
+          /* =================================================================== */
+          /* VISTA DE LECTURA (EXPERIENCIA EDITORIAL ENFOCADA)                  */
+          /* =================================================================== */
+          <div className="max-w-4xl mx-auto">
+            {/* Barra de navegación superior */}
+            <div className="mb-6 flex items-center justify-between">
+              <button
+                onClick={() => {
+                  setSelectedWork(null);
+                  setCurrentPdfPage(1);
+                }}
+                className={`inline-flex items-center gap-2 text-sm font-serif transition-colors px-3 py-1.5 rounded-md ${
+                  isDark
+                    ? 'text-slate-400 hover:text-amber-300 hover:bg-slate-900'
+                    : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/50'
+                }`}
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Volver a la biblioteca</span>
+              </button>
+            </div>
 
-            <article className={`${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
-              {/* Decoración superior */}
-              <div className="text-center mb-6">
-                <div className={`text-2xl mb-4 ${isDark ? 'text-amber-600' : 'text-amber-700'}`}>
-                  ✦
-                </div>
-              </div>
+            {/* CONTENEDOR TIPO HOJA DE LIBRO (CANVAS DE LECTURA) */}
+            <article className={`rounded-xl shadow-xl border transition-all duration-300 overflow-hidden ${
+              isDark
+                ? 'bg-[#12151e] border-slate-800 text-slate-200 shadow-black/50'
+                : 'bg-[#fdfcf9] border-stone-200/80 text-stone-900 shadow-stone-900/5'
+            }`}>
+              
+              {/* Encabezado del Manuscrito */}
+              <header className="px-6 sm:px-16 pt-12 sm:pt-16 pb-8 text-center border-b border-stone-200/50 dark:border-slate-800/80">
+                <span className={`inline-block text-xs uppercase tracking-widest font-sans font-semibold mb-3 px-3 py-1 rounded-full ${
+                  isDark ? 'bg-amber-500/10 text-amber-400' : 'bg-amber-100/60 text-amber-900'
+                }`}>
+                  {genreInfo?.label || 'Obra Literaria'}
+                </span>
 
-              {/* Encabezado del autor - literario */}
-              <header className="text-center mb-8 pb-5 border-b-2 border-double" style={{
-                borderColor: isDark ? '#7c2d12' : '#b45309'
-              }}>
-                <div className="mb-3">
-                  <p className={`text-xs font-serif italic opacity-75 mb-1 ${isDark ? 'text-amber-300' : 'text-amber-900'}`}>
-                    Por
-                  </p>
-                  <p className={`text-xl font-serif font-bold ${isDark ? 'text-amber-100' : 'text-amber-900'}`}>
+                <h1 className={`text-3xl sm:text-5xl font-serif font-bold leading-tight mb-4 ${
+                  isDark ? 'text-amber-50' : 'text-stone-900'
+                }`}>
+                  {story?.title}
+                </h1>
+
+                <div className={`flex items-center justify-center gap-2 font-serif text-sm italic ${
+                  isDark ? 'text-slate-400' : 'text-stone-600'
+                }`}>
+                  <span>Por</span>
+                  <span className={`font-semibold not-italic ${isDark ? 'text-slate-200' : 'text-stone-900'}`}>
                     {story?.author || 'Anónimo'}
-                  </p>
-                </div>
-                <div className="flex justify-center gap-3 items-center text-xs">
-                  <span className={`font-serif px-2 py-0.5 ${isDark ? 'text-amber-300' : 'text-amber-800'}`}>
-                    {genreInfo?.label}
                   </span>
-                  <span className={`${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                    {story?.createdAt ? new Date(story.createdAt).toLocaleDateString('es-CO') : ''}
-                  </span>
+                  {story?.createdAt && (
+                    <>
+                      <span>•</span>
+                      <span>{new Date(story.createdAt).toLocaleDateString('es-CO', { year: 'numeric', month: 'long' })}</span>
+                    </>
+                  )}
                 </div>
               </header>
 
-              {/* Título - elegante */}
-              <h1 className={`text-3xl sm:text-4xl font-serif font-bold mb-8 leading-tight text-center ${isDark ? 'text-amber-100' : 'text-amber-900'}`}>
-                {story?.title}
-              </h1>
-
-              {/* Portada elegante */}
+              {/* Portada Decorativa (opcional dentro de la lectura) */}
               {story?.cover && (
-                <figure className={`mb-8 rounded-sm overflow-hidden h-64 sm:h-80 border-4 shadow-2xl ${isDark ? 'border-amber-900' : 'border-amber-700'}`}>
-                  <img
-                    src={story.cover}
-                    alt={story.title}
-                    className="w-full h-full object-cover"
-                  />
-                </figure>
-              )}
-
-              {/* Acciones literarias */}
-              <div className={`flex justify-center gap-6 mb-8 pb-6 border-b-2 border-double ${isDark ? 'border-amber-900' : 'border-amber-700'}`}>
-                <div className={`flex flex-col items-center gap-1 text-xs font-serif ${isDark ? 'text-amber-300' : 'text-amber-900'}`}>
-                  <Eye className="w-4 h-4" />
-                  <span className="text-xs">{story?.views || 0} lecturas</span>
+                <div className="px-6 sm:px-16 pt-8">
+                  <div className="max-w-md mx-auto rounded-lg overflow-hidden shadow-lg border border-stone-200/30 dark:border-slate-800 max-h-[400px]">
+                    <img
+                      src={story.cover}
+                      alt={story.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                 </div>
-                <button className={`flex flex-col items-center gap-1 text-xs font-serif transition-all group ${isDark ? 'text-amber-300 hover:text-amber-200' : 'text-amber-900 hover:text-amber-700'}`}>
-                  <Heart className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                  <span className="text-xs">{story?.totalRatings || 0}</span>
-                  <span className="text-xs opacity-60">favoritos</span>
-                </button>
-                <button className={`flex flex-col items-center gap-1 text-xs font-serif transition-all group ${isDark ? 'text-amber-300 hover:text-amber-200' : 'text-amber-900 hover:text-amber-700'}`}>
-                  <MessageCircle className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                  <span className="text-xs">{story?.totalComments || 0}</span>
-                  <span className="text-xs opacity-60">comentarios</span>
-                </button>
-                <button className={`flex flex-col items-center gap-1 text-xs font-serif transition-all group ${isDark ? 'text-amber-300 hover:text-amber-200' : 'text-amber-900 hover:text-amber-700'}`}>
-                  <Share2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                  <span className="text-xs opacity-60">compartir</span>
-                </button>
-              </div>
+              )}
 
-              {/* Descripción - sinopsis elegante */}
+              {/* Sinopsis / Prefacio */}
               {story?.description && (
-                <section className="mb-8">
-                  <p className={`text-xs italic opacity-75 mb-4 text-center ${isDark ? 'text-amber-300' : 'text-amber-900'}`}>
-                    Sinopsis
-                  </p>
-                  <p className={`text-sm leading-relaxed whitespace-pre-wrap font-serif ${isDark ? 'text-gray-300' : 'text-gray-800'}`}>
+                <div className="px-6 sm:px-16 pt-8 pb-4">
+                  <div className={`p-6 rounded-lg text-sm sm:text-base font-serif italic leading-relaxed border-l-2 ${
+                    isDark
+                      ? 'bg-slate-900/50 border-amber-500/40 text-slate-300'
+                      : 'bg-amber-50/40 border-amber-600/40 text-stone-700'
+                  }`}>
+                    <p className="font-sans text-xs font-bold uppercase tracking-wider not-italic mb-2 opacity-60">Sinopsis</p>
                     {story.description}
-                  </p>
-                </section>
+                  </div>
+                </div>
               )}
 
-              {/* Contenido - Lectura */}
+              {/* CUERPO TEXTUAL LITERARIO */}
               {story?.content && (
-                <section className="mb-8">
-                  <div className="text-center mb-4">
-                    <div className={`text-xl mb-3 ${isDark ? 'text-amber-600' : 'text-amber-700'}`}>
-                      ✦
-                    </div>
-                  </div>
-                  <pre className={`font-serif text-sm leading-relaxed whitespace-pre-wrap break-words text-justify ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
-                    {story.content}
-                  </pre>
-                  <div className="text-center mt-4">
-                    <div className={`text-xl ${isDark ? 'text-amber-600' : 'text-amber-700'}`}>
-                      ✦
-                    </div>
+                <section className="px-6 sm:px-20 py-10">
+                  <div className={`prose dark:prose-invert max-w-none font-serif text-base sm:text-lg leading-relaxed text-justify space-y-6 ${
+                    isDark ? 'text-slate-300' : 'text-stone-800'
+                  }`}>
+                    {/* Render de párrafos con primera letra capitular */}
+                    {story.content.split('\n\n').map((paragraph, index) => {
+                      if (!paragraph.trim()) return null;
+                      if (index === 0) {
+                        return (
+                          <p key={index} className="first-letter:float-left first-letter:text-5xl first-letter:font-serif first-letter:font-bold first-letter:mr-3 first-letter:leading-none first-letter:text-amber-600 dark:first-letter:text-amber-400">
+                            {paragraph}
+                          </p>
+                        );
+                      }
+                      return <p key={index}>{paragraph}</p>;
+                    })}
                   </div>
                 </section>
               )}
 
-              {/* PDF - Descarga */}
-              {story?.pdfUrl ? (
-                <section className={`rounded-sm border-2 mb-8 overflow-hidden ${isDark ? 'border-amber-900 bg-gray-900' : 'border-amber-700 bg-amber-50'}`}>
-                  <header className={`flex items-center justify-between p-4 border-b-2 border-double ${isDark ? 'border-amber-900' : 'border-amber-700'}`}>
-                    <div>
-                      <p className={`text-xs font-serif italic ${isDark ? 'text-amber-300' : 'text-amber-900'}`}>
-                        Descarga la edición completa
-                      </p>
-                      <span className={`text-sm font-serif font-bold ${isDark ? 'text-amber-100' : 'text-amber-900'}`}>
-                        {story.title}.pdf
-                      </span>
-                    </div>
-                    <button
-                      onClick={handleDownload}
-                      className={`p-2 rounded-sm font-serif font-bold transition-all ${isDark ? 'bg-amber-900 text-amber-100 hover:bg-amber-800' : 'bg-amber-700 text-amber-50 hover:bg-amber-800'}`}
-                    >
-                      <Download className="w-4 h-4" />
-                    </button>
-                  </header>
+              {/* VISOR DE DOCUMENTO PDF */}
+              {story?.pdfUrl && (
+                <section className="px-4 sm:px-12 py-8 border-t border-stone-200/60 dark:border-slate-800">
+                  <div className={`rounded-xl overflow-hidden border shadow-sm ${
+                    isDark ? 'border-slate-800 bg-slate-900' : 'border-stone-200 bg-stone-100'
+                  }`}>
+                    <header className={`flex items-center justify-between p-4 border-b ${
+                      isDark ? 'border-slate-800 bg-slate-950/40' : 'border-stone-200 bg-white'
+                    }`}>
+                      <span className="text-xs font-serif font-medium opacity-80">Documento adjunto (PDF)</span>
+                      <button
+                        onClick={handleDownload}
+                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-sans font-semibold transition-all ${
+                          isDark
+                            ? 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30'
+                            : 'bg-stone-900 text-stone-100 hover:bg-stone-800'
+                        }`}
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Descargar</span>
+                      </button>
+                    </header>
 
-                  <div className={`w-full overflow-auto ${isDark ? 'bg-gray-800' : 'bg-gray-200'}`}>
-                    <div className="flex justify-center p-3">
+                    <div className="flex justify-center p-4 overflow-x-auto min-h-[400px]">
                       <Document
                         file={story.pdfUrl}
                         onLoadSuccess={onDocumentLoadSuccess}
-                        error={<p className={isDark ? 'text-gray-400' : 'text-gray-600'}>Error cargando PDF</p>}
-                        loading={<p className={isDark ? 'text-gray-400' : 'text-gray-600'}>Cargando...</p>}
+                        error={<p className="text-xs py-8 text-rose-500">Error al cargar la vista previa del PDF.</p>}
+                        loading={<p className="text-xs py-8 animate-pulse">Cargando páginas...</p>}
                       >
-                        <Page pageNumber={currentPdfPage} />
+                        <Page pageNumber={currentPdfPage} renderTextLayer={false} renderAnnotationLayer={false} />
                       </Document>
                     </div>
+
+                    {/* Paginador PDF */}
+                    <nav className={`flex items-center justify-between p-3 border-t text-xs ${
+                      isDark ? 'border-slate-800 bg-slate-950/40' : 'border-stone-200 bg-white'
+                    }`}>
+                      <button
+                        onClick={goToPreviousPage}
+                        disabled={currentPdfPage === 1}
+                        className="p-1.5 rounded hover:bg-stone-200 dark:hover:bg-slate-800 disabled:opacity-30"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+
+                      <span className="font-serif">Página {currentPdfPage} de {totalPages}</span>
+
+                      <button
+                        onClick={goToNextPage}
+                        disabled={currentPdfPage === totalPages}
+                        className="p-1.5 rounded hover:bg-stone-200 dark:hover:bg-slate-800 disabled:opacity-30"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </nav>
                   </div>
-
-                  <nav className={`flex items-center justify-between p-3 border-t-2 border-double ${isDark ? 'border-amber-900 bg-gray-900' : 'border-amber-700 bg-amber-50'}`}>
-                    <button
-                      onClick={goToPreviousPage}
-                      disabled={currentPdfPage === 1}
-                      className={`p-1 rounded disabled:opacity-40 disabled:cursor-not-allowed transition-all ${isDark ? 'text-amber-300 hover:text-amber-200' : 'text-amber-900 hover:text-amber-700'}`}
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-
-                    <span className={`text-xs font-serif ${isDark ? 'text-amber-300' : 'text-amber-900'}`}>
-                      {currentPdfPage} de {totalPages}
-                    </span>
-
-                    <button
-                      onClick={goToNextPage}
-                      disabled={currentPdfPage === totalPages}
-                      className={`p-1 rounded disabled:opacity-40 disabled:cursor-not-allowed transition-all ${isDark ? 'text-amber-300 hover:text-amber-200' : 'text-amber-900 hover:text-amber-700'}`}
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </nav>
-                </section>
-              ) : (
-                <section className={`rounded-sm border-2 p-4 text-center mb-8 ${isDark ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-gray-50'}`}>
-                  <p className={`text-xs font-serif ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                    Lectura en línea no disponible
-                  </p>
                 </section>
               )}
 
-              {/* Botón de like para la obra */}
-              <div className="mb-8">
-                <button
-                  onClick={handleToggleLike}
-                  disabled={likeLoading}
-                  className={`px-6 py-3 rounded-lg font-semibold transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-                    story?.likesCount > 0
-                      ? isDark
-                        ? 'bg-red-900 text-red-200 hover:bg-red-800'
-                        : 'bg-red-100 text-red-800 hover:bg-red-200'
-                      : isDark
-                      ? 'bg-gray-700 text-gray-200 hover:bg-gray-600'
-                      : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-                  }`}
-                >
-                  {story?.likesCount > 0 ? '❤️' : '🤍'} {story?.likesCount || 0} Me gusta
-                </button>
+              {/* BARRA DE ACCIONES E INTERACCIÓN (AL FINAL DEL TEXTO) */}
+              <footer className={`px-6 sm:px-16 py-8 border-t flex flex-wrap items-center justify-between gap-4 ${
+                isDark ? 'border-slate-800 bg-slate-950/30' : 'border-stone-200/60 bg-stone-50/50'
+              }`}>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={handleToggleLike}
+                    disabled={likeLoading}
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-serif text-xs font-semibold transition-all ${
+                      story?.likesCount > 0
+                        ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+                        : isDark
+                        ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                        : 'bg-stone-200/80 text-stone-700 hover:bg-stone-300'
+                    }`}
+                  >
+                    <Heart className={`w-4 h-4 ${story?.likesCount > 0 ? 'fill-rose-500' : ''}`} />
+                    <span>{story?.likesCount || 0} Me gusta</span>
+                  </button>
+                </div>
+
+                <div className={`flex items-center gap-6 text-xs font-serif ${isDark ? 'text-slate-400' : 'text-stone-500'}`}>
+                  <span className="flex items-center gap-1.5"><Eye className="w-4 h-4" /> {story?.views || 0} lecturas</span>
+                  <span className="flex items-center gap-1.5"><MessageCircle className="w-4 h-4" /> {story?.totalComments || 0} opiniones</span>
+                </div>
+              </footer>
+            </article>
+
+            {/* SECCIONES COMPLEMENTARIAS (VALORACIÓN Y COMENTARIOS) */}
+            <div className="mt-12 space-y-8">
+              {/* Sección Calificación */}
+              <div className={`p-6 sm:p-8 rounded-xl border shadow-sm ${
+                isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-stone-200'
+              }`}>
+                <LiteraryRatings
+                  workId={selectedWork.id}
+                  ratings={selectedWork.ratings || []}
+                  averageRating={selectedWork.averageRating || 0}
+                  isDark={isDark}
+                  onRatingAdded={handleRatingAdded}
+                />
               </div>
 
-              {/* Ratings */}
-              {selectedWork && (
-                <div className="mb-8">
-                  <LiteraryRatings
-                    workId={selectedWork.id}
-                    ratings={selectedWork.ratings || []}
-                    averageRating={selectedWork.averageRating || 0}
-                    isDark={isDark}
-                    onRatingAdded={handleRatingAdded}
-                  />
-                </div>
-              )}
-
-              {/* Comentarios */}
-              {selectedWork && (
-                <div className="mb-8">
-                  <LiteraryComments
-                    workId={selectedWork.id}
-                    comments={selectedWork.comments || []}
-                    isDark={isDark}
-                    onCommentAdded={handleCommentAdded}
-                    authorId={selectedWork.authorId}
-                  />
-                </div>
-              )}
-            </article>
+              {/* Sección Comentarios */}
+              <div className={`p-6 sm:p-8 rounded-xl border shadow-sm ${
+                isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-stone-200'
+              }`}>
+                <LiteraryComments
+                  workId={selectedWork.id}
+                  comments={selectedWork.comments || []}
+                  isDark={isDark}
+                  onCommentAdded={handleCommentAdded}
+                  authorId={selectedWork.authorId}
+                />
+              </div>
+            </div>
           </div>
         )}
       </main>

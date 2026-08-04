@@ -11,6 +11,7 @@ import Moderation from '../Pages/Admin/moderation.jsx';
 import Users from '../Pages/Admin/users.jsx';
 import Files from '../Pages/Admin/files.jsx';
 import AdminSettings from '../Pages/Admin/settings.jsx';
+import PublishBook from '../Pages/Admin/publishbook.jsx';
 import CollaboratorDashboard from '../Pages/Collaborator/dashboard.jsx';
 import CollaboratorPublications from '../Pages/Collaborator/publications.jsx';
 import CollaboratorAnalytics from '../Pages/Collaborator/analytics.jsx';
@@ -41,6 +42,7 @@ export default function AppRoutes() {
       <Route path="/admin/moderation" element={<AdminRoute><Moderation /></AdminRoute>} />
       <Route path="/admin/users" element={<AdminRoute><Users /></AdminRoute>} />
       <Route path="/admin/files" element={<AdminRoute><Files /></AdminRoute>} />
+      <Route path="/admin/publishbook" element={<AdminRoute><PublishBook /></AdminRoute>} />
       <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
 
       <Route path="/collaborator/dashboard" element={<CollaboratorRoute><CollaboratorDashboard /></CollaboratorRoute>} />

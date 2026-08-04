@@ -228,3 +228,39 @@ export function toggleWorkLike(workId) {
 export function getAllAuthors() {
   return request('/literature/authors/all');
 }
+
+// Promotional Books
+export function createPromotionalBook(bookData) {
+  return request('/promotional-books', {
+    method: 'POST',
+    body: JSON.stringify(bookData),
+  });
+}
+
+export function getPromotionalBooks(genre = 'all') {
+  const url = genre && genre !== 'all' ? `/promotional-books?genre=${genre}` : '/promotional-books';
+  return request(url);
+}
+
+export function getPromotionalBookById(id) {
+  return request(`/promotional-books/${id}`);
+}
+
+export function updatePromotionalBook(id, bookData) {
+  return request(`/promotional-books/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(bookData),
+  });
+}
+
+export function deletePromotionalBook(id) {
+  return request(`/promotional-books/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export function toggleBookFavorite(bookId) {
+  return request(`/promotional-books/${bookId}/favorite`, {
+    method: 'POST',
+  });
+}

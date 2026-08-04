@@ -1,26 +1,114 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { ThemeContext } from '../../context/ThemeContext';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import AdminSidebar from '../../components/AdminSidebar';
+import { getAllUsers, getPendingWorks, getApprovedWorks } from '../../services/api';
 
 export default function Admin() {
   const { isDark } = useContext(ThemeContext);
   const [activeTab, setActiveTab] = useState('general');
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState([
+    { label: 'USUARIOS TOTALES', value: '0', icon: '👥', trend: 'Cargando...' },
+    { label: 'PUBLICACIONES APROBADAS', value: '0', icon: '📄', trend: 'Cargando...' },
+    { label: 'SOLICITUDES PENDIENTES', value: '0', icon: '📋', trend: 'Cargando...' },
+    { label: 'COLABORADORES ACTIVOS', value: '0', icon: '✍️', trend: 'Cargando...' },
+  ]);
+  const [recentActivity, setRecentActivity] = useState([]);
+  const [genreStats, setGenreStats] = useState({});
 
-  const stats = [
-    { label: 'USUARIOS TOTALES', value: '12,482', icon: '👥', trend: '+12% mes pasado' },
-    { label: 'PUBLICACIONES', value: '843', icon: '📄', trend: '+5% mes pasado' },
-    { label: 'SOLICITUDES PENDIENTES', value: '28', icon: '📋', trend: '28 sin revisar' },
-    { label: 'ENGAGEMENT PROMEDIO', value: '78%', icon: '📈', trend: '+3.2% mes pasado' },
-  ];
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
 
-  const recentActivity = [
-    { name: 'Carlos Ruiz', action: 'subió un nuevo manuscrito', time: '2024-1-1024' },
-    { name: 'Soporte', action: 'envió un reporte de plagio', time: '2024-1-1024' },
-    { name: 'Sahema', action: 'resguardó semanal completada', time: '2024-1-1024' },
-    { name: 'María M.', action: 'se registró como autora', time: '2024-1-1024' },
-  ];
+  const loadDashboardData = async () => {
+    setLoading(true);
+    try {
+      const [usersRes, pendingRes, approvedRes] = await Promise.all([
+        getAllUsers(),
+        getPendingWorks(),
+        getApprovedWorks(),
+      ]);
+
+      const totalUsers = usersRes.users?.length || 0;
+      const collaborators = usersRes.users?.filter(u => u.role === 'collaborator').length || 0;
+      const approvedWorks = approvedRes.works?.length || 0;
+      const pendingWorks = pendingRes.works?.length || 0;
+
+      setStats([
+        {
+          label: 'USUARIOS TOTALES',
+          value: totalUsers.toLocaleString(),
+          icon: '👥',
+          trend: `${collaborators} colaboradores activos`,
+        },
+        {
+          label: 'PUBLICACIONES APROBADAS',
+          value: approvedWorks.toLocaleString(),
+          icon: '📄',
+          trend: `${approvedWorks} obras disponibles`,
+        },
+        {
+          label: 'SOLICITUDES PENDIENTES',
+          value: pendingWorks.toLocaleString(),
+          icon: '📋',
+          trend: pendingWorks > 0 ? `${pendingWorks} sin revisar` : 'Todo revisado ✓',
+        },
+        {
+          label: 'COLABORADORES ACTIVOS',
+          value: collaborators.toLocaleString(),
+          icon: '✍️',
+          trend: `${Math.round((collaborators / totalUsers) * 100)}% del total`,
+        },
+      ]);
+
+      const activities = [];
+
+      if (approvedRes.works && approvedRes.works.length > 0) {
+        approvedRes.works.slice(0, 3).forEach(work => {
+          activities.push({
+            name: work.author || 'Anónimo',
+            action: `publicó "${work.title}"`,
+            time: work.createdAt ? new Date(work.createdAt).toLocaleDateString('es-CO') : 'Hace poco',
+            icon: '📚',
+          });
+        });
+      }
+
+      if (usersRes.users && usersRes.users.length > 0) {
+        usersRes.users.slice(0, 1).forEach(user => {
+          activities.push({
+            name: user.nombres || 'Usuario',
+            action: 'se registró en la plataforma',
+            time: user.createdAt ? new Date(user.createdAt).toLocaleDateString('es-CO') : 'Hace poco',
+            icon: '👤',
+          });
+        });
+      }
+
+      setRecentActivity(activities.length > 0 ? activities : [
+        { name: 'Sin actividad', action: 'No hay datos disponibles', time: 'N/A', icon: '📭' },
+      ]);
+
+      // Calcular estadísticas por género
+      if (approvedRes.works && approvedRes.works.length > 0) {
+        const genreCounts = {};
+        approvedRes.works.forEach(work => {
+          const genre = work.genre || 'Otros';
+          genreCounts[genre] = (genreCounts[genre] || 0) + 1;
+        });
+        setGenreStats(genreCounts);
+      }
+    } catch (error) {
+      console.error('Error cargando datos del dashboard:', error);
+      setRecentActivity([
+        { name: 'Error', action: 'No se pudieron cargar los datos', time: 'N/A', icon: '⚠️' },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className={`min-h-screen flex flex-col transition-colors ${isDark ? 'bg-gray-950' : 'bg-white'}`}>
@@ -114,38 +202,46 @@ export default function Admin() {
                 {/* Main Chart */}
                 <div className={`lg:col-span-2 rounded-lg p-8 transition-colors ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'}`}>
                   <h3 className={`text-xl font-bold mb-2 transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                    Crecimiento de Audiencia
+                    Distribución por Géneros
                   </h3>
                   <p className={`text-sm mb-6 transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Tráfico y captación de usuarios en los últimos 6 meses
+                    Cantidad de obras publicadas por cada género literario
                   </p>
 
-                  {/* Placeholder for Chart */}
+                  {/* Gráfico de Géneros */}
                   <div className={`h-64 rounded-lg flex items-end justify-around gap-2 transition-colors ${isDark ? 'bg-gray-800' : 'bg-gray-50'} p-4`}>
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="bg-yellow-400 rounded w-8 h-16"></div>
-                      <span className="text-xs text-gray-500">Ene</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="bg-yellow-400 rounded w-8 h-24"></div>
-                      <span className="text-xs text-gray-500">Feb</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="bg-yellow-400 rounded w-8 h-32"></div>
-                      <span className="text-xs text-gray-500">Mar</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="bg-yellow-400 rounded w-8 h-40"></div>
-                      <span className="text-xs text-gray-500">Abr</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="bg-yellow-400 rounded w-8 h-48"></div>
-                      <span className="text-xs text-gray-500">May</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="bg-yellow-400 rounded w-8 h-56"></div>
-                      <span className="text-xs text-gray-500">Jun</span>
-                    </div>
+                    {loading ? (
+                      <div className="w-full flex items-center justify-center">
+                        <p className={`transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                          Cargando datos...
+                        </p>
+                      </div>
+                    ) : Object.keys(genreStats).length > 0 ? (
+                      Object.entries(genreStats).map(([genre, count]) => {
+                        const maxCount = Math.max(...Object.values(genreStats));
+                        const percentage = (count / maxCount) * 100;
+                        return (
+                          <div key={genre} className="flex flex-col items-center gap-2 flex-1">
+                            <div className="w-full flex flex-col items-center">
+                              <div
+                                className="bg-yellow-400 rounded w-full transition-all"
+                                style={{ height: `${Math.max(20, percentage)}px` }}
+                              ></div>
+                            </div>
+                            <span className="text-xs text-gray-500 text-center truncate max-w-full">
+                              {genre.substring(0, 8)}
+                            </span>
+                            <span className="text-xs font-semibold text-gray-700">{count}</span>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="w-full flex items-center justify-center">
+                        <p className={`transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                          No hay datos disponibles
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -159,27 +255,37 @@ export default function Admin() {
                   </p>
 
                   <div className="space-y-4">
-                    {recentActivity.map((activity, index) => (
-                      <div
-                        key={index}
-                        className={`pb-4 ${index !== recentActivity.length - 1 ? (isDark ? 'border-b border-gray-800' : 'border-b border-gray-200') : ''}`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <span className="text-lg">📝</span>
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-sm font-semibold transition-colors ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
-                              {activity.name}
-                            </p>
-                            <p className={`text-xs transition-colors ${isDark ? 'text-gray-500' : 'text-gray-600'} truncate`}>
-                              {activity.action}
-                            </p>
-                            <p className={`text-xs transition-colors ${isDark ? 'text-gray-600' : 'text-gray-500'} mt-1`}>
-                              {activity.time}
-                            </p>
+                    {loading ? (
+                      <p className={`text-sm transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'} text-center py-4`}>
+                        Cargando actividad...
+                      </p>
+                    ) : recentActivity.length > 0 ? (
+                      recentActivity.map((activity, index) => (
+                        <div
+                          key={index}
+                          className={`pb-4 ${index !== recentActivity.length - 1 ? (isDark ? 'border-b border-gray-800' : 'border-b border-gray-200') : ''}`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <span className="text-lg">{activity.icon}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm font-semibold transition-colors ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
+                                {activity.name}
+                              </p>
+                              <p className={`text-xs transition-colors ${isDark ? 'text-gray-500' : 'text-gray-600'} truncate`}>
+                                {activity.action}
+                              </p>
+                              <p className={`text-xs transition-colors ${isDark ? 'text-gray-600' : 'text-gray-500'} mt-1`}>
+                                {activity.time}
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))
+                    ) : (
+                      <p className={`text-sm transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'} text-center py-4`}>
+                        No hay actividad disponible
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
