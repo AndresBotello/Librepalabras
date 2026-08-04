@@ -260,42 +260,31 @@ export async function deleteComment(req, res) {
 
 export async function getApprovedWorks(req, res) {
   try {
-    const { genre } = req.query;
-    const snapshot = await adminDb.collection('literature').where('status', '==', 'approved').get();
+    const { genre, limit = 50, offset = 0 } = req.query;
+    const limitNum = Math.min(parseInt(limit) || 50, 100);
+    const offsetNum = parseInt(offset) || 0;
 
-    let works = snapshot.docs.map(doc => ({
+    let query = adminDb.collection('literature').where('status', '==', 'approved');
+
+    if (genre) {
+      query = query.where('genre', '==', genre.toLowerCase());
+    }
+
+    const snapshot = await query.get();
+
+    let allDocs = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
     }));
 
-    if (genre) {
-      works = works.filter(w => w.genre === genre.toLowerCase());
-    }
+    allDocs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-    // Enriquecer con información del usuario
-    works = await Promise.all(works.map(async (work) => {
-      try {
-        const userDoc = await adminDb.collection('users').doc(work.authorId).get();
-        if (userDoc.exists) {
-          const userData = userDoc.data();
-          return {
-            ...work,
-            authorPhotoURL: userData.photoURL || null,
-            authorDescription: userData.descripcion || null,
-          };
-        }
-      } catch (err) {
-        console.error(`Error fetching user ${work.authorId}:`, err);
-      }
-      return work;
-    }));
-
-    works.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const paginatedDocs = allDocs.slice(offsetNum, offsetNum + limitNum);
 
     return res.json({
       ok: true,
-      works,
-      total: works.length,
+      works: paginatedDocs,
+      total: allDocs.length,
     });
   } catch (error) {
     return res.status(500).json({
@@ -639,37 +628,45 @@ export async function toggleWorkLike(req, res) {
 
 export async function getAllAuthors(req, res) {
   try {
-    // Obtener todos los usuarios (colaboradores)
-    const usersSnapshot = await adminDb.collection('users').where('role', '==', 'collaborator').get();
-
     // Obtener todas las obras aprobadas
     const worksSnapshot = await adminDb.collection('literature').where('status', '==', 'approved').get();
     const works = worksSnapshot.docs.map(doc => doc.data());
 
+    // Agrupar obras por autor
+    const authorMap = {};
+    works.forEach(work => {
+      if (!authorMap[work.authorId]) {
+        authorMap[work.authorId] = [];
+      }
+      authorMap[work.authorId].push(work);
+    });
+
+    // Obtener información de usuarios
+    const usersSnapshot = await adminDb.collection('users').get();
+    const usersMap = {};
+    usersSnapshot.docs.forEach(doc => {
+      usersMap[doc.id] = doc.data();
+    });
+
     // Construir lista de autores con estadísticas
-    const authors = usersSnapshot.docs.map(userDoc => {
-      const userData = userDoc.data();
-      const userId = userDoc.id;
-
-      // Filtrar obras de este autor
-      const authorWorks = works.filter(w => w.authorId === userId);
-
-      // Calcular estadísticas
+    const authors = Object.entries(authorMap).map(([userId, authorWorks]) => {
+      const firstWork = authorWorks[0];
+      const userData = usersMap[userId];
       const totalLikes = authorWorks.reduce((sum, work) => sum + (work.likesCount || 0), 0);
-      const primaryGenre = authorWorks.length > 0 ? (authorWorks[0]?.genre || 'Colaborador') : 'Colaborador';
+      const primaryGenre = firstWork?.genre || 'Colaborador';
       const genreInfo = genresData.genres.find(g => g.value === primaryGenre);
 
       return {
         id: userId,
-        name: `${userData.nombres || ''} ${userData.apellidos || ''}`.trim() || 'Anónimo',
-        email: userData.email,
-        description: userData.descripcion || null,
-        photoURL: userData.photoURL || null,
+        name: `${userData?.nombres || firstWork?.author || ''} ${userData?.apellidos || ''}`.trim() || 'Anónimo',
+        email: userData?.email || firstWork?.authorEmail || '',
+        description: userData?.descripcion || firstWork?.authorDescription || null,
+        photoURL: userData?.photoURL || null,
         role: genreInfo?.label || 'Colaborador',
         category: primaryGenre,
         publications: authorWorks.length,
         totalLikes: totalLikes,
-        tags: authorWorks.length > 0 ? [...new Set(authorWorks.map(w => w.genre))].slice(0, 3) : [],
+        tags: [...new Set(authorWorks.map(w => w.genre))].slice(0, 3),
       };
     }).sort((a, b) => b.publications - a.publications);
 

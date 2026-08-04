@@ -2,7 +2,7 @@ import React, { useContext, useState, useEffect } from 'react';
 import { ThemeContext } from '../../context/ThemeContext';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
-import { getApprovedWorks } from '../../services/api';
+import { getAllAuthors } from '../../services/api';
 
 export default function Home() {
   const { isDark } = useContext(ThemeContext);
@@ -15,23 +15,9 @@ export default function Home() {
 
   const loadAuthors = async () => {
     try {
-      const response = await getApprovedWorks();
-      if (response.ok && response.works) {
-        // Extraer autores únicos
-        const uniqueAuthors = {};
-        response.works.forEach(work => {
-          if (work.author && !uniqueAuthors[work.authorId]) {
-            uniqueAuthors[work.authorId] = {
-              id: work.authorId,
-              name: work.author,
-              role: work.genre ? work.genre.charAt(0).toUpperCase() + work.genre.slice(1) : 'Autor',
-              bio: `Creador de "${work.title}" y ${response.works.filter(w => w.authorId === work.authorId).length} obra(s) más.`,
-              description: work.authorDescription || null,
-              img: work.authorPhotoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(work.author)}&background=random&size=300`
-            };
-          }
-        });
-        setAuthors(Object.values(uniqueAuthors).slice(0, 4));
+      const response = await getAllAuthors();
+      if (response.ok && response.authors) {
+        setAuthors(response.authors.slice(0, 4));
       }
     } catch (err) {
       console.error('Error cargando autores:', err);
@@ -304,7 +290,7 @@ export default function Home() {
                   <div>
                     <div className="relative w-28 h-28 mx-auto mb-8">
                       <div className={`absolute inset-0 rounded-full blur-md opacity-40 group-hover:opacity-60 transition-opacity duration-500 ${isDark ? 'bg-amber-500/30' : 'bg-amber-400/40'}`} />
-                      <img src={author.img} alt={author.name} className="relative w-full h-full object-cover rounded-full ring-2 ring-amber-500/30 group-hover:ring-amber-500 transition-all duration-500 grayscale group-hover:grayscale-0" />
+                      <img src={author.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(author.name)}&background=random&size=300`} alt={author.name} className="relative w-full h-full object-cover rounded-full ring-2 ring-amber-500/30 group-hover:ring-amber-500 transition-all duration-500 grayscale group-hover:grayscale-0" />
                     </div>
                     <span className="block text-center text-[10px] font-bold tracking-[0.2em] uppercase text-amber-600 dark:text-amber-400 mb-3">
                       {author.role}
@@ -313,7 +299,7 @@ export default function Home() {
                       {author.name}
                     </h3>
                     <p className={`text-sm text-center leading-relaxed italic ${isDark ? 'text-stone-400' : 'text-stone-600'}`}>
-                      {author.bio}
+                      {author.publications} publicacione{author.publications !== 1 ? 's' : ''}
                     </p>
                     {author.description && (
                       <p className={`text-sm text-center leading-relaxed mt-4 pt-4 border-t border-stone-500/20 ${isDark ? 'text-stone-300' : 'text-stone-700'}`}>

@@ -242,12 +242,6 @@ export default function Publications() {
                               </td>
                               <td className={`px-6 py-4 text-sm`}>
                                 <button
-                                  onClick={() => window.open(`/work/${pub.id}`, '_blank')}
-                                  className="text-[#5D4037] hover:text-[#4A302A] font-semibold mr-4"
-                                >
-                                  Ver
-                                </button>
-                                <button
                                   onClick={() => handleEditClick(pub)}
                                   className={`font-semibold transition-colors ${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}
                                 >

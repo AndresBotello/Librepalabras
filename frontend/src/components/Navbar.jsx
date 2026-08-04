@@ -18,7 +18,7 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className={`w-full py-3 sm:py-4 px-4 sm:px-8 transition-colors ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-gray-100 border-gray-300'} border-b`}>
+      <nav className={`fixed top-0 left-0 right-0 w-full py-3 sm:py-4 px-4 sm:px-8 transition-colors z-50 ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-gray-100 border-gray-300'} border-b`}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0">

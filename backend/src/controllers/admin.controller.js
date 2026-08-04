@@ -1,4 +1,6 @@
 import { listUsers, setUserRole } from '../services/user.service.js';
+import { adminDb } from '../config/firebaseAdmin.js';
+import { deleteFile } from '../services/upload.service.js';
 
 export async function testAdminAuth(req, res) {
   return res.json({
@@ -104,7 +106,7 @@ export async function getUserById(req, res) {
 export async function updateUserById(req, res) {
   try {
     const { uid } = req.params;
-    const { nombres, apellidos, telefono, genero, role } = req.body;
+    const { nombres, apellidos, telefono, genero, role, photoURL, descripcion, fechaNacimiento } = req.body;
 
     if (!uid) {
       return res.status(400).json({
@@ -154,6 +156,18 @@ export async function updateUserById(req, res) {
         });
       }
       updateData.genero = genero;
+    }
+
+    if (photoURL !== undefined) {
+      updateData.photoURL = photoURL || null;
+    }
+
+    if (descripcion !== undefined) {
+      updateData.descripcion = descripcion?.trim() || '';
+    }
+
+    if (fechaNacimiento !== undefined) {
+      updateData.fechaNacimiento = fechaNacimiento || '';
     }
 
     if (role !== undefined) {
@@ -227,4 +241,140 @@ export async function updateUserRole(req, res) {
     message: 'Rol actualizado correctamente',
     user: updatedUser,
   });
+}
+
+export async function getPdfFiles(req, res) {
+  try {
+    const { search = '', sortBy = 'date', limit = 25, offset = 0 } = req.query;
+    const limitNum = Math.min(parseInt(limit) || 25, 100);
+    const offsetNum = parseInt(offset) || 0;
+
+    const snapshot = await adminDb.collection('literature').where('pdfUrl', '!=', null).get();
+
+    let files = snapshot.docs
+      .map(doc => {
+        const data = doc.data();
+        const pdfUrl = data.pdfUrl || '';
+        const publicId = pdfUrl.split('/').pop()?.replace('.pdf', '') || '';
+
+        return {
+          id: doc.id,
+          title: data.title || 'Sin título',
+          author: data.author || 'Anónimo',
+          pdfUrl,
+          publicId,
+          fileSize: 0,
+          uploadedAt: data.createdAt || new Date().toISOString(),
+          status: data.status || 'unknown',
+          authorId: data.authorId || '',
+          totalComments: data.totalComments || 0,
+          totalRatings: data.totalRatings || 0,
+          views: data.views || 0,
+        };
+      })
+      .filter(file => {
+        const searchLower = search.toLowerCase();
+        return (
+          file.title.toLowerCase().includes(searchLower) ||
+          file.author.toLowerCase().includes(searchLower)
+        );
+      });
+
+    if (sortBy === 'date') {
+      files.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
+    } else if (sortBy === 'title') {
+      files.sort((a, b) => a.title.localeCompare(b.title));
+    } else if (sortBy === 'author') {
+      files.sort((a, b) => a.author.localeCompare(b.author));
+    }
+
+    const total = files.length;
+    const paginatedFiles = files.slice(offsetNum, offsetNum + limitNum);
+
+    return res.json({
+      ok: true,
+      files: paginatedFiles,
+      total,
+      page: Math.floor(offsetNum / limitNum) + 1,
+      pageSize: limitNum,
+      pages: Math.ceil(total / limitNum),
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      message: 'Error al obtener archivos PDF',
+      error: error.message,
+    });
+  }
+}
+
+export async function deletePdfFile(req, res) {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        ok: false,
+        message: 'ID de documento requerido',
+      });
+    }
+
+    const docRef = adminDb.collection('literature').doc(id);
+    const doc = await docRef.get();
+
+    if (!doc.exists) {
+      return res.status(404).json({
+        ok: false,
+        message: 'Documento no encontrado',
+      });
+    }
+
+    const data = doc.data();
+    const pdfUrl = data.pdfUrl;
+
+    if (!pdfUrl) {
+      return res.status(400).json({
+        ok: false,
+        message: 'Este documento no tiene PDF asociado',
+      });
+    }
+
+    // Extraer publicId de la URL o usar la URL directamente
+    let publicId = '';
+    try {
+      const urlParts = pdfUrl.split('/upload/');
+      if (urlParts.length > 1) {
+        publicId = urlParts[1].replace(/\.\w+$/, '');
+      }
+    } catch (err) {
+      console.error('Error al extraer publicId:', err);
+    }
+
+    // Intentar eliminar del almacenamiento si tenemos el publicId
+    if (publicId) {
+      try {
+        await deleteFile(publicId);
+      } catch (err) {
+        console.error('Error al eliminar de Cloudinary:', err);
+        // Continuamos de todas formas
+      }
+    }
+
+    // Actualizar el documento para remover la URL del PDF
+    await docRef.update({
+      pdfUrl: null,
+      updatedAt: new Date().toISOString(),
+    });
+
+    return res.json({
+      ok: true,
+      message: 'PDF eliminado correctamente',
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      message: 'Error al eliminar PDF',
+      error: error.message,
+    });
+  }
 }

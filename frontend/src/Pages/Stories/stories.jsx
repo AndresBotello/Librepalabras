@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect, useMemo, useCallback } from 'react';
 import { Heart, MessageCircle, Share2, Download, ChevronLeft, ChevronRight, BookOpen, Eye, ArrowLeft, Bookmark } from 'lucide-react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import Navbar from '../../components/Navbar';
@@ -13,6 +13,8 @@ if (typeof window !== 'undefined' && 'Worker' in window) {
   pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 }
 
+const WORKS_PER_PAGE = 12;
+
 export default function Stories() {
   const { isDark } = useContext(ThemeContext);
   const [works, setWorks] = useState([]);
@@ -23,10 +25,15 @@ export default function Stories() {
   const [error, setError] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('all');
   const [likeLoading, setLikeLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     loadWorks();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedGenre]);
 
   const loadWorks = async () => {
     try {
@@ -46,9 +53,24 @@ export default function Stories() {
     }
   };
 
-  const getGenreInfo = (genre) => {
+  const getGenreInfo = useCallback((genre) => {
     return genresData.genres.find(g => g.value === genre);
-  };
+  }, []);
+
+  const uniqueGenres = useMemo(() => [...new Set(works.map(w => w.genre))], [works]);
+
+  const filteredWorks = useMemo(() => {
+    return selectedGenre === 'all' ? works : works.filter(w => w.genre === selectedGenre);
+  }, [works, selectedGenre]);
+
+  const paginatedWorks = useMemo(() => {
+    const startIndex = (currentPage - 1) * WORKS_PER_PAGE;
+    return filteredWorks.slice(startIndex, startIndex + WORKS_PER_PAGE);
+  }, [filteredWorks, currentPage]);
+
+  const totalPages_Gallery = useMemo(() => {
+    return Math.ceil(filteredWorks.length / WORKS_PER_PAGE);
+  }, [filteredWorks.length]);
 
   const handleToggleLike = async () => {
     if (!selectedWork) return;
@@ -129,11 +151,6 @@ export default function Stories() {
     setTotalPages(numPages);
   };
 
-  const filteredWorks = selectedGenre === 'all'
-    ? works
-    : works.filter(w => w.genre === selectedGenre);
-
-  const uniqueGenres = [...new Set(works.map(w => w.genre))];
 
   if (loading) {
     return (
@@ -233,7 +250,7 @@ export default function Stories() {
 
             {/* Grid de Libros / Portadas */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 sm:gap-8">
-              {filteredWorks.map((work) => {
+              {paginatedWorks.map((work) => {
                 const genre = getGenreInfo(work.genre);
                 return (
                   <div
@@ -298,6 +315,37 @@ export default function Stories() {
                 );
               })}
             </div>
+
+            {/* Paginación */}
+            {totalPages_Gallery > 1 && (
+              <nav className="mt-12 flex items-center justify-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className={`px-4 py-2 rounded-md text-sm font-serif transition-all ${
+                    currentPage === 1
+                      ? isDark ? 'bg-slate-800 text-slate-600 cursor-not-allowed' : 'bg-stone-200 text-stone-400 cursor-not-allowed'
+                      : isDark ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-stone-200 text-stone-700 hover:bg-stone-300'
+                  }`}
+                >
+                  Anterior
+                </button>
+                <span className={`px-4 py-2 text-sm font-serif ${isDark ? 'text-slate-400' : 'text-stone-600'}`}>
+                  Página {currentPage} de {totalPages_Gallery}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(Math.min(totalPages_Gallery, currentPage + 1))}
+                  disabled={currentPage === totalPages_Gallery}
+                  className={`px-4 py-2 rounded-md text-sm font-serif transition-all ${
+                    currentPage === totalPages_Gallery
+                      ? isDark ? 'bg-slate-800 text-slate-600 cursor-not-allowed' : 'bg-stone-200 text-stone-400 cursor-not-allowed'
+                      : isDark ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-stone-200 text-stone-700 hover:bg-stone-300'
+                  }`}
+                >
+                  Siguiente
+                </button>
+              </nav>
+            )}
           </div>
         ) : (
           /* =================================================================== */

@@ -264,3 +264,19 @@ export function toggleBookFavorite(bookId) {
     method: 'POST',
   });
 }
+
+// Admin - PDF Files
+export function getPdfFiles(search = '', sortBy = 'date', limit = 25, offset = 0) {
+  const params = new URLSearchParams();
+  if (search) params.append('search', search);
+  if (sortBy) params.append('sortBy', sortBy);
+  params.append('limit', limit);
+  params.append('offset', offset);
+  return request(`/admin/files?${params.toString()}`);
+}
+
+export function deletePdfFile(id) {
+  return request(`/admin/files/${id}`, {
+    method: 'DELETE',
+  });
+}

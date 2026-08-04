@@ -6,6 +6,37 @@ import AdminSidebar from '../../components/AdminSidebar';
 import EditUserModal from '../../components/EditUserModal';
 import { getAllUsers, updateUserRole, getUserById, updateUserById } from '../../services/api';
 
+// Íconos SVG para una estética formal e integrada
+const SearchIcon = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+  </svg>
+);
+
+const PlusIcon = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+  </svg>
+);
+
+const EditIcon = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+  </svg>
+);
+
+const TrashIcon = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+  </svg>
+);
+
+const AlertIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+  </svg>
+);
+
 export default function Users() {
   const { isDark } = useContext(ThemeContext);
   const [users, setUsers] = useState([]);
@@ -32,10 +63,10 @@ export default function Users() {
       if (response.ok && response.users) {
         setUsers(response.users);
       } else {
-        setError('No se pudieron cargar los usuarios');
+        setError('No se pudieron cargar los usuarios.');
       }
     } catch (err) {
-      setError(err.message || 'Error al cargar usuarios');
+      setError(err.message || 'Error al cargar usuarios.');
     } finally {
       setLoading(false);
     }
@@ -45,9 +76,7 @@ export default function Users() {
     try {
       setUpdating(uid);
       await updateUserRole(uid, newRole);
-      setUsers(users.map(u =>
-        u.uid === uid ? { ...u, role: newRole } : u
-      ));
+      setUsers(users.map(u => (u.uid === uid ? { ...u, role: newRole } : u)));
     } catch (err) {
       setError('Error al actualizar rol: ' + err.message);
     } finally {
@@ -76,9 +105,7 @@ export default function Users() {
     try {
       setSavingUser(true);
       await updateUserById(editingUser.uid, updateData);
-      setUsers(users.map(u =>
-        u.uid === editingUser.uid ? { ...u, ...updateData } : u
-      ));
+      setUsers(users.map(u => (u.uid === editingUser.uid ? { ...u, ...updateData } : u)));
       setModalOpen(false);
       setEditingUser(null);
       setError('');
@@ -106,10 +133,10 @@ export default function Users() {
     }
   };
 
-  // Filtrar y paginar usuarios
-  const filteredUsers = users.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredUsers = users.filter(
+    user =>
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
@@ -125,155 +152,172 @@ export default function Users() {
 
   const formatDate = (dateString) => {
     if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('es-ES');
+    return new Date(dateString).toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
   };
 
-  const getRoleColor = (role) => {
-    if (role === 'admin') {
-      return isDark ? 'bg-red-900 text-red-200' : 'bg-red-100 text-red-800';
-    }
-    return isDark ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-800';
+  const getRoleBadge = (role) => {
+    const isAdmin = role === 'admin';
+    return isDark
+      ? isAdmin
+        ? 'bg-rose-950/80 text-rose-300 border-rose-800/50'
+        : 'bg-slate-800 text-slate-300 border-slate-700'
+      : isAdmin
+      ? 'bg-rose-50 text-rose-700 border-rose-200'
+      : 'bg-slate-100 text-slate-700 border-slate-200';
   };
 
   return (
-    <div className={`min-h-screen flex flex-col transition-colors ${isDark ? 'bg-gray-950' : 'bg-white'}`}>
+    <div className={`min-h-screen flex flex-col font-sans transition-colors ${isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50/50 text-slate-900'}`}>
       <Navbar />
 
       <div className="flex flex-1">
         <AdminSidebar />
 
-        <div className={`flex-1 flex flex-col overflow-hidden transition-colors ${isDark ? 'bg-gray-950' : 'bg-white'}`}>
-          {/* Header */}
-          <div className={`px-6 sm:px-10 py-10 sm:py-14 transition-colors ${isDark ? 'bg-gray-900 border-b border-gray-800' : 'bg-gray-50 border-b border-gray-200'}`}>
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-6 max-w-7xl mx-auto">
-              <div className="flex-1">
-                <h1 className={`text-4xl font-bold mb-3 transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                  Usuarios
-                </h1>
-                <p className={`text-base transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Gestiona todos los usuarios registrados en la plataforma. Total: {filteredUsers.length}
+        <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          {/* Header Dashboard Minimalista */}
+          <header className={`px-6 lg:px-10 py-6 border-b transition-colors ${isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-semibold tracking-tight">Gestión de Usuarios</h1>
+                <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Administra los accesos y roles de la plataforma ({filteredUsers.length} en total)
                 </p>
               </div>
-              <button className="px-6 py-2 rounded-lg font-semibold transition-colors text-sm bg-[#5D4037] text-white hover:bg-[#4A302A] whitespace-nowrap">
-                ➕ Nuevo Usuario
+              <button className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all shadow-sm bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 focus:ring-2 focus:ring-slate-400">
+                <PlusIcon />
+                Nuevo Usuario
               </button>
             </div>
-          </div>
+          </header>
 
-          {/* Content */}
-          <div className={`flex-1 px-6 sm:px-10 py-10 overflow-y-auto transition-colors ${isDark ? 'bg-gray-950' : 'bg-white'}`}>
-            <div className="max-w-7xl mx-auto">
+          {/* Área Principal de Contenido */}
+          <section className="flex-1 px-6 lg:px-10 py-8 overflow-y-auto">
+            <div className="max-w-7xl mx-auto space-y-6">
 
-              {/* Search Bar */}
-              <div className="mb-6">
+              {/* Barra de Búsqueda Integrada */}
+              <div className="relative max-w-md">
+                <div className={`absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                  <SearchIcon />
+                </div>
                 <input
                   type="text"
-                  placeholder="Buscar por nombre o email..."
+                  placeholder="Buscar por nombre o correo..."
                   value={searchTerm}
                   onChange={(e) => {
                     setSearchTerm(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className={`w-full px-4 py-2 rounded-lg border text-sm focus:outline-none focus:ring-1 transition-all ${isDark ? 'bg-gray-800 border-gray-700 text-gray-100 placeholder-gray-500 focus:ring-blue-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500'}`}
+                  className={`w-full pl-10 pr-4 py-2 text-sm rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 ${
+                    isDark
+                      ? 'bg-slate-900 border-slate-800 text-slate-100 placeholder-slate-500'
+                      : 'bg-white border-slate-200 text-slate-900 placeholder-slate-400'
+                  }`}
                 />
               </div>
 
-              {/* Error Message */}
+              {/* Notificación de Error */}
               {error && (
-                <div className={`mb-6 rounded-lg px-4 py-3 text-sm border ${isDark ? 'border-red-700 bg-red-900 text-red-200' : 'border-red-300 bg-red-100 text-red-800'}`}>
-                  {error}
+                <div className={`flex items-center gap-3 p-4 rounded-lg border text-sm ${
+                  isDark ? 'bg-rose-950/40 border-rose-900/60 text-rose-300' : 'bg-rose-50 border-rose-200 text-rose-800'
+                }`}>
+                  <AlertIcon />
+                  <span>{error}</span>
                 </div>
               )}
 
-              {/* Loading State */}
+              {/* Contenedor Principal / Estados */}
               {loading ? (
-                <div className={`rounded-lg p-12 text-center transition-colors ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'}`}>
-                  <p className={`transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Cargando usuarios...
-                  </p>
+                <div className={`rounded-xl p-16 text-center border ${isDark ? 'bg-slate-900/40 border-slate-800' : 'bg-white border-slate-200'}`}>
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-slate-500 mb-3" />
+                  <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Cargando usuarios...</p>
                 </div>
               ) : users.length === 0 ? (
-                <div className={`rounded-lg p-12 text-center transition-colors ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'}`}>
-                  <p className={`transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    No hay usuarios registrados
-                  </p>
+                <div className={`rounded-xl p-16 text-center border ${isDark ? 'bg-slate-900/40 border-slate-800' : 'bg-white border-slate-200'}`}>
+                  <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>No hay usuarios registrados en el sistema.</p>
                 </div>
               ) : (
-                /* Users Table */
-                <div className={`rounded-lg overflow-hidden flex flex-col max-h-[600px] transition-colors ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'}`}>
-                  <div className="overflow-x-auto overflow-y-auto flex-1">
-                    <table className="w-full">
-                      <thead className={`sticky top-0 transition-colors ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
-                        <tr className={isDark ? 'bg-gray-800 border-b border-gray-700' : 'bg-gray-50 border-b border-gray-200'}>
-                          <th className={`px-6 py-4 text-left text-sm font-semibold transition-colors ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                            Nombre
-                          </th>
-                          <th className={`px-6 py-4 text-left text-sm font-semibold transition-colors ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                            Email
-                          </th>
-                          <th className={`px-6 py-4 text-left text-sm font-semibold transition-colors ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                            Rol
-                          </th>
-                          <th className={`px-6 py-4 text-left text-sm font-semibold transition-colors ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                            Fecha de Registro
-                          </th>
-                          <th className={`px-6 py-4 text-left text-sm font-semibold transition-colors ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                            Estado
-                          </th>
-                          <th className={`px-6 py-4 text-left text-sm font-semibold transition-colors ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                            Acciones
-                          </th>
+                /* Tabla de Usuarios Estilizada */
+                <div className={`rounded-xl border shadow-sm overflow-hidden transition-colors ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className={`border-b text-xs font-semibold uppercase tracking-wider ${
+                          isDark ? 'bg-slate-900/80 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'
+                        }`}>
+                          <th className="px-6 py-3.5">Usuario</th>
+                          <th className="px-6 py-3.5">Rol</th>
+                          <th className="px-6 py-3.5">Fecha Registro</th>
+                          <th className="px-6 py-3.5">Estado</th>
+                          <th className="px-6 py-3.5 text-right">Acciones</th>
                         </tr>
                       </thead>
-                      <tbody>
+                      <tbody className={`divide-y text-sm ${isDark ? 'divide-slate-800' : 'divide-slate-100'}`}>
                         {paginatedUsers.map((user) => (
-                          <tr key={user.uid} className={isDark ? 'border-b border-gray-800 hover:bg-gray-800' : 'border-b border-gray-200 hover:bg-gray-50'}>
-                            <td className={`px-6 py-4 text-sm font-semibold transition-colors ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
-                              {user.name}
+                          <tr key={user.uid} className={`transition-colors ${isDark ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50/80'}`}>
+                            {/* Nombre y Email */}
+                            <td className="px-6 py-4">
+                              <div className="font-medium">{user.name}</div>
+                              <div className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{user.email}</div>
                             </td>
-                            <td className={`px-6 py-4 text-sm transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                              {user.email}
-                            </td>
-                            <td className={`px-6 py-4 text-sm`}>
+
+                            {/* Selector de Rol Elegante */}
+                            <td className="px-6 py-4">
                               <select
                                 value={user.role}
                                 onChange={(e) => handleRoleChange(user.uid, e.target.value)}
                                 disabled={updating === user.uid}
-                                className={`px-3 py-1 rounded-full text-xs font-semibold cursor-pointer transition-colors ${getRoleColor(user.role)} ${updating === user.uid ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                className={`text-xs font-medium px-2.5 py-1 rounded-md border focus:outline-none cursor-pointer transition-all ${getRoleBadge(user.role)} ${
+                                  updating === user.uid ? 'opacity-50 cursor-not-allowed' : ''
+                                }`}
                               >
-                                <option value="collaborator">Colaborador</option>
-                                <option value="admin">Admin</option>
+                                <option value="collaborator" className={isDark ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'}>Colaborador</option>
+                                <option value="admin" className={isDark ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'}>Admin</option>
                               </select>
                             </td>
-                            <td className={`px-6 py-4 text-sm transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+
+                            {/* Fecha */}
+                            <td className={`px-6 py-4 whitespace-nowrap text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                               {formatDate(user.createdAt)}
                             </td>
-                            <td className={`px-6 py-4 text-sm`}>
-                              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+
+                            {/* Badge Estado con indicador de punto */}
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
                                 user.status === 'Activo'
-                                  ? isDark
-                                    ? 'bg-green-900 text-green-200'
-                                    : 'bg-green-100 text-green-800'
-                                  : isDark
-                                    ? 'bg-gray-700 text-gray-300'
-                                    : 'bg-gray-200 text-gray-700'
+                                  ? isDark ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-800/50' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  : isDark ? 'bg-slate-800 text-slate-400 border border-slate-700' : 'bg-slate-100 text-slate-600 border border-slate-200'
                               }`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${user.status === 'Activo' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                                 {user.status}
                               </span>
                             </td>
-                            <td className={`px-6 py-4 text-sm space-y-2`}>
-                              <button
-                                onClick={() => handleEditClick(user.uid)}
-                                className={`block w-full px-3 py-2 rounded text-sm font-semibold transition-colors ${isDark ? 'bg-blue-900 text-blue-200 hover:bg-blue-800' : 'bg-blue-100 text-blue-800 hover:bg-blue-200'}`}
-                              >
-                                ✏️ Editar
-                              </button>
-                              <button
-                                onClick={() => handleDeleteClick(user.uid, user.name)}
-                                className={`block w-full px-3 py-2 rounded text-sm font-semibold transition-colors ${isDark ? 'bg-red-900 text-red-200 hover:bg-red-800' : 'bg-red-100 text-red-800 hover:bg-red-200'}`}
-                              >
-                                🗑️ Eliminar
-                              </button>
+
+                            {/* Botones de Acción Inline */}
+                            <td className="px-6 py-4 whitespace-nowrap text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <button
+                                  onClick={() => handleEditClick(user.uid)}
+                                  title="Editar usuario"
+                                  className={`p-2 rounded-lg transition-colors ${
+                                    isDark ? 'hover:bg-slate-800 text-slate-300 hover:text-white' : 'hover:bg-slate-100 text-slate-600 hover:text-slate-900'
+                                  }`}
+                                >
+                                  <EditIcon />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteClick(user.uid, user.name)}
+                                  title="Eliminar usuario"
+                                  className={`p-2 rounded-lg transition-colors ${
+                                    isDark ? 'hover:bg-rose-950/50 text-rose-400' : 'hover:bg-rose-50 text-rose-600'
+                                  }`}
+                                >
+                                  <TrashIcon />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -283,36 +327,38 @@ export default function Users() {
 
                   {/* Paginación */}
                   {totalPages > 1 && (
-                    <div className={`flex items-center justify-between px-6 py-4 border-t transition-colors ${isDark ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-gray-50'}`}>
-                      <div className={`text-sm transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                        Mostrando {startIndex + 1} a {Math.min(startIndex + usersPerPage, filteredUsers.length)} de {filteredUsers.length}
+                    <div className={`flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 border-t ${
+                      isDark ? 'border-slate-800 bg-slate-900/50' : 'border-slate-200 bg-slate-50/50'
+                    }`}>
+                      <div className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                        Mostrando <span className="font-medium text-slate-700 dark:text-slate-300">{startIndex + 1}</span> a{' '}
+                        <span className="font-medium text-slate-700 dark:text-slate-300">{Math.min(startIndex + usersPerPage, filteredUsers.length)}</span> de{' '}
+                        <span className="font-medium text-slate-700 dark:text-slate-300">{filteredUsers.length}</span> resultados
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => handlePageChange(currentPage - 1)}
                           disabled={currentPage === 1}
-                          className={`px-3 py-1 rounded text-sm font-semibold transition-colors ${
+                          className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors border ${
                             currentPage === 1
-                              ? isDark
-                                ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
-                                : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                              ? 'opacity-40 cursor-not-allowed border-transparent'
                               : isDark
-                                ? 'bg-gray-700 text-gray-200 hover:bg-gray-600'
-                                : 'bg-gray-300 text-gray-800 hover:bg-gray-400'
+                              ? 'border-slate-700 hover:bg-slate-800 text-slate-300'
+                              : 'border-slate-200 hover:bg-white text-slate-700 shadow-sm'
                           }`}
                         >
-                          ← Anterior
+                          Anterior
                         </button>
                         {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                           <button
                             key={page}
                             onClick={() => handlePageChange(page)}
-                            className={`px-3 py-1 rounded text-sm font-semibold transition-colors ${
+                            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                               currentPage === page
-                                ? 'bg-[#5D4037] text-white'
+                                ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-sm'
                                 : isDark
-                                  ? 'bg-gray-700 text-gray-200 hover:bg-gray-600'
-                                  : 'bg-gray-300 text-gray-800 hover:bg-gray-400'
+                                ? 'hover:bg-slate-800 text-slate-400'
+                                : 'hover:bg-slate-100 text-slate-600'
                             }`}
                           >
                             {page}
@@ -321,17 +367,15 @@ export default function Users() {
                         <button
                           onClick={() => handlePageChange(currentPage + 1)}
                           disabled={currentPage === totalPages}
-                          className={`px-3 py-1 rounded text-sm font-semibold transition-colors ${
+                          className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors border ${
                             currentPage === totalPages
-                              ? isDark
-                                ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
-                                : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                              ? 'opacity-40 cursor-not-allowed border-transparent'
                               : isDark
-                                ? 'bg-gray-700 text-gray-200 hover:bg-gray-600'
-                                : 'bg-gray-300 text-gray-800 hover:bg-gray-400'
+                              ? 'border-slate-700 hover:bg-slate-800 text-slate-300'
+                              : 'border-slate-200 hover:bg-white text-slate-700 shadow-sm'
                           }`}
                         >
-                          Siguiente →
+                          Siguiente
                         </button>
                       </div>
                     </div>
@@ -339,8 +383,8 @@ export default function Users() {
                 </div>
               )}
             </div>
-          </div>
-        </div>
+          </section>
+        </main>
       </div>
 
       {/* Modal de Edición */}
@@ -356,39 +400,44 @@ export default function Users() {
         isLoading={savingUser}
       />
 
-      {/* Modal de Confirmación de Eliminación */}
+      {/* Modal de Confirmación de Eliminación Renovado */}
       {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setDeleteConfirm(null)} />
-          <div className={`relative z-50 w-full max-w-sm rounded-lg shadow-lg transition-colors ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
-            <div className={`flex items-center justify-between px-6 py-4 border-b transition-colors ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-              <h2 className={`text-lg font-bold transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                ⚠️ Confirmar eliminación
-              </h2>
-            </div>
-            <div className="p-6 space-y-4">
-              <p className={`transition-colors ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                ¿Estás seguro de que deseas eliminar a <span className="font-bold">{deleteConfirm.name}</span>?
-              </p>
-              <p className={`text-sm transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                Esta acción no se puede deshacer.
-              </p>
-              <div className="flex gap-3 pt-4">
-                <button
-                  onClick={() => setDeleteConfirm(null)}
-                  disabled={updating === deleteConfirm.uid}
-                  className={`flex-1 px-4 py-2 rounded text-sm font-semibold transition-colors ${isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'} disabled:opacity-50 disabled:cursor-not-allowed`}
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleConfirmDelete}
-                  disabled={updating === deleteConfirm.uid}
-                  className="flex-1 px-4 py-2 rounded text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {updating === deleteConfirm.uid ? 'Eliminando...' : 'Eliminar'}
-                </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" onClick={() => setDeleteConfirm(null)} />
+          <div className={`relative z-10 w-full max-w-sm rounded-xl border shadow-xl p-6 transition-all ${
+            isDark ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900'
+          }`}>
+            <div className="flex items-center gap-3 text-rose-500 mb-3">
+              <div className={`p-2 rounded-lg ${isDark ? 'bg-rose-950/50' : 'bg-rose-50'}`}>
+                <AlertIcon />
               </div>
+              <h3 className="text-base font-semibold">Confirmar eliminación</h3>
+            </div>
+            
+            <p className={`text-sm ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+              ¿Estás seguro de que deseas eliminar a <span className="font-semibold text-slate-900 dark:text-slate-100">{deleteConfirm.name}</span>?
+            </p>
+            <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              Esta acción es irreversible y eliminará todos los permisos del usuario.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 mt-6">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                disabled={updating === deleteConfirm.uid}
+                className={`px-4 py-2 rounded-lg text-xs font-medium border transition-colors ${
+                  isDark ? 'border-slate-700 hover:bg-slate-800 text-slate-300' : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                }`}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={updating === deleteConfirm.uid}
+                className="px-4 py-2 rounded-lg text-xs font-medium text-white bg-rose-600 hover:bg-rose-700 transition-colors shadow-sm disabled:opacity-50"
+              >
+                {updating === deleteConfirm.uid ? 'Eliminando...' : 'Eliminar'}
+              </button>
             </div>
           </div>
         </div>
