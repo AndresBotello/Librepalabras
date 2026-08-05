@@ -49,8 +49,8 @@ export default function Navbar() {
             <Link to="/concursos/cuento-corto" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037]'}`}>
               Concurso
             </Link>
-            <Link to="#" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037]'}`}>
-              Sobre
+            <Link to="/poliversia" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037]'}`}>
+              Poliversia
             </Link>
           </div>
 

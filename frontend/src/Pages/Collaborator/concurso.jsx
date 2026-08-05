@@ -1,10 +1,11 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { CheckCircle2, Image as ImageIcon, Loader2, Lock, PenLine } from 'lucide-react';
+import { CheckCircle2, Image as ImageIcon, Loader2, Lock, PenLine, Star } from 'lucide-react';
 import CollaboratorSidebar from '../../components/CollaboratorSidebar';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { ThemeContext } from '../../context/ThemeContext';
 import {
+  CONTEST_MAX_SCORE,
   CONTEST_STATUS_LABELS,
   MAX_IMAGE_BYTES,
   formatBytes,
@@ -17,6 +18,10 @@ import {
 const MIN_CONTENT_LENGTH = 200;
 const MAX_CONTENT_LENGTH = 25000;
 const MAX_TITLE_LENGTH = 140;
+
+function formatScore(value) {
+  return Number(value || 0).toFixed(1);
+}
 
 export default function CollaboratorConcurso() {
   const { isDark } = useContext(ThemeContext);
@@ -196,9 +201,51 @@ export default function CollaboratorConcurso() {
                       </p>
                     )}
 
-                    <p className={`mt-3 text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                      Las notas y los comentarios del jurado son internos y no se muestran aquí.
-                    </p>
+                    {story.totalRatings > 0 ? (
+                      <div className={`mt-4 pt-4 border-t ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
+                        <div className="flex flex-wrap items-center gap-2 mb-3">
+                          <span className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                            Calificación del jurado
+                          </span>
+                          <span className={`inline-flex items-center gap-1 text-sm font-bold ${isDark ? 'text-amber-400' : 'text-[#5D4037]'}`}>
+                            <Star className="w-4 h-4 fill-current" />
+                            {formatScore(story.averageScore)} / {CONTEST_MAX_SCORE.toFixed(1)}
+                            <span className={`font-normal text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                              ({story.totalRatings} {story.totalRatings === 1 ? 'juez' : 'jueces'})
+                            </span>
+                          </span>
+                        </div>
+
+                        <div className="space-y-2">
+                          {(story.ratings || []).map((rating) => (
+                            <div
+                              key={rating.id}
+                              className={`flex flex-wrap items-start gap-3 rounded-lg px-3 py-2 ${
+                                isDark ? 'bg-gray-800/60' : 'bg-white border border-gray-200'
+                              }`}
+                            >
+                              <span className={`font-bold tabular-nums text-sm ${isDark ? 'text-amber-400' : 'text-[#5D4037]'}`}>
+                                {formatScore(rating.score)}
+                              </span>
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-xs font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                                  {rating.judgeName}
+                                </p>
+                                {rating.comment && (
+                                  <p className={`text-xs mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                                    {rating.comment}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className={`mt-3 text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                        Todavía ningún juez ha calificado tu cuento.
+                      </p>
+                    )}
                   </div>
                 )}
 

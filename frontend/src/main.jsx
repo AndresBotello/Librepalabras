@@ -5,12 +5,14 @@ import './index.css'
 import { ThemeProvider } from './context/ThemeContext'
 import { AuthProvider } from './context/AuthContext.jsx'
 import AppRoutes from './Routes/AppRoutes.jsx'
+import ScrollToTop from './components/ScrollToTop.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ThemeProvider>
       <AuthProvider>
         <Router>
+          <ScrollToTop />
           <AppRoutes />
         </Router>
       </AuthProvider>

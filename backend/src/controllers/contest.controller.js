@@ -45,13 +45,31 @@ function toPublicStory(story) {
   };
 }
 
-/** Lo que ve el autor de su propio cuento: sin notas ni comentarios del jurado. */
-function toAuthorStory(story) {
+/**
+ * Una calificación vista por el autor. Lista blanca igual que el resto: se
+ * devuelven la nota y el comentario, pero nunca el `judgeId`, para no exponer
+ * el uid de una cuenta interna.
+ */
+function toAuthorRating(rating) {
+  return {
+    id: rating.id,
+    judgeName: rating.judgeName,
+    score: rating.score,
+    comment: rating.comment || '',
+    updatedAt: rating.updatedAt,
+  };
+}
+
+/** Lo que ve el autor de su propio cuento, con las notas que le puso el jurado. */
+function toAuthorStory(story, ratings = []) {
   return {
     ...toPublicStory(story),
     status: story.status,
     isPublished: Boolean(story.isPublished),
     updatedAt: story.updatedAt,
+    averageScore: story.averageScore || 0,
+    totalRatings: story.totalRatings || 0,
+    ratings: ratings.map(toAuthorRating),
   };
 }
 
@@ -178,9 +196,15 @@ export async function getMyStory(req, res) {
   try {
     const story = await findStoryByAuthor(req.auth.uid);
 
+    if (!story) {
+      return res.json({ ok: true, story: null });
+    }
+
+    const ratings = await listRatingsForStory(story.id);
+
     return res.json({
       ok: true,
-      story: story ? toAuthorStory(story) : null,
+      story: toAuthorStory(story, ratings),
     });
   } catch (error) {
     console.error('Error al obtener tu cuento:', error);
@@ -226,11 +250,12 @@ export async function updateMyStory(req, res) {
     }
 
     const updated = await updateStory(story.id, updates);
+    const ratings = await listRatingsForStory(updated.id);
 
     return res.json({
       ok: true,
       message: 'Cuento actualizado',
-      story: toAuthorStory(updated),
+      story: toAuthorStory(updated, ratings),
     });
   } catch (error) {
     console.error('Error al actualizar el cuento:', error);

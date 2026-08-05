@@ -221,7 +221,7 @@ export default function Home() {
                     Nuestra biblioteca digital de obras completas, antologías inéditas y narrativa local.
                   </p>
                 </div>
-                <a href="#" className="inline-flex items-center gap-2 text-sm font-bold text-amber-600 dark:text-amber-400 group-hover:gap-4 transition-all duration-300">
+                <a href="/stories" className="inline-flex items-center gap-2 text-sm font-bold text-amber-600 dark:text-amber-400 group-hover:gap-4 transition-all duration-300">
                   Ver Catálogo Completo <span className="text-lg">→</span>
                 </a>
               </div>
@@ -352,15 +352,15 @@ export default function Home() {
                 </p>
 
                 <div className="flex flex-wrap gap-5">
-                  <button className="group relative bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold px-8 py-4 rounded-xl transition-all duration-300 shadow-lg shadow-amber-500/20 hover:shadow-amber-400/40 hover:-translate-y-1 overflow-hidden">
+                  <Link
+                    to="/login"
+                    className="group relative bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold px-8 py-4 rounded-xl transition-all duration-300 shadow-lg shadow-amber-500/20 hover:shadow-amber-400/40 hover:-translate-y-1 overflow-hidden"
+                  >
                     <span className="relative z-10 flex items-center gap-2">
                       Postular Texto
                       <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
                     </span>
-                  </button>
-                  <button className="border border-stone-700 hover:bg-stone-800/50 hover:border-stone-600 text-stone-200 font-medium px-8 py-4 rounded-xl transition-all duration-300 hover:-translate-y-1">
-                    Criterios Editoriales
-                  </button>
+                  </Link>
                 </div>
               </div>
             </div>
