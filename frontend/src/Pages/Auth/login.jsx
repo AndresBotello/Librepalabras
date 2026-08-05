@@ -6,11 +6,12 @@ import Footer from '../../components/Footer';
 import { ThemeContext } from '../../context/ThemeContext';
 import { loginWithEmail, loginWithGoogle, registerWithEmail } from '../../services/auth';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { homeRouteForRole } from '../../utils/roles';
 import gendersData from '../../config/genders.json';
 
 export default function Login({ initialMode = 'login' }) {
   const navigate = useNavigate();
-  const { refreshAuth } = useAuth();
+  const { applySession, refreshAuth } = useAuth();
   const [isLogin, setIsLogin] = useState(initialMode !== 'register');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
@@ -106,8 +107,10 @@ export default function Login({ initialMode = 'login' }) {
     setIsSubmitting(true);
 
     try {
+      let sessionUser;
+
       if (isLogin) {
-        await loginWithEmail(formData.email, formData.password, rememberMe);
+        sessionUser = await loginWithEmail(formData.email, formData.password, rememberMe);
       } else {
         const profileData = {
           nombres: formData.nombres,
@@ -118,13 +121,13 @@ export default function Login({ initialMode = 'login' }) {
           genero: formData.genero,
         };
 
-        await registerWithEmail(formData.email, formData.password, profileData, rememberMe);
+        sessionUser = await registerWithEmail(formData.email, formData.password, profileData, rememberMe);
       }
 
-      const sessionUser = await refreshAuth();
-      const role = sessionUser?.role || 'collaborator';
+      // Si por lo que sea el backend no devolvió perfil, caemos al camino largo.
+      const currentUser = sessionUser ? applySession(sessionUser) : await refreshAuth();
 
-      navigate(role === 'admin' ? '/admin/dashboard' : '/collaborator/dashboard');
+      navigate(homeRouteForRole(currentUser?.role));
     } catch (error) {
       setStatusMessage(error.message || 'No se pudo conectar con el servidor.');
     } finally {
@@ -137,11 +140,11 @@ export default function Login({ initialMode = 'login' }) {
     setStatusMessage('');
 
     try {
-      const user = await loginWithGoogle(rememberMe);
-      const sessionUser = await refreshAuth();
-      const role = sessionUser?.role || user?.role || 'collaborator';
+      const sessionUser = await loginWithGoogle(rememberMe);
+      const currentUser = sessionUser ? applySession(sessionUser) : await refreshAuth();
+
       setStatusMessage('Google conectado correctamente.');
-      navigate(role === 'admin' ? '/admin/dashboard' : '/collaborator/dashboard');
+      navigate(homeRouteForRole(currentUser?.role));
     } catch (error) {
       setStatusMessage(error.message || 'No se pudo iniciar sesión con Google.');
     } finally {

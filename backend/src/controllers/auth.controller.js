@@ -1,6 +1,6 @@
 import { adminAuth, authSessionMaxAgeMs, firebaseAdminReady } from '../config/firebaseAdmin.js';
 import { upsertUserProfile, updateUserProfile } from '../services/user.service.js';
-import { invalidateUserCache } from '../middlewares/auth.middleware.js';
+import { invalidateUserCache, primeUserCache } from '../middlewares/auth.middleware.js';
 
 const sessionCookieOptions = {
   httpOnly: true,
@@ -29,28 +29,35 @@ export async function createSession(req, res) {
     }
 
     const decodedClaims = await adminAuth.verifyIdToken(idToken);
-    const sessionCookie = await adminAuth.createSessionCookie(idToken, {
-      expiresIn: authSessionMaxAgeMs,
-    });
+
+    // La cookie del usuario anterior se sobrescribe al asignar la nueva,
+    // pero el perfil cacheado en memoria hay que invalidarlo a mano.
+    invalidateUserCache(decodedClaims.uid);
+
+    const additionalData = profile ? validateAndSanitizeProfile(profile) : {};
+
+    // Emitir la cookie y escribir el perfil son independientes entre sí:
+    // en paralelo el login cuesta un viaje de red menos.
+    const [sessionCookie, userProfile] = await Promise.all([
+      adminAuth.createSessionCookie(idToken, { expiresIn: authSessionMaxAgeMs }),
+      upsertUserProfile(decodedClaims, additionalData),
+    ]);
 
     res.cookie('session', sessionCookie, sessionCookieOptions);
 
-    let additionalData = {};
-    if (profile) {
-      additionalData = validateAndSanitizeProfile(profile);
-    }
+    const responseUser = userProfile || {
+      uid: decodedClaims.uid,
+      email: decodedClaims.email || null,
+      photoURL: decodedClaims.picture || null,
+      role: 'collaborator',
+    };
 
-    const userProfile = await upsertUserProfile(decodedClaims, additionalData);
+    primeUserCache(decodedClaims.uid, responseUser);
 
     return res.json({
       ok: true,
       message: 'Sesión creada correctamente',
-      user: userProfile || {
-        uid: decodedClaims.uid,
-        email: decodedClaims.email || null,
-        photoURL: decodedClaims.picture || null,
-        role: 'collaborator',
-      },
+      user: responseUser,
     });
   } catch (error) {
     return res.status(401).json({
@@ -114,6 +121,7 @@ export async function getCurrentUser(req, res) {
 
 export async function logout(req, res) {
   res.clearCookie('session', sessionCookieOptions);
+  invalidateUserCache(req.auth?.uid);
 
   return res.json({
     ok: true,

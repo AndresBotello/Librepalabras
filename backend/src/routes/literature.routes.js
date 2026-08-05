@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticateRequest, attachUserIfPresent } from '../middlewares/auth.middleware.js';
-import { authorizeRoles } from '../middlewares/role.middleware.js';
+import { authorizeRoles, AUTHOR_ROLES } from '../middlewares/role.middleware.js';
 import { commentRateLimiter, likeRateLimiter } from '../middlewares/rateLimiter.middleware.js';
 import {
   createWork,
@@ -26,16 +26,17 @@ router.get('/genres', getGenres);
 router.get('/approved', getApprovedWorks);
 router.get('/authors/all', getAllAuthors);
 
-// Rutas autenticadas - RUTAS ESPECÍFICAS ANTES DE PARÁMETROS
-router.post('/', authenticateRequest, createWork);
-router.get('/user/my-works', authenticateRequest, getMyWorks);
+// Autoría: crear y gestionar obra propia. Antes solo pedían sesión iniciada,
+// así que cualquier usuario autenticado podía publicar; ahora está explícito.
+router.post('/', authenticateRequest, authorizeRoles(AUTHOR_ROLES), createWork);
+router.get('/user/my-works', authenticateRequest, authorizeRoles(AUTHOR_ROLES), getMyWorks);
 
 // Rutas solo para admins
 router.get('/admin/pending', authenticateRequest, authorizeRoles(['admin']), getPendingWorks);
 router.patch('/:id/review', authenticateRequest, authorizeRoles(['admin']), reviewWork);
 
 // Rutas con parámetro /:id - AL FINAL
-router.patch('/:id', authenticateRequest, updateWork);
+router.patch('/:id', authenticateRequest, authorizeRoles(AUTHOR_ROLES), updateWork);
 router.post('/:id/rate', authenticateRequest, addRating);
 router.post('/:id/comment', authenticateRequest, commentRateLimiter, addComment);
 router.delete('/:id/comment/:commentId', authenticateRequest, deleteComment);

@@ -1,4 +1,10 @@
-import { uploadImage, uploadProfilePhoto as uploadProfilePhotoService, uploadPdf } from '../services/upload.service.js';
+import {
+  uploadImage,
+  uploadProfilePhoto as uploadProfilePhotoService,
+  uploadPdf,
+  uploadMagazinePdf as uploadMagazinePdfService,
+} from '../services/upload.service.js';
+import { MAX_PDF_BYTES, formatBytes, looksLikePdf, sanitizeFileName } from '../utils/files.js';
 
 export async function uploadCover(req, res) {
   if (!req.file) {
@@ -15,7 +21,8 @@ export async function uploadCover(req, res) {
 
   try {
     const result = await uploadImage(req.file, 'covers');
-    return res.json({ ok: true, url: result.url });
+    // `publicId` permite borrar la imagen anterior al reemplazarla.
+    return res.json({ ok: true, url: result.url, publicId: result.publicId });
   } catch (error) {
     console.error('Error uploadCover:', error);
     return res.status(500).json({ ok: false, message: error.message });
@@ -40,6 +47,44 @@ export async function uploadProfilePhoto(req, res) {
     return res.json({ ok: true, url: result.url });
   } catch (error) {
     console.error('Error uploadProfilePhoto:', error);
+    return res.status(500).json({ ok: false, message: error.message });
+  }
+}
+
+export async function uploadMagazinePdf(req, res) {
+  if (!req.file) {
+    return res.status(400).json({ ok: false, message: 'No se recibió archivo' });
+  }
+
+  // Triple comprobación: mimetype declarado, extensión y firma real del archivo.
+  // Las dos primeras las controla el cliente; la tercera no se puede falsear.
+  const hasPdfExtension = /\.pdf$/i.test(req.file.originalname || '');
+
+  if (req.file.mimetype !== 'application/pdf' || !hasPdfExtension || !looksLikePdf(req.file.buffer)) {
+    return res.status(400).json({ ok: false, message: 'El archivo debe ser un PDF válido' });
+  }
+
+  if (req.file.size > MAX_PDF_BYTES) {
+    return res.status(400).json({
+      ok: false,
+      message: `El PDF no puede pesar más de ${formatBytes(MAX_PDF_BYTES)}`,
+    });
+  }
+
+  try {
+    const publicId = sanitizeFileName(req.file.originalname);
+    const result = await uploadMagazinePdfService(req.file, publicId);
+
+    return res.json({
+      ok: true,
+      url: result.url,
+      publicId: result.publicId,
+      size: result.bytes ?? req.file.size,
+      pages: result.pages,
+      fileName: `${publicId}.pdf`,
+    });
+  } catch (error) {
+    console.error('Error uploadMagazinePdf:', error);
     return res.status(500).json({ ok: false, message: error.message });
   }
 }

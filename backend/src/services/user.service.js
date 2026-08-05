@@ -1,4 +1,4 @@
-import { adminDb, defaultUserRole, getRoleForEmail } from '../config/firebaseAdmin.js';
+import { adminDb, defaultUserRole, getRoleForEmail, isValidRole } from '../config/firebaseAdmin.js';
 
 function usersCollection() {
   if (!adminDb) {
@@ -81,7 +81,7 @@ export async function setUserRole(uid, role) {
     return null;
   }
 
-  const normalizedRole = role === 'admin' ? 'admin' : 'collaborator';
+  const normalizedRole = isValidRole(role) ? role : defaultUserRole;
   await usersCollection().doc(uid).set({
     role: normalizedRole,
     updatedAt: new Date().toISOString(),

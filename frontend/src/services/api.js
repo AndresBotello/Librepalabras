@@ -1,14 +1,24 @@
 const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api').replace(/\/$/, '');
 
 async function request(path, options = {}) {
-  const response = await fetch(`${baseUrl}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {}),
-    },
-    credentials: 'include',
-    ...options,
-  });
+  let response;
+
+  try {
+    response = await fetch(`${baseUrl}${path}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.headers || {}),
+      },
+      credentials: 'include',
+      // Las respuestas dependen de la sesión, pero el caché del navegador
+      // solo distingue por URL: sin esto puede servir los datos de otro usuario.
+      cache: 'no-store',
+      ...options,
+    });
+  } catch {
+    // fetch solo lanza por fallos de red, no por códigos de error HTTP.
+    throw new Error('No se pudo conectar con el servidor. Revisa tu conexión a internet.');
+  }
 
   const data = await response.json().catch(() => null);
 
@@ -17,6 +27,66 @@ async function request(path, options = {}) {
   }
 
   return data;
+}
+
+export const MAX_PDF_BYTES = 10 * 1024 * 1024;
+export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+export function formatBytes(bytes) {
+  if (!bytes) return '0 B';
+
+  const units = ['B', 'KB', 'MB', 'GB'];
+  const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+
+  return `${(bytes / 1024 ** exponent).toFixed(exponent === 0 ? 0 : 1)} ${units[exponent]}`;
+}
+
+/**
+ * `fetch` no expone el progreso de subida, así que para archivos grandes usamos
+ * XHR: es la única forma de tener una barra de progreso real y no un spinner
+ * indeterminado durante toda la subida.
+ */
+function uploadWithProgress(path, file, onProgress) {
+  return new Promise((resolve, reject) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${baseUrl}${path}`);
+    xhr.withCredentials = true;
+    xhr.setRequestHeader('Accept', 'application/json');
+
+    xhr.upload.addEventListener('progress', (event) => {
+      if (event.lengthComputable && onProgress) {
+        onProgress(Math.round((event.loaded / event.total) * 100));
+      }
+    });
+
+    xhr.addEventListener('load', () => {
+      let data = null;
+      try {
+        data = JSON.parse(xhr.responseText);
+      } catch {
+        data = null;
+      }
+
+      if (xhr.status >= 200 && xhr.status < 300 && data?.ok) {
+        resolve(data);
+      } else {
+        reject(new Error(data?.message || `Error HTTP ${xhr.status}`));
+      }
+    });
+
+    xhr.addEventListener('error', () => {
+      reject(new Error('No se pudo conectar con el servidor durante la subida.'));
+    });
+
+    xhr.addEventListener('abort', () => {
+      reject(new Error('Subida cancelada.'));
+    });
+
+    xhr.send(formData);
+  });
 }
 
 export async function uploadCover(file) {
@@ -262,6 +332,111 @@ export function deletePromotionalBook(id) {
 export function toggleBookFavorite(bookId) {
   return request(`/promotional-books/${bookId}/favorite`, {
     method: 'POST',
+  });
+}
+
+// Revista Poliversia
+export function getPoliversiaEditions({ includeDrafts = false } = {}) {
+  return request(includeDrafts ? '/poliversia?includeDrafts=true' : '/poliversia');
+}
+
+export function getPoliversiaEdition(id) {
+  return request(`/poliversia/${id}`);
+}
+
+export function createPoliversiaEdition(payload) {
+  return request('/poliversia', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updatePoliversiaEdition(id, payload) {
+  return request(`/poliversia/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deletePoliversiaEdition(id) {
+  return request(`/poliversia/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export function uploadMagazinePdf(file, onProgress) {
+  return uploadWithProgress('/upload/magazine-pdf', file, onProgress);
+}
+
+export function uploadCoverWithProgress(file, onProgress) {
+  return uploadWithProgress('/upload/cover', file, onProgress);
+}
+
+// Concurso de Cuento Corto
+export const CONTEST_MIN_SCORE = 0;
+export const CONTEST_MAX_SCORE = 5;
+
+export const CONTEST_STATUS_LABELS = {
+  enviado: 'Enviado',
+  en_evaluacion: 'En evaluación',
+  calificado: 'Calificado',
+  publicado: 'Publicado',
+};
+
+export function getPublishedContestStories() {
+  return request('/contest/published');
+}
+
+export function getPublishedContestStory(id) {
+  return request(`/contest/published/${id}`);
+}
+
+export function getMyContestStory() {
+  return request('/contest/mine');
+}
+
+export function submitContestStory(payload) {
+  return request('/contest', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateMyContestStory(id, payload) {
+  return request(`/contest/mine/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getContestPanel() {
+  return request('/contest/panel');
+}
+
+export function rateContestStory(id, { score, comment }) {
+  return request(`/contest/${id}/rating`, {
+    method: 'POST',
+    body: JSON.stringify({ score, comment }),
+  });
+}
+
+export function setContestStoryPublication(id, isPublished) {
+  return request(`/contest/${id}/publication`, {
+    method: 'PATCH',
+    body: JSON.stringify({ isPublished }),
+  });
+}
+
+export function setContestStoryEvaluation(id, evaluationClosed) {
+  return request(`/contest/${id}/evaluation`, {
+    method: 'PATCH',
+    body: JSON.stringify({ evaluationClosed }),
+  });
+}
+
+export function deleteContestStory(id) {
+  return request(`/contest/${id}`, {
+    method: 'DELETE',
   });
 }
 

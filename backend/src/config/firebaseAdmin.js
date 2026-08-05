@@ -34,6 +34,14 @@ export const adminAuth = adminApp ? getAuth(adminApp) : null;
 export const adminDb = adminApp ? getFirestore(adminApp) : null;
 export const authSessionMaxAgeMs = Number(process.env.AUTH_SESSION_MAX_AGE_MS || 5 * 24 * 60 * 60 * 1000);
 export const defaultUserRole = 'collaborator';
+
+// Roles del sistema. `judge` califica y publica cuentos del concurso, pero no
+// puede subir obras ni gestionar la plataforma.
+export const VALID_ROLES = ['admin', 'collaborator', 'judge'];
+
+export function isValidRole(role) {
+  return VALID_ROLES.includes(role);
+}
 export const adminEmails = (process.env.ADMIN_EMAILS || '')
   .split(',')
   .map((email) => email.trim().toLowerCase())

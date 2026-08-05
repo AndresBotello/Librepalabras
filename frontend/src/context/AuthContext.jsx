@@ -9,6 +9,14 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Para cuando ya tenemos el perfil en la mano (respuesta de /auth/session):
+  // evita un GET /auth/me redundante justo después de iniciar sesión.
+  const applySession = useCallback((sessionUser) => {
+    setUser(sessionUser || null);
+    setLoading(false);
+    return sessionUser || null;
+  }, []);
+
   const refreshAuth = useCallback(async () => {
     try {
       const response = await getCurrentSession();
@@ -36,7 +44,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, refreshAuth, logout, isAuthenticated: Boolean(user) }}>
+    <AuthContext.Provider value={{ user, loading, refreshAuth, applySession, logout, isAuthenticated: Boolean(user) }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,4 +1,5 @@
 import React, { useContext, useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { ThemeContext } from '../../context/ThemeContext';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
@@ -172,12 +173,14 @@ export default function Home() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               
               {/* Card Principal */}
-              <div className={`lg:col-span-7 group relative overflow-hidden rounded-3xl border transition-all duration-500 hover:shadow-2xl hover:shadow-amber-900/10 shimmer-card ${
+              <Link
+                to="/poliversia"
+                className={`block lg:col-span-7 group relative overflow-hidden rounded-3xl border transition-all duration-500 hover:shadow-2xl hover:shadow-amber-900/10 shimmer-card ${
                 isDark ? 'bg-stone-900/40 border-stone-800 hover:border-amber-500/40' : 'bg-white border-stone-200 hover:border-amber-600/40'
               }`}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 h-full">
                   <div className="relative h-72 sm:h-auto overflow-hidden">
-                    <img src="https://images.unsplash.com/photo-1507842747716-6fed3c493e2a?w=800&fit=crop" alt="Revista Poliversia" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 ease-out" />
+                    <img src="https://res.cloudinary.com/j7q2huvz/image/upload/v1785901071/librepalaras/covers/ahjqwbr2tlxlfz5vku4j.png" alt="Revista Poliversia" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 ease-out" />
                     <div className="absolute inset-0 bg-gradient-to-t sm:bg-gradient-to-r from-stone-950/80 to-transparent sm:hidden" />
                   </div>
                   <div className="p-8 sm:p-10 flex flex-col justify-between relative z-10">
@@ -192,12 +195,12 @@ export default function Home() {
                         Un diálogo multidisciplinario entre la literatura, las artes plásticas y el pensamiento crítico territorial.
                       </p>
                     </div>
-                    <a href="#" className="inline-flex items-center gap-2 text-sm font-bold text-amber-600 dark:text-amber-400 group-hover:gap-4 transition-all duration-300">
-                      Explorar Edición Actual <span className="text-lg">→</span>
-                    </a>
+                    <span className="inline-flex items-center gap-2 text-sm font-bold text-amber-600 dark:text-amber-400 group-hover:gap-4 transition-all duration-300">
+                      Explorar Ediciones <span className="text-lg">→</span>
+                    </span>
                   </div>
                 </div>
-              </div>
+              </Link>
 
               {/* Card Secundaria */}
               <div className={`lg:col-span-5 group relative overflow-hidden rounded-3xl border p-8 sm:p-10 flex flex-col justify-between transition-all duration-500 hover:shadow-2xl hover:shadow-amber-900/10 shimmer-card ${

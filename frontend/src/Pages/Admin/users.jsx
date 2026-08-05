@@ -160,13 +160,20 @@ export default function Users() {
   };
 
   const getRoleBadge = (role) => {
-    const isAdmin = role === 'admin';
-    return isDark
-      ? isAdmin
+    if (role === 'admin') {
+      return isDark
         ? 'bg-rose-950/80 text-rose-300 border-rose-800/50'
-        : 'bg-slate-800 text-slate-300 border-slate-700'
-      : isAdmin
-      ? 'bg-rose-50 text-rose-700 border-rose-200'
+        : 'bg-rose-50 text-rose-700 border-rose-200';
+    }
+
+    if (role === 'judge') {
+      return isDark
+        ? 'bg-amber-950/80 text-amber-300 border-amber-800/50'
+        : 'bg-amber-50 text-amber-700 border-amber-200';
+    }
+
+    return isDark
+      ? 'bg-slate-800 text-slate-300 border-slate-700'
       : 'bg-slate-100 text-slate-700 border-slate-200';
   };
 
@@ -275,6 +282,7 @@ export default function Users() {
                                 }`}
                               >
                                 <option value="collaborator" className={isDark ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'}>Colaborador</option>
+                                <option value="judge" className={isDark ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'}>Juez</option>
                                 <option value="admin" className={isDark ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'}>Admin</option>
                               </select>
                             </td>

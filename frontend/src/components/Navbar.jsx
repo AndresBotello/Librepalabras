@@ -46,6 +46,9 @@ export default function Navbar() {
             <Link to="/authors" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037]'}`}>
               Autores
             </Link>
+            <Link to="/concursos/cuento-corto" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037]'}`}>
+              Concurso
+            </Link>
             <Link to="#" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037]'}`}>
               Sobre
             </Link>
@@ -121,6 +124,9 @@ export default function Navbar() {
             </Link>
             <Link to="/authors" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037] hover:text-gray-900'}`}>
               Autores
+            </Link>
+            <Link to="/concursos/cuento-corto" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037] hover:text-gray-900'}`}>
+              Concurso
             </Link>
             <div className="pt-4 space-y-3 border-t" style={{borderColor: isDark ? '#374151' : '#e5e7eb'}}>
               {isAuthenticated ? (

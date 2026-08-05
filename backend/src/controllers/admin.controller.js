@@ -1,5 +1,5 @@
 import { listUsers, setUserRole } from '../services/user.service.js';
-import { adminDb } from '../config/firebaseAdmin.js';
+import { adminDb, VALID_ROLES, isValidRole } from '../config/firebaseAdmin.js';
 import { deleteFile } from '../services/upload.service.js';
 
 export async function testAdminAuth(req, res) {
@@ -25,6 +25,7 @@ export async function getAdminOverview(_req, res) {
       totalUsers: users.length,
       admins: users.filter((user) => user.role === 'admin').length,
       collaborators: users.filter((user) => user.role === 'collaborator').length,
+      judges: users.filter((user) => user.role === 'judge').length,
     },
   });
 }
@@ -171,10 +172,10 @@ export async function updateUserById(req, res) {
     }
 
     if (role !== undefined) {
-      if (!['admin', 'collaborator'].includes(role)) {
+      if (!isValidRole(role)) {
         return res.status(400).json({
           ok: false,
-          message: 'Rol debe ser: admin o collaborator',
+          message: `Rol debe ser uno de: ${VALID_ROLES.join(', ')}`,
         });
       }
       updateData.role = role;
@@ -227,10 +228,10 @@ export async function updateUserRole(req, res) {
     });
   }
 
-  if (!['admin', 'collaborator'].includes(role)) {
+  if (!isValidRole(role)) {
     return res.status(400).json({
       ok: false,
-      message: 'role debe ser admin o collaborator',
+      message: `role debe ser uno de: ${VALID_ROLES.join(', ')}`,
     });
   }
 
