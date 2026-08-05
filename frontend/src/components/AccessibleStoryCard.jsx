@@ -219,7 +219,7 @@ export default function AccessibleStoryCard({ story }) {
  *   border-width: 0;
  * }
  *
- * /* Mostrar sr-only al enfocar */
+ * Mostrar sr-only al enfocar:
  * .sr-only:focus {
  *   position: static;
  *   width: auto;

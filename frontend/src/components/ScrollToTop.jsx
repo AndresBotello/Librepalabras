@@ -7,22 +7,20 @@ import { useLocation } from 'react-router-dom';
  * pinta nada: solo reacciona al cambio de ruta.
  */
 export default function ScrollToTop() {
-  const { pathname, search, hash } = useLocation();
+  // Solo `pathname`: si dependiera también de `search`, cualquier filtro que
+  // escriba en la URL saltaría al inicio mientras el usuario está leyendo.
+  const { pathname } = useLocation();
 
   useEffect(() => {
-    // Un enlace con ancla (#seccion) quiere ir a esa sección, no arriba.
-    if (hash) {
-      const target = document.getElementById(hash.slice(1));
-      if (target) {
-        target.scrollIntoView();
-        return;
-      }
+    // La forma de dos argumentos, no la de objeto con `behavior`: está
+    // soportada en todos los navegadores y no valida enums que puedan lanzar.
+    try {
+      window.scrollTo(0, 0);
+    } catch {
+      // Un fallo al desplazar es cosmético. Si se propagara desde un efecto,
+      // React desmontaría el árbol entero y la página quedaría en blanco.
     }
-
-    // 'instant' y no 'smooth': al cambiar de página el recorrido animado se ve
-    // como un salto raro sobre contenido que aún se está montando.
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-  }, [pathname, search, hash]);
+  }, [pathname]);
 
   return null;
 }

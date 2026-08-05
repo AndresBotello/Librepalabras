@@ -16,6 +16,14 @@ const app = express();
 
 const isProduction = process.env.NODE_ENV === 'production';
 
+// En producción el backend vive detrás del proxy del hosting (Render, Railway,
+// Fly…). Sin esto `req.ip` es la IP del proxy, la misma para todo el mundo, y
+// los rate limiters cuentan a todos los visitantes en un solo cubo: bastaría
+// con 10 comentarios en total para bloquear el sitio entero.
+if (isProduction) {
+  app.set('trust proxy', 1);
+}
+
 // Rate Limiting Global (desactivado en desarrollo para no estorbar)
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
@@ -32,7 +40,16 @@ const authLimiter = rateLimit({
   skip: () => !isProduction,
 });
 
-const allowedOrigins = (process.env.CORS_ORIGIN || process.env.CLIENT_URL || 'http://localhost:5173')
+const configuredOrigins = process.env.CORS_ORIGIN || process.env.CLIENT_URL;
+
+// En producción, quedarse con el localhost por defecto significa que el
+// frontend desplegado recibe errores de CORS en cada petición sin ninguna
+// pista en los logs. Mejor no arrancar que arrancar roto.
+if (isProduction && !configuredOrigins) {
+  throw new Error('Falta CORS_ORIGIN: define el dominio del frontend desplegado.');
+}
+
+const allowedOrigins = (configuredOrigins || 'http://localhost:5173')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
@@ -68,11 +85,6 @@ app.get('/health', (_req, res) => {
   });
 });
 
-app.post('/test-upload', (req, res) => {
-  console.log('POST /test-upload called');
-  res.json({ ok: true, message: 'Test upload works' });
-});
-
 // Rutas con rate limiting más estricto para auth
 app.use('/api/auth/session', authLimiter);
 app.use('/api/auth', authRoutes);
@@ -83,6 +95,23 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/promotional-books', promotionalBooksRoutes);
 app.use('/api/poliversia', poliversiaRoutes);
 app.use('/api/contest', contestRoutes);
+
+// Una ruta /api inexistente devolvía el HTML de error de Express, que el
+// frontend intenta parsear como JSON y acaba en "Unexpected token <".
+app.use('/api', (_req, res) => {
+  res.status(404).json({ ok: false, message: 'Ruta no encontrada' });
+});
+
+// Último recurso: cualquier error que se escape de un controlador. El detalle
+// se queda en los logs del servidor, nunca viaja al navegador en producción.
+app.use((error, _req, res, _next) => {
+  console.error('Error no controlado:', error);
+
+  res.status(error.status || 500).json({
+    ok: false,
+    message: isProduction ? 'Error interno del servidor' : error.message,
+  });
+});
 
 console.log('✓ Rutas registradas correctamente');
 console.log('✓ Compresión Gzip habilitada');
