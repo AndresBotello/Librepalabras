@@ -5,16 +5,44 @@ import Footer from '../../components/Footer';
 import AdminSidebar from '../../components/AdminSidebar';
 import { getAllUsers, getPendingWorks, getApprovedWorks } from '../../services/api';
 
+// Iconos SVG reutilizables
+const Icons = {
+  Users: () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+    </svg>
+  ),
+  Document: () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+  ),
+  Clock: () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  ),
+  Pen: () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+    </svg>
+  ),
+  Book: () => (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+    </svg>
+  ),
+  UserAdd: () => (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+    </svg>
+  ),
+};
+
 export default function Admin() {
   const { isDark } = useContext(ThemeContext);
-  const [activeTab, setActiveTab] = useState('general');
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState([
-    { label: 'USUARIOS TOTALES', value: '0', icon: '👥', trend: 'Cargando...' },
-    { label: 'PUBLICACIONES APROBADAS', value: '0', icon: '📄', trend: 'Cargando...' },
-    { label: 'SOLICITUDES PENDIENTES', value: '0', icon: '📋', trend: 'Cargando...' },
-    { label: 'COLABORADORES ACTIVOS', value: '0', icon: '✍️', trend: 'Cargando...' },
-  ]);
+  const [stats, setStats] = useState([]);
   const [recentActivity, setRecentActivity] = useState([]);
   const [genreStats, setGenreStats] = useState({});
 
@@ -36,63 +64,69 @@ export default function Admin() {
       const approvedWorks = approvedRes.works?.length || 0;
       const pendingWorks = pendingRes.works?.length || 0;
 
+      // Calculo seguro del porcentaje
+      const colabPercentage = totalUsers > 0 ? Math.round((collaborators / totalUsers) * 100) : 0;
+
       setStats([
         {
-          label: 'USUARIOS TOTALES',
+          label: 'Usuarios Totales',
           value: totalUsers.toLocaleString(),
-          icon: '👥',
-          trend: `${collaborators} colaboradores activos`,
+          icon: Icons.Users,
+          badge: `${collaborators} colaboradores`,
+          badgeColor: 'bg-blue-500/10 text-blue-500',
         },
         {
-          label: 'PUBLICACIONES APROBADAS',
+          label: 'Publicaciones Aprobadas',
           value: approvedWorks.toLocaleString(),
-          icon: '📄',
-          trend: `${approvedWorks} obras disponibles`,
+          icon: Icons.Document,
+          badge: 'Obras públicas',
+          badgeColor: 'bg-emerald-500/10 text-emerald-500',
         },
         {
-          label: 'SOLICITUDES PENDIENTES',
+          label: 'Solicitudes Pendientes',
           value: pendingWorks.toLocaleString(),
-          icon: '📋',
-          trend: pendingWorks > 0 ? `${pendingWorks} sin revisar` : 'Todo revisado ✓',
+          icon: Icons.Clock,
+          badge: pendingWorks > 0 ? `${pendingWorks} por revisar` : 'Al día',
+          badgeColor: pendingWorks > 0 ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500',
         },
         {
-          label: 'COLABORADORES ACTIVOS',
+          label: 'Colaboradores Activos',
           value: collaborators.toLocaleString(),
-          icon: '✍️',
-          trend: `${Math.round((collaborators / totalUsers) * 100)}% del total`,
+          icon: Icons.Pen,
+          badge: `${colabPercentage}% del total`,
+          badgeColor: 'bg-purple-500/10 text-purple-500',
         },
       ]);
 
       const activities = [];
 
-      if (approvedRes.works && approvedRes.works.length > 0) {
+      if (approvedRes.works?.length > 0) {
         approvedRes.works.slice(0, 3).forEach(work => {
           activities.push({
             name: work.author || 'Anónimo',
-            action: `publicó "${work.title}"`,
+            action: `Publicó "${work.title}"`,
             time: work.createdAt ? new Date(work.createdAt).toLocaleDateString('es-CO') : 'Hace poco',
-            icon: '📚',
+            Icon: Icons.Book,
+            type: 'work',
           });
         });
       }
 
-      if (usersRes.users && usersRes.users.length > 0) {
-        usersRes.users.slice(0, 1).forEach(user => {
+      if (usersRes.users?.length > 0) {
+        usersRes.users.slice(0, 2).forEach(user => {
           activities.push({
-            name: user.nombres || 'Usuario',
-            action: 'se registró en la plataforma',
+            name: user.nombres || 'Usuario nuevo',
+            action: 'Se unió a la plataforma',
             time: user.createdAt ? new Date(user.createdAt).toLocaleDateString('es-CO') : 'Hace poco',
-            icon: '👤',
+            Icon: Icons.UserAdd,
+            type: 'user',
           });
         });
       }
 
-      setRecentActivity(activities.length > 0 ? activities : [
-        { name: 'Sin actividad', action: 'No hay datos disponibles', time: 'N/A', icon: '📭' },
-      ]);
+      setRecentActivity(activities);
 
-      // Calcular estadísticas por género
-      if (approvedRes.works && approvedRes.works.length > 0) {
+      if (approvedRes.works?.length > 0) {
         const genreCounts = {};
         approvedRes.works.forEach(work => {
           const genre = work.genre || 'Otros';
@@ -102,222 +136,172 @@ export default function Admin() {
       }
     } catch (error) {
       console.error('Error cargando datos del dashboard:', error);
-      setRecentActivity([
-        { name: 'Error', action: 'No se pudieron cargar los datos', time: 'N/A', icon: '⚠️' },
-      ]);
     } finally {
       setLoading(false);
     }
   };
 
+  const totalWorksInGenres = Object.values(genreStats).reduce((a, b) => a + b, 0);
+
   return (
-    <div className={`min-h-screen flex flex-col transition-colors ${isDark ? 'bg-gray-950' : 'bg-white'}`}>
+    <div className={`min-h-screen flex flex-col font-sans transition-colors duration-200 ${isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
       <Navbar />
 
-      <div className="flex flex-1">
+      <div className="flex flex-1 overflow-hidden">
         <AdminSidebar />
 
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Header Section */}
-          <section className={`px-4 sm:px-8 py-10 sm:py-14 transition-colors ${isDark ? 'bg-gray-900 border-b border-gray-800' : 'bg-gray-50 border-b border-gray-200'}`}>
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-6 mb-8">
-            <div>
-              <h1 className={`text-4xl font-bold mb-3 transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                Panel Administrativo
-              </h1>
-              <p className={`text-base transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'} max-w-2xl`}>
-                Bienvenido, Administrador. Gestiona la moderación de contenidos, supervisa el crecimiento de la comunidad y cataloga archivos literarios de Liberapalabras.
-              </p>
-            </div>
-            <div className="flex gap-3 flex-wrap">
-              <button className={`px-5 py-2 rounded-lg font-semibold transition-colors text-sm ${isDark ? 'bg-gray-800 text-gray-200 hover:bg-gray-700 border border-gray-700' : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'}`}>
-                📊 Exportar Reportes
-              </button>
-              <button className="px-5 py-2 rounded-lg font-semibold transition-colors text-sm bg-[#5D4037] text-white hover:bg-[#4A302A]">
-                ⚙️ Nueva Configuración
-              </button>
-            </div>
-          </div>
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {stats.map((stat, index) => (
-              <div
-                key={index}
-                className={`rounded-lg p-6 transition-colors ${isDark ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'} hover:shadow-lg transition-shadow`}
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <p className={`text-xs font-semibold tracking-widest uppercase transition-colors ${isDark ? 'text-gray-400' : 'text-gray-500'} mb-2`}>
-                      {stat.label}
-                    </p>
-                    <p className={`text-3xl font-bold transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                      {stat.value}
-                    </p>
-                  </div>
-                  <span className="text-3xl">{stat.icon}</span>
+        <main className="flex-1 overflow-y-auto">
+          {/* Header Dashboard */}
+          <div className={`px-6 lg:px-10 py-8 border-b transition-colors ${isDark ? 'bg-slate-900/50 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-bold tracking-wider uppercase px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                    Administración
+                  </span>
                 </div>
-                <p className={`text-xs transition-colors ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                  {stat.trend}
+                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Panel de Control</h1>
+                <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Monitorea la actividad, moderación de obras y métricas globales de Liberapalabras.
                 </p>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-          {/* Tabs Section */}
-          <section className={`px-4 sm:px-8 py-10 flex-1 overflow-y-auto transition-colors ${isDark ? 'bg-gray-950' : 'bg-white'}`}>
-        <div className="max-w-7xl mx-auto">
-          <div className={`border-b transition-colors ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
-            <div className="flex gap-8 overflow-x-auto">
-              {['general', 'moderation', 'users', 'files'].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`py-4 px-2 font-semibold text-sm whitespace-nowrap uppercase tracking-wider transition-colors ${
-                    activeTab === tab
-                      ? isDark
-                        ? 'text-yellow-400 border-b-2 border-yellow-400'
-                        : 'text-yellow-600 border-b-2 border-yellow-600'
-                      : isDark
-                        ? 'text-gray-400 hover:text-gray-300'
-                        : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  {tab === 'general' && 'Vista General'}
-                  {tab === 'moderation' && 'Moderación'}
-                  {tab === 'users' && 'Usuarios'}
-                  {tab === 'files' && 'Archivos'}
-                </button>
-              ))}
             </div>
           </div>
 
-          {/* Tab Content */}
-          <div className="mt-8">
-            {activeTab === 'general' && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Main Chart */}
-                <div className={`lg:col-span-2 rounded-lg p-8 transition-colors ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'}`}>
-                  <h3 className={`text-xl font-bold mb-2 transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                    Distribución por Géneros
-                  </h3>
-                  <p className={`text-sm mb-6 transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Cantidad de obras publicadas por cada género literario
-                  </p>
+          {/* Body Content */}
+          <div className="max-w-7xl mx-auto px-6 lg:px-10 py-8 space-y-8">
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {loading
+                ? Array(4).fill(0).map((_, i) => (
+                    <div key={i} className={`h-32 rounded-xl p-5 border animate-pulse ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`} />
+                  ))
+                : stats.map((stat, idx) => {
+                    const IconComponent = stat.icon;
+                    return (
+                      <div
+                        key={idx}
+                        className={`p-5 rounded-xl border transition-all duration-200 hover:shadow-md ${
+                          isDark ? 'bg-slate-900/80 border-slate-800/80' : 'bg-white border-slate-200/80'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className={`p-2.5 rounded-lg ${isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-700'}`}>
+                            <IconComponent />
+                          </span>
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-md ${stat.badgeColor}`}>
+                            {stat.badge}
+                          </span>
+                        </div>
+                        <div className="mt-4">
+                          <p className={`text-xs font-medium uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                            {stat.label}
+                          </p>
+                          <p className="text-2xl sm:text-3xl font-bold mt-1 tracking-tight">
+                            {stat.value}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+            </div>
 
-                  {/* Gráfico de Géneros */}
-                  <div className={`h-64 rounded-lg flex items-end justify-around gap-2 transition-colors ${isDark ? 'bg-gray-800' : 'bg-gray-50'} p-4`}>
-                    {loading ? (
-                      <div className="w-full flex items-center justify-center">
-                        <p className={`transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                          Cargando datos...
-                        </p>
-                      </div>
-                    ) : Object.keys(genreStats).length > 0 ? (
-                      Object.entries(genreStats).map(([genre, count]) => {
-                        const maxCount = Math.max(...Object.values(genreStats));
-                        const percentage = (count / maxCount) * 100;
-                        return (
-                          <div key={genre} className="flex flex-col items-center gap-2 flex-1">
-                            <div className="w-full flex flex-col items-center">
-                              <div
-                                className="bg-yellow-400 rounded w-full transition-all"
-                                style={{ height: `${Math.max(20, percentage)}px` }}
-                              ></div>
-                            </div>
-                            <span className="text-xs text-gray-500 text-center truncate max-w-full">
-                              {genre.substring(0, 8)}
-                            </span>
-                            <span className="text-xs font-semibold text-gray-700">{count}</span>
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <div className="w-full flex items-center justify-center">
-                        <p className={`transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                          No hay datos disponibles
-                        </p>
-                      </div>
-                    )}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Horizontal Bar Chart Component */}
+              <div className={`lg:col-span-2 p-6 rounded-xl border ${isDark ? 'bg-slate-900/80 border-slate-800/80' : 'bg-white border-slate-200'}`}>
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-base font-bold">Distribución por Géneros</h3>
+                    <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                      Proporción de publicaciones según categoría literaria
+                    </p>
                   </div>
+                  <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-500">
+                    {totalWorksInGenres} Obras Totales
+                  </span>
                 </div>
 
-                {/* Recent Activity */}
-                <div className={`rounded-lg p-8 transition-colors ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'}`}>
-                  <h3 className={`text-xl font-bold mb-2 transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                    Actividad Reciente
-                  </h3>
-                  <p className={`text-sm mb-6 transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Últimas acciones en la plataforma
-                  </p>
-
+                {loading ? (
+                  <div className="space-y-4 py-4">
+                    {Array(4).fill(0).map((_, i) => (
+                      <div key={i} className="h-8 bg-slate-800/20 rounded animate-pulse" />
+                    ))}
+                  </div>
+                ) : Object.keys(genreStats).length > 0 ? (
                   <div className="space-y-4">
-                    {loading ? (
-                      <p className={`text-sm transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'} text-center py-4`}>
-                        Cargando actividad...
-                      </p>
-                    ) : recentActivity.length > 0 ? (
-                      recentActivity.map((activity, index) => (
-                        <div
-                          key={index}
-                          className={`pb-4 ${index !== recentActivity.length - 1 ? (isDark ? 'border-b border-gray-800' : 'border-b border-gray-200') : ''}`}
-                        >
-                          <div className="flex items-start gap-3">
-                            <span className="text-lg">{activity.icon}</span>
-                            <div className="flex-1 min-w-0">
-                              <p className={`text-sm font-semibold transition-colors ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
-                                {activity.name}
-                              </p>
-                              <p className={`text-xs transition-colors ${isDark ? 'text-gray-500' : 'text-gray-600'} truncate`}>
-                                {activity.action}
-                              </p>
-                              <p className={`text-xs transition-colors ${isDark ? 'text-gray-600' : 'text-gray-500'} mt-1`}>
-                                {activity.time}
-                              </p>
-                            </div>
+                    {Object.entries(genreStats).map(([genre, count]) => {
+                      const pct = totalWorksInGenres > 0 ? Math.round((count / totalWorksInGenres) * 100) : 0;
+                      return (
+                        <div key={genre} className="space-y-1">
+                          <div className="flex justify-between text-xs font-medium">
+                            <span className={isDark ? 'text-slate-300' : 'text-slate-700'}>{genre}</span>
+                            <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>{count} ({pct}%)</span>
+                          </div>
+                          <div className={`w-full h-2 rounded-full overflow-hidden ${isDark ? 'bg-slate-800' : 'bg-slate-100'}`}>
+                            <div
+                              className="h-full bg-amber-500 rounded-full transition-all duration-500"
+                              style={{ width: `${pct}%` }}
+                            />
                           </div>
                         </div>
-                      ))
-                    ) : (
-                      <p className={`text-sm transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'} text-center py-4`}>
-                        No hay actividad disponible
-                      </p>
-                    )}
+                      );
+                    })}
                   </div>
-                </div>
+                ) : (
+                  <div className="py-12 text-center text-sm text-slate-500">
+                    No hay suficientes datos de géneros registrados.
+                  </div>
+                )}
               </div>
-            )}
 
-            {activeTab === 'moderation' && (
-              <div className={`rounded-lg p-8 transition-colors ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'} text-center py-12`}>
-                <p className={`transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Contenido de Moderación (próximamente)
+              {/* Recent Activity List */}
+              <div className={`p-6 rounded-xl border ${isDark ? 'bg-slate-900/80 border-slate-800/80' : 'bg-white border-slate-200'}`}>
+                <h3 className="text-base font-bold mb-1">Actividad Reciente</h3>
+                <p className={`text-xs mb-6 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Últimos eventos en el ecosistema
                 </p>
-              </div>
-            )}
 
-            {activeTab === 'users' && (
-              <div className={`rounded-lg p-8 transition-colors ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'} text-center py-12`}>
-                <p className={`transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Gestión de Usuarios (próximamente)
-                </p>
+                {loading ? (
+                  <div className="space-y-4">
+                    {Array(3).fill(0).map((_, i) => (
+                      <div key={i} className="h-12 bg-slate-800/20 rounded animate-pulse" />
+                    ))}
+                  </div>
+                ) : recentActivity.length > 0 ? (
+                  <div className="space-y-4">
+                    {recentActivity.map((item, index) => {
+                      const ItemIcon = item.Icon;
+                      return (
+                        <div key={index} className="flex items-start gap-3 text-sm">
+                          <span className={`p-2 rounded-lg shrink-0 mt-0.5 ${
+                            item.type === 'work' 
+                              ? 'bg-emerald-500/10 text-emerald-500' 
+                              : 'bg-blue-500/10 text-blue-500'
+                          }`}>
+                            <ItemIcon />
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-xs sm:text-sm truncate">{item.name}</p>
+                            <p className={`text-xs truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                              {item.action}
+                            </p>
+                            <span className="text-[10px] text-slate-400 block mt-0.5">
+                              {item.time}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="py-8 text-center text-sm text-slate-500">
+                    Sin registros recientes.
+                  </div>
+                )}
               </div>
-            )}
-
-            {activeTab === 'files' && (
-              <div className={`rounded-lg p-8 transition-colors ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'} text-center py-12`}>
-                <p className={`transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Gestión de Archivos (próximamente)
-                </p>
-              </div>
-            )}
             </div>
           </div>
-          </section>
-        </div>
+        </main>
       </div>
 
       <Footer />

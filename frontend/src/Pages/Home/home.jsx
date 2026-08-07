@@ -99,20 +99,14 @@ export default function Home() {
 
         {/* ================= HERO SECTION ================= */}
         <section className="relative w-full min-h-[90vh] flex items-center justify-center overflow-hidden py-16 px-4 sm:px-8">
-          {/* Video de Fondo Cinematográfico */}
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
+          {/* Imagen de fondo. Es decorativa (el texto va encima), así que el alt
+              va vacío para que un lector de pantalla no la anuncie. */}
+          <img
+            src="https://res.cloudinary.com/j7q2huvz/image/upload/v1785971697/69478894-7be6-4384-be37-40fc593636eb_f9ibui.webp"
+            alt=""
+            fetchPriority="high"
             className="absolute inset-0 w-full h-full object-cover z-0 scale-105 pointer-events-none"
-          >
-            <source 
-              src="https://res.cloudinary.com/j7q2huvz/video/upload/v1785478212/caa61411-add7-47ea-a133-35291b096b68_fk6fan.mp4" 
-              type="video/mp4" 
-            />
-            Tu navegador no soporta el formato de video.
-          </video>
+          />
 
           {/* Oscurecimiento de contraste sobre el video */}
           <div className="absolute inset-0 z-0 bg-gradient-to-b from-stone-950/75 via-stone-950/80 to-stone-950/95 pointer-events-none" />
@@ -174,13 +168,13 @@ export default function Home() {
               
               {/* Card Principal */}
               <Link
-                to="/poliversia"
+                to="/poleversia"
                 className={`block lg:col-span-7 group relative overflow-hidden rounded-3xl border transition-all duration-500 hover:shadow-2xl hover:shadow-amber-900/10 shimmer-card ${
                 isDark ? 'bg-stone-900/40 border-stone-800 hover:border-amber-500/40' : 'bg-white border-stone-200 hover:border-amber-600/40'
               }`}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 h-full">
                   <div className="relative h-72 sm:h-auto overflow-hidden">
-                    <img src="https://res.cloudinary.com/j7q2huvz/image/upload/v1785901071/librepalaras/covers/ahjqwbr2tlxlfz5vku4j.png" alt="Revista Poliversia" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 ease-out" />
+                    <img src="https://res.cloudinary.com/j7q2huvz/image/upload/v1785901071/librepalaras/covers/ahjqwbr2tlxlfz5vku4j.png" alt="Revista Poleversia" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 ease-out" />
                     <div className="absolute inset-0 bg-gradient-to-t sm:bg-gradient-to-r from-stone-950/80 to-transparent sm:hidden" />
                   </div>
                   <div className="p-8 sm:p-10 flex flex-col justify-between relative z-10">
@@ -189,7 +183,7 @@ export default function Home() {
                         Publicación Periódica
                       </span>
                       <h3 className={`text-3xl font-serif font-bold mb-4 leading-tight ${isDark ? 'text-stone-100' : 'text-stone-900'}`}>
-                        Revista Poliversia
+                        Revista Poleversia
                       </h3>
                       <p className={`text-base leading-relaxed mb-8 ${isDark ? 'text-stone-400' : 'text-stone-600'}`}>
                         Un diálogo multidisciplinario entre la literatura, las artes plásticas y el pensamiento crítico territorial.
@@ -221,7 +215,7 @@ export default function Home() {
                     Nuestra biblioteca digital de obras completas, antologías inéditas y narrativa local.
                   </p>
                 </div>
-                <a href="/stories" className="inline-flex items-center gap-2 text-sm font-bold text-amber-600 dark:text-amber-400 group-hover:gap-4 transition-all duration-300">
+                <a href="/literature" className="inline-flex items-center gap-2 text-sm font-bold text-amber-600 dark:text-amber-400 group-hover:gap-4 transition-all duration-300">
                   Ver Catálogo Completo <span className="text-lg">→</span>
                 </a>
               </div>

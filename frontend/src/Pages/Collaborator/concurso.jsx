@@ -1,15 +1,16 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Image as ImageIcon, Loader2, Lock, PenLine, Star } from 'lucide-react';
 import CollaboratorSidebar from '../../components/CollaboratorSidebar';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { ThemeContext } from '../../context/ThemeContext';
+import useContestCatalog from '../../hooks/useContestCatalog';
 import {
   CONTEST_MAX_SCORE,
   CONTEST_STATUS_LABELS,
   MAX_IMAGE_BYTES,
   formatBytes,
-  getMyContestStory,
+  getMyContestStories,
   submitContestStory,
   updateMyContestStory,
   uploadCoverWithProgress,
@@ -25,27 +26,44 @@ function formatScore(value) {
 
 export default function CollaboratorConcurso() {
   const { isDark } = useContext(ThemeContext);
-  const [story, setStory] = useState(null);
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
+  const { contests } = useContestCatalog();
+
+  // Solo se puede concursar donde el administrador abrió la convocatoria.
+  const openContests = useMemo(
+    () => contests.filter((item) => item.status === 'abierto'),
+    [contests]
+  );
+
+  const [contestId, setContestId] = useState('');
+  const [stories, setStories] = useState([]);
+  // Un borrador por concurso: lo que el autor ha escrito sin guardar todavía.
+  // Lo que no esté en el borrador se lee de su inscripción, así cambiar de
+  // convocatoria muestra el texto correcto sin recargar el formulario a mano.
+  const [drafts, setDrafts] = useState({});
   const [uploadProgress, setUploadProgress] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState(null);
 
+  // Sin elección explícita se muestra la primera convocatoria abierta; así la
+  // página no queda vacía mientras carga el catálogo.
+  const contest = useMemo(
+    () => openContests.find((item) => item.id === contestId) || openContests[0] || null,
+    [openContests, contestId]
+  );
+
+  // La inscripción del autor en el concurso que está mirando, si ya existe.
+  const story = useMemo(
+    () => stories.find((item) => item.contestId === contest?.id) || null,
+    [stories, contest]
+  );
+
   useEffect(() => {
     let active = true;
 
-    getMyContestStory()
+    getMyContestStories()
       .then((response) => {
-        if (!active || !response.story) return;
-
-        setStory(response.story);
-        setTitle(response.story.title || '');
-        setContent(response.story.content || '');
-        setImagePreview(response.story.imageUrl || null);
+        if (active) setStories(response.stories || []);
       })
       .catch((error) => {
         if (active) setStatus({ type: 'error', message: error.message });
@@ -59,18 +77,44 @@ export default function CollaboratorConcurso() {
     };
   }, []);
 
+  const draft = drafts[contest?.id] || {};
+  const title = draft.title ?? story?.title ?? '';
+  const content = draft.content ?? story?.content ?? '';
+  const imageFile = draft.imageFile ?? null;
+  const imagePreview = draft.imagePreview ?? story?.imageUrl ?? null;
+
+  const updateDraft = (changes) => {
+    if (!contest) return;
+
+    setDrafts((previous) => ({
+      ...previous,
+      [contest.id]: { ...previous[contest.id], ...changes },
+    }));
+  };
+
+  const setTitle = (value) => updateDraft({ title: value });
+  const setContent = (value) => updateDraft({ content: value });
+
   // Un cuento congelado por el jurado ya no se puede tocar.
   const isLocked = Boolean(story && (story.status === 'calificado' || story.isPublished));
 
   const handleImageChange = (event) => {
     const file = event.target.files?.[0] || null;
-    setImageFile(file);
-    setImagePreview(file ? URL.createObjectURL(file) : story?.imageUrl || null);
+
+    updateDraft({
+      imageFile: file,
+      imagePreview: file ? URL.createObjectURL(file) : story?.imageUrl || null,
+    });
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setStatus(null);
+
+    if (!contest) {
+      setStatus({ type: 'error', message: 'No hay ningún concurso abierto en este momento.' });
+      return;
+    }
 
     if (!title.trim()) {
       setStatus({ type: 'error', message: 'Ponle un título a tu cuento.' });
@@ -123,11 +167,22 @@ export default function CollaboratorConcurso() {
 
       const response = story
         ? await updateMyContestStory(story.id, payload)
-        : await submitContestStory(payload);
+        : await submitContestStory({ ...payload, contestId: contest.id });
 
-      setStory(response.story);
-      setImageFile(null);
-      setImagePreview(response.story.imageUrl || null);
+      // Se reemplaza la inscripción de este concurso y se conservan las demás.
+      setStories((previous) => [
+        response.story,
+        ...previous.filter((item) => item.id !== response.story.id),
+      ]);
+
+      // Guardado: el borrador ya no hace falta, el formulario pasa a leer la
+      // inscripción recién devuelta por el servidor.
+      setDrafts((previous) => {
+        const rest = { ...previous };
+        delete rest[contest.id];
+        return rest;
+      });
+
       setStatus({ type: 'success', message: response.message });
     } catch (error) {
       setStatus({ type: 'error', message: error.message });
@@ -158,20 +213,65 @@ export default function CollaboratorConcurso() {
           <div className="max-w-3xl mx-auto">
             <header className="mb-8">
               <h1 className={`text-2xl sm:text-3xl font-bold ${isDark ? 'text-gray-100' : 'text-[#5D4037]'}`}>
-                Concurso de Cuento Corto
+                Concursos
               </h1>
               <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                Puedes inscribir un cuento. Mientras el jurado no cierre su evaluación, podrás editarlo.
+                Puedes inscribir un cuento en cada concurso abierto. Mientras el jurado no cierre
+                su evaluación, podrás editarlo.
               </p>
             </header>
+
+            {/* Un concurso a la vez: cada uno guarda su propia inscripción. */}
+            {openContests.length > 1 && (
+              <div className="flex flex-wrap gap-2 mb-6">
+                {openContests.map((item) => {
+                  const inscrito = stories.some((entry) => entry.contestId === item.id);
+
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setContestId(item.id)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                        contest?.id === item.id
+                          ? 'bg-[#5D4037] text-white'
+                          : isDark
+                            ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {item.shortName}
+                      {inscrito && <span className="ml-1.5 opacity-70">✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
             {loading ? (
               <div className={`flex items-center justify-center gap-3 py-20 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                 <Loader2 className="w-5 h-5 animate-spin" />
                 Cargando…
               </div>
+            ) : !contest ? (
+              <div className={`rounded-2xl border border-dashed px-6 py-16 text-center text-sm ${
+                isDark ? 'border-gray-800 text-gray-400' : 'border-gray-300 text-gray-600'
+              }`}>
+                Ahora mismo no hay concursos abiertos. Cuando se abra una convocatoria
+                podrás inscribir tu cuento desde aquí.
+              </div>
             ) : (
               <>
+                <div className={`mb-6 rounded-2xl border p-5 ${isDark ? 'bg-gray-900/60 border-gray-800' : 'bg-amber-50/50 border-amber-200'}`}>
+                  <p className={`font-semibold ${isDark ? 'text-gray-100' : 'text-[#5D4037]'}`}>
+                    <span>{contest.name}</span>
+                    {contest.edition && <span className="font-normal opacity-70">{` · Edición ${contest.edition}`}</span>}
+                  </p>
+                  <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    {contest.summary}
+                  </p>
+                </div>
+
                 {story && (
                   <div className={`mb-6 rounded-2xl border p-5 ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
                     <div className="flex flex-wrap items-center gap-3">

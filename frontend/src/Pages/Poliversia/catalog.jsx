@@ -4,7 +4,7 @@ import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import MagazineViewer from '../../components/MagazineViewer';
 import { ThemeContext } from '../../context/ThemeContext';
-import { getPoliversiaEditions, formatBytes } from '../../services/api';
+import { getPoliversiaEdition, getPoliversiaEditions, formatBytes } from '../../services/api';
 
 function formatDate(value) {
   if (!value) return '';
@@ -44,6 +44,16 @@ export default function PoliversiaCatalog() {
   useEffect(() => {
     if (selected) window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [selected]);
+
+  /**
+   * Abrir una edición cuenta como una lectura: el backend suma la visita al
+   * responder este GET. El registro va por detrás porque es estadística, no
+   * contenido: si la petición falla, el lector igual ve la revista.
+   */
+  const openEdition = (edition) => {
+    setSelected(edition);
+    getPoliversiaEdition(edition.id).catch(() => {});
+  };
 
   return (
     <div className={`min-h-screen flex flex-col ${isDark ? 'bg-stone-950' : 'bg-stone-50'}`}>
@@ -95,7 +105,7 @@ export default function PoliversiaCatalog() {
                 Publicación Periódica
               </span>
               <h1 className={`text-4xl sm:text-5xl font-serif font-bold mb-4 ${isDark ? 'text-stone-100' : 'text-stone-900'}`}>
-                Revista Poliversia
+                Revista Poleversia
               </h1>
               <p className={`max-w-2xl text-base sm:text-lg leading-relaxed ${isDark ? 'text-stone-400' : 'text-stone-600'}`}>
                 Un diálogo multidisciplinario entre la literatura, las artes plásticas y el
@@ -133,7 +143,7 @@ export default function PoliversiaCatalog() {
                   <button
                     key={edition.id}
                     type="button"
-                    onClick={() => setSelected(edition)}
+                    onClick={() => openEdition(edition)}
                     className={`group text-left rounded-2xl overflow-hidden border transition-all duration-300 hover:shadow-2xl hover:shadow-amber-900/10 ${
                       isDark
                         ? 'bg-stone-900 border-stone-800 hover:border-amber-500/40'

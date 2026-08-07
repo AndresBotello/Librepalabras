@@ -1,7 +1,13 @@
 import { adminDb } from '../config/firebaseAdmin.js';
+import { normalizeContestId } from '../config/contests.js';
 
 const STORIES = 'contestStories';
 const RATINGS = 'contestRatings';
+
+// Un único documento con el estado de todos los concursos: son cuatro campos,
+// no merece una colección propia.
+const SETTINGS = 'appSettings';
+const CONTESTS_DOC = 'contests';
 
 export const CONTEST_STATUSES = ['enviado', 'en_evaluacion', 'calificado', 'publicado'];
 
@@ -23,6 +29,29 @@ function ratingsCollection() {
   }
 
   return adminDb.collection(RATINGS);
+}
+
+function contestsSettingsRef() {
+  if (!adminDb) {
+    throw new Error('Firebase Admin no está configurado.');
+  }
+
+  return adminDb.collection(SETTINGS).doc(CONTESTS_DOC);
+}
+
+/**
+ * Estado de los concursos tal como lo dejó el administrador, indexado por id.
+ * Si nunca se ha tocado nada, el documento no existe y manda el catálogo.
+ */
+export async function readContestStates() {
+  const doc = await contestsSettingsRef().get();
+  return doc.exists ? doc.data() || {} : {};
+}
+
+export async function writeContestState(contestId, state) {
+  // `set` con merge crea el documento la primera vez sin pisar los otros concursos.
+  await contestsSettingsRef().set({ [contestId]: state }, { merge: true });
+  return readContestStates();
 }
 
 /**
@@ -62,10 +91,23 @@ export async function getStoryById(id) {
   return doc.exists ? toDoc(doc) : null;
 }
 
-/** Un colaborador solo puede concursar con un cuento. */
-export async function findStoryByAuthor(authorId) {
-  const snapshot = await storiesCollection().where('authorId', '==', authorId).limit(1).get();
-  return snapshot.empty ? null : toDoc(snapshot.docs[0]);
+/**
+ * Todo lo que ha inscrito un autor, en cualquier concurso. Se filtra en memoria
+ * por `contestId` (en vez de con un segundo `where`) porque los cuentos
+ * anteriores al catálogo de concursos no tienen ese campo.
+ */
+export async function listStoriesByAuthor(authorId) {
+  const snapshot = await storiesCollection().where('authorId', '==', authorId).get();
+
+  return snapshot.docs
+    .map(toDoc)
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+}
+
+/** Un colaborador solo puede concursar con un cuento en cada concurso. */
+export async function findStoryByAuthor(authorId, contestId) {
+  const stories = await listStoriesByAuthor(authorId);
+  return stories.find((story) => normalizeContestId(story.contestId) === contestId) || null;
 }
 
 export async function updateStory(id, updates) {

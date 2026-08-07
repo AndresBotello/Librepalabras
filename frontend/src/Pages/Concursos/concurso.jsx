@@ -1,8 +1,10 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { ArrowLeft, BookOpen, Calendar, Loader2, PenLine } from 'lucide-react';
+import { Link, useParams } from 'react-router-dom';
+import { ArrowLeft, BookOpen, Calendar, Clock, Loader2, PenLine, Users } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { ThemeContext } from '../../context/ThemeContext';
+import useContestCatalog from '../../hooks/useContestCatalog';
 import { getPublishedContestStories } from '../../services/api';
 
 function formatDate(value) {
@@ -19,17 +21,40 @@ function excerpt(text, length = 180) {
   return clean.length > length ? `${clean.slice(0, length)}…` : clean;
 }
 
-export default function CuentoCorto() {
+/**
+ * Página de un concurso concreto. La ruta trae el slug del catálogo, así que
+ * /concursos/cuento-corto sigue funcionando igual que antes.
+ *
+ * El `key` monta una página nueva al cambiar de concurso: así no se arrastra
+ * el cuento abierto ni la lista del certamen anterior.
+ */
+export default function ConcursoRoute() {
+  const { slug } = useParams();
+  return <Concurso key={slug} slug={slug} />;
+}
+
+function Concurso({ slug }) {
   const { isDark } = useContext(ThemeContext);
+  const { contests } = useContestCatalog();
+
+  // El estado (abierto / próximamente / cerrado) lo pone el administrador, así
+  // que sale del catálogo del backend, no del archivo local.
+  const contest = contests.find((item) => item.slug === slug) || null;
+  const contestId = contest?.id;
+
+  const isComingSoon = contest?.status === 'proximamente';
+
   const [stories, setStories] = useState([]);
   const [selected, setSelected] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(contestId));
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (!contestId) return undefined;
+
     let active = true;
 
-    getPublishedContestStories()
+    getPublishedContestStories(contestId)
       .then((response) => {
         if (active) setStories(response.stories || []);
       })
@@ -43,11 +68,41 @@ export default function CuentoCorto() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [contestId]);
 
   useEffect(() => {
     if (selected) window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [selected]);
+
+  const backToContests = (
+    <Link
+      to="/concursos"
+      className={`inline-flex items-center gap-2 text-sm font-semibold mb-8 transition-colors ${
+        isDark ? 'text-amber-400 hover:text-amber-300' : 'text-[#5D4037] hover:underline'
+      }`}
+    >
+      <ArrowLeft className="w-4 h-4" />
+      Todos los concursos
+    </Link>
+  );
+
+  if (!contest) {
+    return (
+      <div className={`min-h-screen flex flex-col ${isDark ? 'bg-stone-950' : 'bg-stone-50'}`}>
+        <Navbar />
+        <main className="flex-1 max-w-3xl w-full mx-auto px-4 sm:px-8 py-12">
+          {backToContests}
+          <h1 className={`text-3xl font-serif font-bold mb-3 ${isDark ? 'text-stone-100' : 'text-stone-900'}`}>
+            Este concurso no existe
+          </h1>
+          <p className={`text-sm ${isDark ? 'text-stone-400' : 'text-stone-600'}`}>
+            Puede que la convocatoria haya cambiado de dirección. Revisa la lista de concursos.
+          </p>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className={`min-h-screen flex flex-col ${isDark ? 'bg-stone-950' : 'bg-stone-50'}`}>
@@ -102,27 +157,54 @@ export default function CuentoCorto() {
           </article>
         ) : (
           <>
+            {backToContests}
+
             <header className="mb-12">
-              <span className="inline-block px-3 py-1 text-[10px] font-bold tracking-widest uppercase rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 mb-4 border border-amber-500/20">
-                Concurso
-              </span>
+              <div className="flex flex-wrap items-center gap-2 mb-4">
+                <span className="inline-block px-3 py-1 text-[10px] font-bold tracking-widest uppercase rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                  {isComingSoon ? 'Próximamente' : 'Concurso'}
+                </span>
+                {contest.edition && (
+                  <span className={`text-xs font-semibold tabular-nums ${isDark ? 'text-stone-500' : 'text-stone-500'}`}>
+                    {`Edición ${contest.edition}`}
+                  </span>
+                )}
+              </div>
+
               <h1 className={`text-4xl sm:text-5xl font-serif font-bold mb-4 ${isDark ? 'text-stone-100' : 'text-stone-900'}`}>
-                Concurso de Cuento Corto
+                {contest.name}
               </h1>
-              <p className={`max-w-2xl text-base sm:text-lg leading-relaxed ${isDark ? 'text-stone-400' : 'text-stone-600'}`}>
-                Los cuentos seleccionados por el jurado del concurso. Cada uno es una voz del
-                Cesar contando su propio pedazo de mundo.
+
+              <p className={`max-w-2xl text-base sm:text-lg leading-relaxed mb-4 ${isDark ? 'text-stone-400' : 'text-stone-600'}`}>
+                {contest.description}
+              </p>
+
+              <p className={`inline-flex items-center gap-1.5 text-xs ${isDark ? 'text-stone-500' : 'text-stone-500'}`}>
+                <Users className="w-3.5 h-3.5" />
+                {contest.audience}
               </p>
             </header>
 
-            {loading && (
+            {isComingSoon && (
+              <div className={`rounded-2xl border border-dashed px-6 py-16 text-center ${
+                isDark ? 'border-stone-800 text-stone-400' : 'border-stone-300 text-stone-600'
+              }`}>
+                <Clock className="w-10 h-10 mx-auto mb-4 opacity-40" />
+                <p className="text-sm max-w-md mx-auto">
+                  La convocatoria de este concurso todavía no está abierta. Cuando lo esté,
+                  aquí aparecerán las bases y los cuentos publicados.
+                </p>
+              </div>
+            )}
+
+            {!isComingSoon && loading && (
               <div className={`flex items-center justify-center gap-3 py-24 text-sm ${isDark ? 'text-stone-400' : 'text-stone-600'}`}>
                 <Loader2 className="w-5 h-5 animate-spin" />
                 Cargando cuentos…
               </div>
             )}
 
-            {!loading && error && (
+            {!isComingSoon && !loading && error && (
               <div className={`rounded-2xl border px-6 py-5 text-sm ${
                 isDark ? 'bg-rose-950/40 border-rose-800 text-rose-300' : 'bg-rose-50 border-rose-200 text-rose-800'
               }`}>
@@ -130,7 +212,7 @@ export default function CuentoCorto() {
               </div>
             )}
 
-            {!loading && !error && stories.length === 0 && (
+            {!isComingSoon && !loading && !error && stories.length === 0 && (
               <div className={`rounded-2xl border border-dashed px-6 py-20 text-center ${
                 isDark ? 'border-stone-800 text-stone-400' : 'border-stone-300 text-stone-600'
               }`}>
@@ -139,7 +221,7 @@ export default function CuentoCorto() {
               </div>
             )}
 
-            {!loading && !error && stories.length > 0 && (
+            {!isComingSoon && !loading && !error && stories.length > 0 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {stories.map((story) => (
                   <button

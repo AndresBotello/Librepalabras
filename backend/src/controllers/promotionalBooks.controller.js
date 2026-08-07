@@ -204,19 +204,27 @@ export async function updatePromotionalBook(req, res) {
       }
       updates.genre = genre.toLowerCase();
     }
-    if (description) updates.description = description.trim();
+    // Los campos opcionales se comparan contra `undefined`, no por verdadero: si
+    // se compararan por verdadero, vaciar un campo desde el formulario de edición
+    // no borraría nada y el valor viejo reaparecería al recargar.
+    if (description !== undefined) updates.description = description?.trim() || '';
     if (price !== undefined) updates.price = parseFloat(price);
     if (originalPrice !== undefined) updates.originalPrice = originalPrice ? parseFloat(originalPrice) : null;
-    if (discount !== undefined) updates.discount = parseInt(discount);
-    if (isbn) updates.isbn = isbn.trim();
-    if (publisher) updates.publisher = publisher.trim();
-    if (publicationDate) updates.publicationDate = publicationDate;
-    if (pages) updates.pages = parseInt(pages);
-    if (language) updates.language = language.trim();
-    if (synopsis) updates.synopsis = synopsis.trim();
-    if (coverImage) updates.coverImage = coverImage;
+    if (discount !== undefined) {
+      // `parseInt(null)` es NaN, y NaN es un double válido en Firestore: se
+      // guardaría sin error y el precio con descuento quedaría roto.
+      const parsedDiscount = parseInt(discount);
+      updates.discount = Number.isNaN(parsedDiscount) ? 0 : parsedDiscount;
+    }
+    if (isbn !== undefined) updates.isbn = isbn?.trim() || null;
+    if (publisher !== undefined) updates.publisher = publisher?.trim() || null;
+    if (publicationDate !== undefined) updates.publicationDate = publicationDate || null;
+    if (pages !== undefined) updates.pages = pages ? parseInt(pages) : null;
+    if (language !== undefined) updates.language = language?.trim() || 'Español';
+    if (synopsis !== undefined) updates.synopsis = synopsis?.trim() || '';
+    if (coverImage !== undefined) updates.coverImage = coverImage || null;
     if (availability) updates.availability = availability;
-    if (tags) updates.tags = Array.isArray(tags) ? tags.filter(t => t.trim()) : [];
+    if (tags !== undefined) updates.tags = Array.isArray(tags) ? tags.filter(t => t.trim()) : [];
     if (isActive !== undefined) updates.isActive = isActive;
 
     await doc.ref.update(updates);

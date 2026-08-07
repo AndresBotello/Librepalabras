@@ -1,11 +1,29 @@
-import React, { useContext, useState, useEffect } from 'react';
-import { Plus, Upload, X, AlertCircle, CheckCircle } from 'lucide-react';
+import React, { useContext, useState, useEffect, useMemo, useRef } from 'react';
+import { BookOpen, Loader2, Pencil, Plus, Upload, X, AlertCircle, CheckCircle, Eye } from 'lucide-react';
 import { ThemeContext } from '../../context/ThemeContext';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import AdminSidebar from '../../components/AdminSidebar';
-import { createPromotionalBook, uploadCover } from '../../services/api';
+import { createPromotionalBook, getPromotionalBooks, updatePromotionalBook, uploadCover } from '../../services/api';
 import genresData from '../../config/genres.json';
+
+const EMPTY_FORM = {
+  title: '',
+  author: '',
+  genre: '',
+  description: '',
+  synopsis: '',
+  price: '',
+  originalPrice: '',
+  discount: '',
+  isbn: '',
+  publisher: '',
+  publicationDate: '',
+  pages: '',
+  language: 'Español',
+  availability: 'available',
+  tags: '',
+};
 
 export default function PublishBook() {
   const { isDark } = useContext(ThemeContext);
@@ -16,28 +34,72 @@ export default function PublishBook() {
   const [coverImageFile, setCoverImageFile] = useState(null);
   const [coverUploadLoading, setCoverUploadLoading] = useState(false);
 
-  const [formData, setFormData] = useState({
-    title: '',
-    author: '',
-    genre: '',
-    description: '',
-    synopsis: '',
-    price: '',
-    originalPrice: '',
-    discount: '',
-    isbn: '',
-    publisher: '',
-    publicationDate: '',
-    pages: '',
-    language: 'Español',
-    availability: 'available',
-    tags: '',
-  });
+  // Libros ya publicados: el mismo formulario sirve para crear y para editar,
+  // según haya o no un `editingId`.
+  const [books, setBooks] = useState([]);
+  const [booksLoading, setBooksLoading] = useState(true);
+  const [editingId, setEditingId] = useState(null);
+  const formRef = useRef(null);
+
+  const [formData, setFormData] = useState(EMPTY_FORM);
+
+  const genreLabels = useMemo(
+    () => Object.fromEntries(genresData.genres.map(g => [g.value, g.label])),
+    []
+  );
+
+  const loadBooks = async () => {
+    try {
+      const response = await getPromotionalBooks();
+      setBooks(response.books || []);
+    } catch (err) {
+      console.error('Error cargando los libros publicados:', err);
+    } finally {
+      setBooksLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadBooks();
+  }, []);
 
   const showMessage = (text, type = 'success') => {
     setMessage(text);
     setMessageType(type);
     setTimeout(() => setMessage(''), 4000);
+  };
+
+  const resetForm = () => {
+    setFormData(EMPTY_FORM);
+    setCoverImage(null);
+    setCoverImageFile(null);
+    setEditingId(null);
+  };
+
+  // Carga el libro en el formulario. Los números y las etiquetas se convierten a
+  // texto porque los inputs son controlados y no aceptan otro tipo.
+  const startEdit = (book) => {
+    setEditingId(book.id);
+    setFormData({
+      title: book.title || '',
+      author: book.author || '',
+      genre: book.genre || '',
+      description: book.description || '',
+      synopsis: book.synopsis || '',
+      price: book.price != null ? String(book.price) : '',
+      originalPrice: book.originalPrice != null ? String(book.originalPrice) : '',
+      discount: book.discount != null ? String(book.discount) : '',
+      isbn: book.isbn || '',
+      publisher: book.publisher || '',
+      publicationDate: (book.publicationDate || '').slice(0, 10),
+      pages: book.pages != null ? String(book.pages) : '',
+      language: book.language || 'Español',
+      availability: book.availability || 'available',
+      tags: (book.tags || []).join(', '),
+    });
+    setCoverImage(book.coverImage || null);
+    setCoverImageFile(null);
+    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const handleInputChange = (e) => {
@@ -136,31 +198,19 @@ export default function PublishBook() {
           : [],
       };
 
-      const response = await createPromotionalBook(bookData);
+      const response = editingId
+        ? await updatePromotionalBook(editingId, bookData)
+        : await createPromotionalBook(bookData);
 
       if (response.ok) {
-        showMessage('📚 Libro promocionado creado exitosamente', 'success');
-        setFormData({
-          title: '',
-          author: '',
-          genre: '',
-          description: '',
-          synopsis: '',
-          price: '',
-          originalPrice: '',
-          discount: '',
-          isbn: '',
-          publisher: '',
-          publicationDate: '',
-          pages: '',
-          language: 'Español',
-          availability: 'available',
-          tags: '',
-        });
-        setCoverImage(null);
-        setCoverImageFile(null);
+        showMessage(
+          editingId ? '✅ Libro actualizado correctamente' : '📚 Libro promocionado creado exitosamente',
+          'success'
+        );
+        resetForm();
+        await loadBooks();
       } else {
-        showMessage(response.message || 'Error al crear el libro', 'error');
+        showMessage(response.message || 'Error al guardar el libro', 'error');
       }
     } catch (err) {
       console.error('Error:', err);
@@ -220,8 +270,112 @@ export default function PublishBook() {
                 </div>
               )}
 
+              {/* Libros ya publicados */}
+              <div className="mb-10">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className={`text-lg font-semibold transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                    Libros publicados
+                  </h2>
+                  {!booksLoading && books.length > 0 && (
+                    <span className={`text-sm transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      {books.length} {books.length === 1 ? 'libro' : 'libros'}
+                    </span>
+                  )}
+                </div>
+
+                {booksLoading ? (
+                  <div className={`flex items-center justify-center gap-3 py-12 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Cargando libros…
+                  </div>
+                ) : books.length === 0 ? (
+                  <div className={`rounded-lg border-2 border-dashed px-6 py-12 text-center text-sm transition-colors ${
+                    isDark ? 'border-gray-800 text-gray-400' : 'border-gray-300 text-gray-600'
+                  }`}>
+                    <BookOpen className="w-8 h-8 mx-auto mb-3 opacity-40" />
+                    Todavía no has publicado ningún libro.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {books.map(book => (
+                      <div
+                        key={book.id}
+                        className={`flex gap-4 rounded-lg border p-4 transition-colors ${
+                          editingId === book.id
+                            ? isDark ? 'bg-amber-950/30 border-amber-700' : 'bg-amber-50 border-amber-400'
+                            : isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
+                        }`}
+                      >
+                        <div className={`w-16 h-24 rounded flex-shrink-0 overflow-hidden ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                          {book.coverImage ? (
+                            <img src={book.coverImage} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <BookOpen className={`w-5 h-5 ${isDark ? 'text-gray-700' : 'text-gray-300'}`} />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex-1 min-w-0 flex flex-col">
+                          <p className={`font-semibold truncate transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`} title={book.title}>
+                            {book.title}
+                          </p>
+                          <p className={`text-sm truncate transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                            {book.author}
+                          </p>
+
+                          <div className="flex flex-wrap items-center gap-2 mt-2">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${
+                              isDark ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'
+                            }`}>
+                              {genreLabels[book.genre] || book.genre}
+                            </span>
+                            <span className={`text-sm font-bold ${isDark ? 'text-amber-400' : 'text-amber-700'}`}>
+                              ${Number(book.price || 0).toFixed(2)}
+                            </span>
+                            <span className={`inline-flex items-center gap-1 text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                              <Eye className="w-3 h-3" />
+                              {book.views || 0}
+                            </span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => startEdit(book)}
+                            className={`mt-3 self-start inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                              isDark
+                                ? 'bg-gray-800 text-gray-200 hover:bg-gray-700'
+                                : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                            }`}
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                            {editingId === book.id ? 'Editando' : 'Editar'}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {/* Form */}
-              <form onSubmit={handleSubmit} className={`rounded-lg border-2 p-8 transition-colors ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
+              <form ref={formRef} onSubmit={handleSubmit} className={`rounded-lg border-2 p-8 transition-colors ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
+                {editingId && (
+                  <div className={`mb-8 -mt-2 flex flex-wrap items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm ${
+                    isDark ? 'bg-amber-950/40 text-amber-300' : 'bg-amber-50 text-amber-800'
+                  }`}>
+                    <span>
+                      Estás editando <strong>{formData.title || 'este libro'}</strong>.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={resetForm}
+                      className={`font-semibold underline underline-offset-2 ${isDark ? 'hover:text-amber-200' : 'hover:text-amber-900'}`}
+                    >
+                      Cancelar edición
+                    </button>
+                  </div>
+                )}
                 {/* Portada */}
                 <div className="mb-8 pb-8 border-b" style={{borderColor: isDark ? '#2d2d2d' : '#e5e7eb'}}>
                   <label className={`block text-lg font-semibold mb-4 transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
@@ -611,10 +765,13 @@ export default function PublishBook() {
                         : 'bg-amber-700 hover:bg-amber-800 disabled:opacity-50'
                     } disabled:cursor-not-allowed flex items-center justify-center gap-2`}
                   >
-                    {loading ? '⏳ Publicando...' : '✅ Publicar Libro'}
+                    {loading
+                      ? (editingId ? '⏳ Guardando...' : '⏳ Publicando...')
+                      : (editingId ? '💾 Guardar Cambios' : '✅ Publicar Libro')}
                   </button>
                   <button
-                    type="reset"
+                    type="button"
+                    onClick={resetForm}
                     disabled={loading}
                     className={`px-6 py-3 rounded-lg font-semibold border-2 transition-colors ${
                       isDark
@@ -622,7 +779,7 @@ export default function PublishBook() {
                         : 'border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50'
                     } disabled:cursor-not-allowed`}
                   >
-                    Limpiar
+                    {editingId ? 'Cancelar' : 'Limpiar'}
                   </button>
                 </div>
               </form>

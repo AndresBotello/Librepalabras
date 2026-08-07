@@ -84,7 +84,11 @@ export async function getEdition(req, res) {
       return res.status(404).json({ ok: false, message: 'Edición no encontrada' });
     }
 
-    incrementEditionViews(edition.id);
+    // Abrir la edición cuenta como una lectura. Los borradores quedan fuera: solo
+    // los alcanza el admin al previsualizar, y eso no es un lector real.
+    if (edition.isPublished) {
+      incrementEditionViews(edition.id);
+    }
 
     return res.json({ ok: true, edition });
   } catch (error) {

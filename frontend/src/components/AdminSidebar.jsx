@@ -88,8 +88,9 @@ export default function AdminSidebar() {
     { icon: IconUsers, label: 'Usuarios', path: '/admin/users' },
     { icon: IconFiles, label: 'Archivos', path: '/admin/files' },
     { icon: IconBooks, label: 'Venta de Libros', path: '/admin/publishbook' },
-    { icon: IconMagazine, label: 'Revista Poliversia', path: '/admin/poliversia' },
-    { icon: IconContest, label: 'Concurso de Cuento', path: '/concursos/panel' },
+    { icon: IconMagazine, label: 'Revista Poleversia', path: '/admin/poleversia' },
+    { icon: IconContest, label: 'Convocatorias', path: '/admin/concursos' },
+    { icon: IconContest, label: 'Calificar Concursos', path: '/concursos/panel' },
     { icon: IconSettings, label: 'Configuración', path: '/admin/settings' },
   ];
 

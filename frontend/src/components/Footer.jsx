@@ -31,7 +31,7 @@ export default function Footer() {
             <ul className="space-y-2">
               <li><a href="#" className={`text-sm transition-colors ${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-[#5D4037]'}`}>Explorar</a></li>
               <li><a href="#" className={`text-sm transition-colors ${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-[#5D4037]'}`}>Comunidad</a></li>
-              <li><a href="#" className={`text-sm transition-colors ${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-[#5D4037]'}`}>Historias</a></li>
+              <li><a href="#" className={`text-sm transition-colors ${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-[#5D4037]'}`}>Literatura</a></li>
             </ul>
           </div>
 

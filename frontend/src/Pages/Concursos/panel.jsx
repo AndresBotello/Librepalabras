@@ -16,6 +16,7 @@ import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { ThemeContext } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext.jsx';
+import useContestCatalog from '../../hooks/useContestCatalog';
 import {
   CONTEST_MAX_SCORE,
   CONTEST_MIN_SCORE,
@@ -42,9 +43,11 @@ function formatScore(value) {
 export default function ContestPanel() {
   const { isDark } = useContext(ThemeContext);
   const { user } = useAuth();
+  const { contests } = useContestCatalog();
   const [stories, setStories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('todos');
+  const [contestFilter, setContestFilter] = useState('todos');
   const [expandedId, setExpandedId] = useState(null);
   const [status, setStatus] = useState(null);
   const [busyId, setBusyId] = useState(null);
@@ -82,10 +85,25 @@ export default function ContestPanel() {
     };
   }, []);
 
-  const visibleStories = useMemo(
-    () => (filter === 'todos' ? stories : stories.filter((story) => story.status === filter)),
-    [stories, filter]
+  // Solo se ofrecen los concursos que ya tienen cuentos inscritos: no tiene
+  // sentido filtrar por una convocatoria vacía.
+  const contestsWithStories = useMemo(
+    () => contests.filter((contest) => stories.some((story) => story.contestId === contest.id)),
+    [contests, stories]
   );
+
+  const contestLabel = (id) => {
+    const contest = contests.find((item) => item.id === id);
+    if (!contest) return 'Concurso';
+
+    return contest.edition ? `${contest.shortName} ${contest.edition}` : contest.shortName;
+  };
+
+  const visibleStories = useMemo(() => {
+    return stories
+      .filter((story) => filter === 'todos' || story.status === filter)
+      .filter((story) => contestFilter === 'todos' || story.contestId === contestFilter);
+  }, [stories, filter, contestFilter]);
 
   const runAction = async (storyId, action, successMessage) => {
     setBusyId(storyId);
@@ -170,7 +188,7 @@ export default function ContestPanel() {
                 Panel de calificación
               </h1>
               <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                Concurso de Cuento Corto. Calificar y publicar son decisiones independientes:
+                Todos los concursos. Calificar y publicar son decisiones independientes:
                 puedes publicar un cuento aunque no esté calificado.
               </p>
             </header>
@@ -182,6 +200,30 @@ export default function ContestPanel() {
                   : isDark ? 'bg-rose-950/40 border-rose-800 text-rose-300' : 'bg-rose-50 border-rose-200 text-rose-800'
               }`}>
                 {status.message}
+              </div>
+            )}
+
+            {contestsWithStories.length > 1 && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {[{ id: 'todos', shortName: 'Todos los concursos', edition: '' }, ...contestsWithStories].map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setContestFilter(item.id)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors border ${
+                      contestFilter === item.id
+                        ? isDark
+                          ? 'bg-amber-950/50 text-amber-300 border-amber-800'
+                          : 'bg-amber-50 text-amber-800 border-amber-300'
+                        : isDark
+                          ? 'bg-gray-900 text-gray-400 border-gray-800 hover:text-gray-200'
+                          : 'bg-white text-gray-600 border-gray-200 hover:text-gray-900'
+                    }`}
+                  >
+                    {item.shortName}
+                    {item.edition && <span className="ml-1 opacity-70">{item.edition}</span>}
+                  </button>
+                ))}
               </div>
             )}
 
@@ -221,6 +263,7 @@ export default function ContestPanel() {
                   <StoryCard
                     key={story.id}
                     story={story}
+                    contestName={contestLabel(story.contestId)}
                     isDark={isDark}
                     isAdmin={isAdmin}
                     busy={busyId === story.id}
@@ -250,6 +293,7 @@ export default function ContestPanel() {
 
 function StoryCard({
   story,
+  contestName,
   isDark,
   isAdmin,
   busy,
@@ -326,7 +370,7 @@ function StoryCard({
 
           <p className={`font-semibold truncate ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{story.title}</p>
           <p className={`text-xs mt-0.5 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-            {story.authorName} · {(story.createdAt || '').slice(0, 10)}
+            {`${contestName} · ${story.authorName} · ${(story.createdAt || '').slice(0, 10)}`}
           </p>
         </div>
 

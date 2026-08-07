@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, FileText, Image as ImageIcon, Loader2, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { AlertTriangle, BookOpen, Eye, FileText, Image as ImageIcon, Loader2, Pencil, Plus, Trash2, TrendingUp, X } from 'lucide-react';
 import AdminSidebar from '../../components/AdminSidebar';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
@@ -68,6 +68,21 @@ export default function AdminPoliversia() {
     () => editions.find((item) => item.id === editingId) || null,
     [editions, editingId]
   );
+
+  // Las lecturas solo se acumulan en ediciones públicas, así que el resumen
+  // ignora los borradores para no dar un total engañoso.
+  const readingStats = useMemo(() => {
+    const published = editions.filter((item) => item.isPublished !== false);
+
+    return {
+      publishedCount: published.length,
+      totalViews: published.reduce((sum, item) => sum + (item.views || 0), 0),
+      mostRead: published.reduce(
+        (best, item) => ((item.views || 0) > (best?.views || 0) ? item : best),
+        null
+      ),
+    };
+  }, [editions]);
 
   // Recarga desde manejadores de eventos (tras crear, editar o eliminar).
   const loadEditions = async () => {
@@ -269,7 +284,7 @@ export default function AdminPoliversia() {
             <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
               <div>
                 <h1 className={`text-2xl sm:text-3xl font-bold ${isDark ? 'text-gray-100' : 'text-[#5D4037]'}`}>
-                  Revista Poliversia
+                  Revista Poleversia
                 </h1>
                 <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                   Publica nuevas ediciones o reemplaza el PDF de una existente.
@@ -293,6 +308,38 @@ export default function AdminPoliversia() {
                   : isDark ? 'bg-rose-950/40 border-rose-800 text-rose-300' : 'bg-rose-50 border-rose-200 text-rose-800'
               }`}>
                 {status.message}
+              </div>
+            )}
+
+            {/* Lecturas: se suma una cada vez que alguien abre una edición en el
+                catálogo público. */}
+            {!loading && editions.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                <StatTile
+                  isDark={isDark}
+                  icon={Eye}
+                  label="Lecturas totales"
+                  value={readingStats.totalViews.toLocaleString('es-CO')}
+                  hint="Aperturas en el catálogo público"
+                />
+                <StatTile
+                  isDark={isDark}
+                  icon={BookOpen}
+                  label="Ediciones publicadas"
+                  value={readingStats.publishedCount}
+                  hint={`${editions.length - readingStats.publishedCount} en borrador`}
+                />
+                <StatTile
+                  isDark={isDark}
+                  icon={TrendingUp}
+                  label="Edición más leída"
+                  value={readingStats.mostRead ? `N.º ${readingStats.mostRead.edition}` : '—'}
+                  hint={
+                    readingStats.mostRead
+                      ? `${(readingStats.mostRead.views || 0).toLocaleString('es-CO')} lecturas · ${readingStats.mostRead.title}`
+                      : 'Aún sin lecturas'
+                  }
+                />
               </div>
             )}
 
@@ -487,6 +534,15 @@ export default function AdminPoliversia() {
                             Borrador
                           </span>
                         )}
+                        <span
+                          title={`${edition.views || 0} lecturas registradas`}
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            isDark ? 'bg-amber-950/50 text-amber-400' : 'bg-amber-50 text-amber-700'
+                          }`}
+                        >
+                          <Eye className="w-3 h-3" />
+                          {(edition.views || 0).toLocaleString('es-CO')} {(edition.views || 0) === 1 ? 'lectura' : 'lecturas'}
+                        </span>
                       </div>
                       <p className={`font-semibold truncate ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
                         {edition.title}
@@ -494,7 +550,6 @@ export default function AdminPoliversia() {
                       <p className={`text-xs mt-0.5 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
                         {(edition.publishedAt || '').slice(0, 10)}
                         {edition.pdfSize ? ` · ${formatBytes(edition.pdfSize)}` : ''}
-                        {` · ${edition.views || 0} lecturas`}
                       </p>
                     </div>
 
@@ -537,6 +592,27 @@ export default function AdminPoliversia() {
           {...confirmation}
           onCancel={() => setConfirmation(null)}
         />
+      )}
+    </div>
+  );
+}
+
+function StatTile({ isDark, icon: Icon, label, value, hint }) {
+  return (
+    <div className={`rounded-2xl border p-4 ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
+      <div className="flex items-center gap-2 mb-2">
+        <Icon className={`w-4 h-4 ${isDark ? 'text-amber-400' : 'text-[#5D4037]'}`} />
+        <span className={`text-xs font-semibold tracking-wider uppercase ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+          {label}
+        </span>
+      </div>
+      <p className={`text-2xl font-bold tabular-nums ${isDark ? 'text-gray-100' : 'text-[#5D4037]'}`}>
+        {value}
+      </p>
+      {hint && (
+        <p className={`text-xs mt-1 truncate ${isDark ? 'text-gray-500' : 'text-gray-500'}`} title={hint}>
+          {hint}
+        </p>
       )}
     </div>
   );

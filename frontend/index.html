@@ -1,9 +1,14 @@
 <!doctype html>
-<html lang="en">
+<html lang="es" translate="no">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- El traductor automático del navegador reemplaza los nodos de texto por
+         elementos <font> y React acaba borrando nodos que ya no son suyos
+         ("removeChild/insertBefore ... not a child of this node"). Con el idioma
+         bien declarado y notranslate, no se dispara. -->
+    <meta name="google" content="notranslate" />
     <title>Librepalabras</title>
   </head>
   <body>

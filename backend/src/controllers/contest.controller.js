@@ -1,5 +1,12 @@
 import { default as xss } from 'xss';
 import {
+  CONTEST_STATUSES,
+  DEFAULT_CONTEST_ID,
+  getContest,
+  mergeContestStates,
+  normalizeContestId,
+} from '../config/contests.js';
+import {
   MAX_SCORE,
   MIN_SCORE,
   computeStatus,
@@ -11,14 +18,27 @@ import {
   listAllStories,
   listPublishedStories,
   listRatingsForStory,
+  listStoriesByAuthor,
+  readContestStates,
   updateStory,
   upsertRating,
+  writeContestState,
 } from '../services/contest.service.js';
+
+const MAX_EDITION_LENGTH = 40;
+
+/** El catálogo con el estado que decidió el administrador aplicado encima. */
+async function loadCatalog() {
+  return mergeContestStates(await readContestStates());
+}
 
 const MAX_TITLE_LENGTH = 140;
 const MIN_CONTENT_LENGTH = 200;
 const MAX_CONTENT_LENGTH = 25000;
 const MAX_COMMENT_LENGTH = 2000;
+
+/** Cuántos puestos tiene el podio de cada edición cerrada. */
+const PODIUM_SIZE = 3;
 
 function isOwnCloudinaryUrl(url) {
   if (typeof url !== 'string') return false;
@@ -35,6 +55,7 @@ function isOwnCloudinaryUrl(url) {
 function toPublicStory(story) {
   return {
     id: story.id,
+    contestId: normalizeContestId(story.contestId),
     title: story.title,
     content: story.content,
     imageUrl: story.imageUrl || null,
@@ -65,6 +86,7 @@ function toAuthorStory(story, ratings = []) {
   return {
     ...toPublicStory(story),
     status: story.status,
+    evaluationClosed: Boolean(story.evaluationClosed),
     isPublished: Boolean(story.isPublished),
     updatedAt: story.updatedAt,
     averageScore: story.averageScore || 0,
@@ -102,18 +124,73 @@ function validateStoryInput({ title, content, imageUrl }, { requireAll = true } 
 
 // ---------------------------------------------------------------- público
 
-export async function getPublishedStories(_req, res) {
+export async function getPublishedStories(req, res) {
   try {
     const stories = await listPublishedStories();
+    const requested = req.query.contest;
+
+    // Sin `?contest=` se devuelve todo: la portada de Concursos los agrupa por
+    // su cuenta para no pedir una lista por cada certamen.
+    const visible = requested
+      ? stories.filter((story) => normalizeContestId(story.contestId) === requested)
+      : stories;
 
     return res.json({
       ok: true,
-      stories: stories.map(toPublicStory),
-      total: stories.length,
+      stories: visible.map(toPublicStory),
+      total: visible.length,
     });
   } catch (error) {
     console.error('Error al listar cuentos publicados:', error);
     return res.status(500).json({ ok: false, message: 'Error al obtener los cuentos' });
+  }
+}
+
+/** El catálogo con el estado real de cada concurso. */
+export async function getCatalog(_req, res) {
+  try {
+    return res.json({ ok: true, contests: await loadCatalog() });
+  } catch (error) {
+    console.error('Error al obtener el catálogo de concursos:', error);
+    return res.status(500).json({ ok: false, message: 'Error al obtener los concursos' });
+  }
+}
+
+/**
+ * Ganadores de las ediciones ya cerradas. El podio se calcula solo: entre los
+ * cuentos publicados de cada concurso cerrado, los de mejor promedio del
+ * jurado. La nota no sale en la respuesta —sirve para ordenar, pero sigue
+ * siendo información interna—; hacia afuera solo va el puesto.
+ */
+export async function getWinners(_req, res) {
+  try {
+    const catalog = await loadCatalog();
+    const closed = catalog.filter((contest) => contest.status === 'cerrado');
+
+    if (closed.length === 0) {
+      return res.json({ ok: true, editions: [], total: 0 });
+    }
+
+    const stories = await listPublishedStories();
+
+    const editions = closed
+      .map((contest) => ({
+        contestId: contest.id,
+        name: contest.name,
+        edition: contest.edition || '',
+        winners: stories
+          .filter((story) => normalizeContestId(story.contestId) === contest.id)
+          .filter((story) => (story.totalRatings || 0) > 0)
+          .sort((a, b) => (b.averageScore || 0) - (a.averageScore || 0))
+          .slice(0, PODIUM_SIZE)
+          .map((story, index) => ({ position: index + 1, ...toPublicStory(story) })),
+      }))
+      .filter((edition) => edition.winners.length > 0);
+
+    return res.json({ ok: true, editions, total: editions.length });
+  } catch (error) {
+    console.error('Error al obtener los ganadores:', error);
+    return res.status(500).json({ ok: false, message: 'Error al obtener los ganadores' });
   }
 }
 
@@ -143,16 +220,36 @@ export async function submitStory(req, res) {
   try {
     const { title, content, imageUrl, imagePublicId } = req.body;
 
+    // Sin `contestId` se asume el institucional: es lo que enviaban los
+    // clientes anteriores al catálogo de concursos.
+    const contestId = req.body.contestId || DEFAULT_CONTEST_ID;
+
+    // Se consulta el estado guardado, no el del archivo: quien abre y cierra
+    // las convocatorias es el administrador.
+    const catalog = await loadCatalog();
+    const contest = catalog.find((item) => item.id === contestId);
+
+    if (!contest) {
+      return res.status(400).json({ ok: false, message: 'El concurso indicado no existe' });
+    }
+
+    if (contest.status !== 'abierto') {
+      return res.status(409).json({
+        ok: false,
+        message: `"${contest.name}" no está recibiendo inscripciones.`,
+      });
+    }
+
     const validationError = validateStoryInput({ title, content, imageUrl });
     if (validationError) {
       return res.status(400).json({ ok: false, message: validationError });
     }
 
-    const existing = await findStoryByAuthor(req.auth.uid);
+    const existing = await findStoryByAuthor(req.auth.uid, contestId);
     if (existing) {
       return res.status(409).json({
         ok: false,
-        message: 'Ya tienes un cuento inscrito en el concurso. Puedes editarlo mientras no esté calificado.',
+        message: `Ya tienes un cuento inscrito en "${contest.name}". Puedes editarlo mientras no esté calificado.`,
       });
     }
 
@@ -160,6 +257,7 @@ export async function submitStory(req, res) {
     const authorName = [req.user?.nombres, req.user?.apellidos].filter(Boolean).join(' ').trim();
 
     const story = await createStory({
+      contestId,
       title: title.trim(),
       // El cuento se muestra como texto plano en el front, pero se sanea igual
       // por si algún día se renderiza como HTML.
@@ -192,23 +290,19 @@ export async function submitStory(req, res) {
   }
 }
 
-export async function getMyStory(req, res) {
+/** Todas las inscripciones del autor, una por concurso. */
+export async function getMyStories(req, res) {
   try {
-    const story = await findStoryByAuthor(req.auth.uid);
+    const stories = await listStoriesByAuthor(req.auth.uid);
 
-    if (!story) {
-      return res.json({ ok: true, story: null });
-    }
+    const withRatings = await Promise.all(
+      stories.map(async (story) => toAuthorStory(story, await listRatingsForStory(story.id)))
+    );
 
-    const ratings = await listRatingsForStory(story.id);
-
-    return res.json({
-      ok: true,
-      story: toAuthorStory(story, ratings),
-    });
+    return res.json({ ok: true, stories: withRatings, total: withRatings.length });
   } catch (error) {
-    console.error('Error al obtener tu cuento:', error);
-    return res.status(500).json({ ok: false, message: 'Error al obtener tu cuento' });
+    console.error('Error al obtener tus cuentos:', error);
+    return res.status(500).json({ ok: false, message: 'Error al obtener tus cuentos' });
   }
 }
 
@@ -284,6 +378,7 @@ export async function getEvaluationPanel(req, res) {
 
         return {
           ...story,
+          contestId: normalizeContestId(story.contestId),
           ratings: storyRatings,
           myRating: storyRatings.find((rating) => rating.judgeId === judgeId) || null,
         };
@@ -450,6 +545,60 @@ export async function setStoryEvaluation(req, res) {
   } catch (error) {
     console.error('Error al cambiar la evaluación:', error);
     return res.status(500).json({ ok: false, message: 'Error al cambiar la evaluación' });
+  }
+}
+
+/**
+ * Solo admin: abre, anuncia o cierra un concurso, y fija su edición. Cerrar es
+ * lo que hace aparecer el podio en la página de ganadores.
+ */
+export async function setContestState(req, res) {
+  try {
+    const { id } = req.params;
+    const { status, edition } = req.body;
+
+    if (!getContest(id)) {
+      return res.status(404).json({ ok: false, message: 'El concurso indicado no existe' });
+    }
+
+    if (!CONTEST_STATUSES.includes(status)) {
+      return res.status(400).json({
+        ok: false,
+        message: `El estado debe ser uno de: ${CONTEST_STATUSES.join(', ')}`,
+      });
+    }
+
+    if (edition !== undefined && String(edition).length > MAX_EDITION_LENGTH) {
+      return res.status(400).json({
+        ok: false,
+        message: `La edición no puede superar los ${MAX_EDITION_LENGTH} caracteres`,
+      });
+    }
+
+    const state = {
+      status,
+      updatedAt: new Date().toISOString(),
+      updatedBy: req.auth.uid,
+    };
+
+    // `undefined` no se puede guardar en Firestore: si no llega edición, se
+    // deja la que hubiera.
+    if (edition !== undefined) {
+      state.edition = xss(String(edition).trim());
+    }
+
+    const states = await writeContestState(id, state);
+    const contests = mergeContestStates(states);
+
+    return res.json({
+      ok: true,
+      message: 'Concurso actualizado',
+      contests,
+      contest: contests.find((item) => item.id === id),
+    });
+  } catch (error) {
+    console.error('Error al actualizar el concurso:', error);
+    return res.status(500).json({ ok: false, message: 'Error al actualizar el concurso' });
   }
 }
 

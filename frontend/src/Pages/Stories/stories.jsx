@@ -1,5 +1,8 @@
 import React, { useState, useContext, useEffect, useMemo, useCallback } from 'react';
-import { Heart, MessageCircle, Share2, Download, ChevronLeft, ChevronRight, BookOpen, Eye, ArrowLeft, Bookmark } from 'lucide-react';
+import {
+  Heart, MessageCircle, Share2, Download, ChevronLeft, ChevronRight, BookOpen, Eye, ArrowLeft, Bookmark,
+  Feather, BookMarked, ScrollText, Drama, Newspaper, UserRound, Quote, NotebookPen, Palette, Library,
+} from 'lucide-react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
@@ -14,6 +17,22 @@ if (typeof window !== 'undefined' && 'Worker' in window) {
 }
 
 const WORKS_PER_PAGE = 12;
+
+// Icono de línea por género: sustituye a los emojis para mantener la estética editorial.
+const GENRE_ICONS = {
+  cuento: BookOpen,
+  'poesía': Feather,
+  novela: BookMarked,
+  ensayo: ScrollText,
+  drama: Drama,
+  'crónica': Newspaper,
+  'biografía': UserRound,
+  microrrelato: Quote,
+  cuaderno: NotebookPen,
+  otro: Palette,
+};
+
+const getGenreIcon = (genre) => GENRE_ICONS[genre] || BookOpen;
 
 export default function Stories() {
   const { isDark } = useContext(ThemeContext);
@@ -57,7 +76,13 @@ export default function Stories() {
     return genresData.genres.find(g => g.value === genre);
   }, []);
 
-  const uniqueGenres = useMemo(() => [...new Set(works.map(w => w.genre))], [works]);
+  // Obras publicadas por cada género del catálogo de creación.
+  const genreCounts = useMemo(() => {
+    return works.reduce((acc, work) => {
+      acc[work.genre] = (acc[work.genre] || 0) + 1;
+      return acc;
+    }, {});
+  }, [works]);
 
   const filteredWorks = useMemo(() => {
     return selectedGenre === 'all' ? works : works.filter(w => w.genre === selectedGenre);
@@ -201,52 +226,58 @@ export default function Stories() {
             {/* Encabezado Principal */}
             <header className="mb-10 text-center sm:text-left">
               <h1 className={`text-4xl sm:text-5xl font-serif font-bold tracking-tight mb-3 ${isDark ? 'text-amber-100' : 'text-stone-900'}`}>
-                Biblioteca de Historias
+                Biblioteca de Literatura
               </h1>
               <p className={`text-base sm:text-lg max-w-2xl font-serif italic ${isDark ? 'text-slate-400' : 'text-stone-600'}`}>
                 Explora manuscritos, relatos y creaciones literarias de autores independientes.
               </p>
             </header>
 
-            {/* Filtros por Género */}
-            {uniqueGenres.length > 1 && (
-              <nav className="mb-10 flex flex-wrap gap-2 border-b pb-4 border-stone-200 dark:border-slate-800">
-                <button
-                  onClick={() => setSelectedGenre('all')}
-                  className={`px-4 py-2 rounded-full text-xs font-serif font-medium transition-all ${
-                    selectedGenre === 'all'
-                      ? isDark
-                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                        : 'bg-stone-900 text-stone-50 shadow-md'
-                      : isDark
-                      ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-                      : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/60'
-                  }`}
-                >
-                  Todas las obras
-                </button>
-                {uniqueGenres.map(genre => {
-                  const info = getGenreInfo(genre);
-                  return (
-                    <button
-                      key={genre}
-                      onClick={() => setSelectedGenre(genre)}
-                      className={`px-4 py-2 rounded-full text-xs font-serif font-medium transition-all ${
-                        selectedGenre === genre
-                          ? isDark
-                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                            : 'bg-stone-900 text-stone-50 shadow-md'
-                          : isDark
-                          ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-                          : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/60'
-                      }`}
-                    >
-                      {info?.label || genre}
-                    </button>
-                  );
-                })}
-              </nav>
-            )}
+            {/* Filtros por Género: catálogo completo del formulario de publicación */}
+            <nav className={`mb-12 pb-4 border-b ${isDark ? 'border-slate-800' : 'border-stone-200'}`}>
+              <div className="flex flex-wrap gap-x-1.5 gap-y-2">
+                {[{ value: 'all', label: 'Todas', icon: Library, count: works.length, description: 'El catálogo completo' }]
+                  .concat(genresData.genres.map(genre => ({
+                    value: genre.value,
+                    label: genre.label,
+                    icon: getGenreIcon(genre.value),
+                    count: genreCounts[genre.value] || 0,
+                    description: genre.description,
+                  })))
+                  .map(({ value, label, icon: Icon, count, description }) => {
+                    const isActive = selectedGenre === value;
+                    const isEmpty = count === 0;
+                    return (
+                      <button
+                        key={value}
+                        onClick={() => setSelectedGenre(value)}
+                        disabled={isEmpty}
+                        title={description}
+                        aria-current={isActive ? 'true' : undefined}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm font-serif whitespace-nowrap transition-all duration-200 ${
+                          isEmpty
+                            ? isDark
+                              ? 'border-transparent text-slate-700 cursor-not-allowed'
+                              : 'border-transparent text-stone-300 cursor-not-allowed'
+                            : isActive
+                            ? isDark
+                              ? 'border-amber-400/50 bg-amber-500/10 text-amber-300'
+                              : 'border-stone-900 bg-stone-900 text-stone-50'
+                            : isDark
+                            ? 'border-slate-800 text-slate-400 hover:border-slate-600 hover:text-slate-200'
+                            : 'border-stone-200 text-stone-600 hover:border-stone-400 hover:text-stone-900'
+                        }`}
+                      >
+                        <Icon className="w-4 h-4 shrink-0" strokeWidth={1.5} />
+                        <span>{label}</span>
+                        <span className={`text-[11px] font-sans tabular-nums ${isActive ? 'opacity-70' : 'opacity-45'}`}>
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+              </div>
+            </nav>
 
             {/* Grid de Libros / Portadas */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 sm:gap-8">
@@ -265,7 +296,7 @@ export default function Stories() {
                     <div className={`relative rounded-md overflow-hidden shadow-md group-hover:shadow-2xl transition-all duration-300 border ${
                       isDark ? 'border-slate-800 bg-slate-900' : 'border-stone-200 bg-stone-100'
                     }`} style={{ aspectRatio: '2/3' }}>
-                      
+
                       {/* Simulación del lomo de un libro (Sombra lateral izquierda) */}
                       <div className="absolute inset-y-0 left-0 w-3 bg-gradient-to-r from-black/30 to-transparent z-10 pointer-events-none" />
 
@@ -304,7 +335,7 @@ export default function Stories() {
                       <p className={`text-xs font-serif italic ${isDark ? 'text-slate-400' : 'text-stone-500'}`}>
                         {work.author || 'Anónimo'}
                       </p>
-                      
+
                       <div className={`flex items-center gap-3 text-xs mt-1 ${isDark ? 'text-slate-500' : 'text-stone-400'}`}>
                         <span className="flex items-center gap-1"><Eye className="w-3.5 h-3.5" />{work.views || 0}</span>
                         <span className="flex items-center gap-1"><Heart className="w-3.5 h-3.5" />{work.totalRatings || 0}</span>

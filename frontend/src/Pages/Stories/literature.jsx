@@ -34,7 +34,7 @@ export default function Literature() {
   const sections = [
     {
       id: 1,
-      title: 'Revista Poliversia',
+      title: 'Revista Poleversia',
       description: 'Nuestra publicación insignia donde la voz de nuestros autores océano vive, ensayos, crítica y análisis que expanden la literatura.',
       image: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=400&h=300&fit=crop',
       category: 'Publicación Periódica',
@@ -86,7 +86,7 @@ export default function Literature() {
             </div>
 
             <h1 className={`text-4xl sm:text-5xl font-bold mb-6 leading-tight transition-colors ${isDark ? 'text-gray-100' : 'text-[#5D4037]'}`}>
-              Nuestra <span className="italic font-serif">Literatura</span>
+              Nuestros <span className="italic font-serif">Libros</span>
             </h1>
 
             <p className={`text-base mb-8 leading-relaxed transition-colors ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>

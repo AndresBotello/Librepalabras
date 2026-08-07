@@ -372,7 +372,7 @@ export function uploadCoverWithProgress(file, onProgress) {
   return uploadWithProgress('/upload/cover', file, onProgress);
 }
 
-// Concurso de Cuento Corto
+// Concursos
 export const CONTEST_MIN_SCORE = 0;
 export const CONTEST_MAX_SCORE = 5;
 
@@ -383,15 +383,34 @@ export const CONTEST_STATUS_LABELS = {
   publicado: 'Publicado',
 };
 
-export function getPublishedContestStories() {
-  return request('/contest/published');
+/** Catálogo con el estado (abierto / próximamente / cerrado) que fijó el admin. */
+export function getContestCatalog() {
+  return request('/contest/catalog');
+}
+
+/** Solo admin: abre, anuncia o cierra una convocatoria. */
+export function setContestState(id, { status, edition }) {
+  return request(`/contest/catalog/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status, edition }),
+  });
+}
+
+export function getPublishedContestStories(contestId = '') {
+  return request(contestId ? `/contest/published?contest=${encodeURIComponent(contestId)}` : '/contest/published');
 }
 
 export function getPublishedContestStory(id) {
   return request(`/contest/published/${id}`);
 }
 
-export function getMyContestStory() {
+/** Podios de las ediciones cerradas, calculados por el backend. */
+export function getContestWinners() {
+  return request('/contest/winners');
+}
+
+/** Las inscripciones del colaborador: una por concurso. */
+export function getMyContestStories() {
   return request('/contest/mine');
 }
 

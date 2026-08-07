@@ -1,0 +1,52 @@
+{
+  "contests": [
+    {
+      "id": "cuento-corto-institucional",
+      "slug": "cuento-corto",
+      "name": "Concurso de Cuento Corto Institucional",
+      "shortName": "Cuento Corto Institucional",
+      "genre": "cuento",
+      "edition": "2025",
+      "status": "abierto",
+      "audience": "Comunidad de la institución",
+      "summary": "El certamen de casa: cuentos breves escritos por la comunidad de la institución.",
+      "description": "Los cuentos seleccionados por el jurado del concurso. Cada uno es una voz del Cesar contando su propio pedazo de mundo."
+    },
+    {
+      "id": "cuento-corto-intercolegial",
+      "slug": "cuento-corto-intercolegial",
+      "name": "Concurso Intercolegial de Cuento Corto",
+      "shortName": "Cuento Corto Intercolegial",
+      "genre": "cuento",
+      "edition": "2026",
+      "status": "proximamente",
+      "audience": "Colegios del departamento del Cesar",
+      "summary": "La próxima edición abre la convocatoria a los colegios del departamento.",
+      "description": "Un certamen entre colegios del Cesar: cada institución presenta las voces de sus estudiantes y el jurado elige los cuentos que se publican."
+    },
+    {
+      "id": "poesia",
+      "slug": "poesia",
+      "name": "Concurso de Poesía",
+      "shortName": "Poesía",
+      "genre": "poesía",
+      "edition": "",
+      "status": "proximamente",
+      "audience": "Por definir",
+      "summary": "Un certamen dedicado al verso, todavía en preparación.",
+      "description": "Poemas breves para leer en voz alta. La convocatoria se anunciará en esta misma página."
+    },
+    {
+      "id": "microrrelato",
+      "slug": "microrrelato",
+      "name": "Concurso de Microrrelato",
+      "shortName": "Microrrelato",
+      "genre": "microrrelato",
+      "edition": "",
+      "status": "proximamente",
+      "audience": "Por definir",
+      "summary": "Historias mínimas con el máximo impacto, próximamente.",
+      "description": "Textos muy breves donde cada palabra pesa. La convocatoria se anunciará en esta misma página."
+    }
+  ]
+}

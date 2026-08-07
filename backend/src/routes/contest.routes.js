@@ -3,10 +3,13 @@ import { authenticateRequest } from '../middlewares/auth.middleware.js';
 import { authorizeRoles, JURY_ROLES } from '../middlewares/role.middleware.js';
 import { contestSubmissionRateLimiter } from '../middlewares/rateLimiter.middleware.js';
 import {
+  getCatalog,
   getPublishedStories,
   getPublishedStory,
+  getWinners,
+  setContestState,
   submitStory,
-  getMyStory,
+  getMyStories,
   updateMyStory,
   getEvaluationPanel,
   rateStory,
@@ -19,12 +22,17 @@ import {
 const router = Router();
 
 // Públicas: únicamente cuentos publicados, sin notas ni comentarios.
+router.get('/catalog', getCatalog);
 router.get('/published', getPublishedStories);
+router.get('/winners', getWinners);
 router.get('/published/:id', getPublishedStory);
+
+// Abrir, anunciar o cerrar una convocatoria es decisión del administrador.
+router.patch('/catalog/:id', authenticateRequest, authorizeRoles(['admin']), setContestState);
 
 // Solo colaborador, a propósito: un juez puede publicar obra literaria propia,
 // pero no concursar en el certamen que él mismo califica.
-router.get('/mine', authenticateRequest, authorizeRoles(['collaborator']), getMyStory);
+router.get('/mine', authenticateRequest, authorizeRoles(['collaborator']), getMyStories);
 router.post('/', authenticateRequest, authorizeRoles(['collaborator']), contestSubmissionRateLimiter, submitStory);
 router.patch('/mine/:id', authenticateRequest, authorizeRoles(['collaborator']), updateMyStory);
 

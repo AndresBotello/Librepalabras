@@ -87,7 +87,7 @@ export default function CollaboratorSidebar() {
     { icon: IconPublish, label: 'Mis Publicaciones', path: '/collaborator/publications' },
     isJudge
       ? { icon: IconContest, label: 'Panel de Calificación', path: '/concursos/panel' }
-      : { icon: IconContest, label: 'Concurso de Cuento', path: '/collaborator/concurso' },
+      : { icon: IconContest, label: 'Concursos', path: '/collaborator/concurso' },
     { icon: IconAnalytics, label: 'Estadísticas', path: '/collaborator/analytics' },
     { icon: IconProfile, label: 'Perfil', path: '/collaborator/profile' },
   ];

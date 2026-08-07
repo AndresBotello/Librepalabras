@@ -38,19 +38,19 @@ export default function Navbar() {
               Inicio
             </Link>
             <Link to="/literature" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037]'}`}>
-              Literatura
+              Libros
             </Link>
             <Link to="/stories" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037]'}`}>
-              Historias
+              Literatura
             </Link>
             <Link to="/authors" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037]'}`}>
               Autores
             </Link>
-            <Link to="/concursos/cuento-corto" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037]'}`}>
-              Concurso
+            <Link to="/concursos" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037]'}`}>
+              Concursos
             </Link>
-            <Link to="/poliversia" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037]'}`}>
-              Poliversia
+            <Link to="/poleversia" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037]'}`}>
+              Revista Poleversia
             </Link>
           </div>
 
@@ -117,16 +117,19 @@ export default function Navbar() {
               Inicio
             </Link>
             <Link to="/literature" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037] hover:text-gray-900'}`}>
-              Literatura
+              Libros
             </Link>
             <Link to="/stories" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037] hover:text-gray-900'}`}>
-              Historias
+              Literatura
             </Link>
             <Link to="/authors" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037] hover:text-gray-900'}`}>
               Autores
             </Link>
-            <Link to="/concursos/cuento-corto" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037] hover:text-gray-900'}`}>
-              Concurso
+            <Link to="/concursos" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037] hover:text-gray-900'}`}>
+              Concursos
+            </Link>
+            <Link to="/poleversia" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037] hover:text-gray-900'}`}>
+              Revista Poleversia
             </Link>
             <div className="pt-4 space-y-3 border-t" style={{borderColor: isDark ? '#374151' : '#e5e7eb'}}>
               {isAuthenticated ? (
