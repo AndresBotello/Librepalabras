@@ -43,6 +43,16 @@ export async function createSession(req, res) {
       upsertUserProfile(decodedClaims, additionalData),
     ]);
 
+    // La cookie se emite en paralelo con la lectura del perfil, pero solo se
+    // entrega si la cuenta sigue activa: sin `Set-Cookie` no hay sesión.
+    if (userProfile?.disabled) {
+      return res.status(403).json({
+        ok: false,
+        message: 'Tu cuenta está desactivada. Contacta con un administrador.',
+        code: 'account-disabled',
+      });
+    }
+
     res.cookie('session', sessionCookie, sessionCookieOptions);
 
     const responseUser = userProfile || {

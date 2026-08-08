@@ -1,0 +1,13 @@
+# Librepalabras — https://librepalabras.com
+
+User-agent: *
+Allow: /
+
+# Zonas privadas: no aportan nada en resultados y exigen sesión.
+Disallow: /admin/
+Disallow: /collaborator/
+Disallow: /concursos/panel
+Disallow: /login
+Disallow: /register
+
+Sitemap: https://librepalabras.com/sitemap.xml

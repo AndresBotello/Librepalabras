@@ -8,6 +8,7 @@ import {
   testAdminAuth,
   getUserById,
   updateUserById,
+  updateUserStatus,
   getPdfFiles,
   deletePdfFile,
 } from '../controllers/admin.controller.js';
@@ -28,6 +29,7 @@ router.get('/users', getAllUsers);
 router.get('/users/:uid', getUserById);
 router.patch('/users/:uid', updateUserById);
 router.patch('/users/:uid/role', updateUserRole);
+router.patch('/users/:uid/status', updateUserStatus);
 
 // Rutas para gestión de archivos PDF
 router.get('/files', getPdfFiles);

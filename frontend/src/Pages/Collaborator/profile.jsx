@@ -5,6 +5,10 @@ import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import CollaboratorSidebar from '../../components/CollaboratorSidebar';
 import { updateUserById, uploadProfilePhoto } from '../../services/api';
+import { getAccountProviders, changePassword, addPasswordToAccount } from '../../services/auth';
+
+const EMPTY_PASSWORD_FORM = { current: '', next: '', confirm: '' };
+const MIN_PASSWORD_LENGTH = 6;
 
 export default function Profile() {
   const { isDark } = useContext(ThemeContext);
@@ -35,6 +39,87 @@ export default function Profile() {
       descripcion: user?.descripcion || '',
     });
   }, [user?.nombres, user?.apellidos, user?.telefono, user?.genero, user?.fechaNacimiento, user?.descripcion]);
+
+  // Qué métodos de acceso tiene la cuenta: decide si el formulario cambia la
+  // contraseña o añade una por primera vez (cuentas que solo entraban con Google).
+  const [providers, setProviders] = useState({ ready: false, hasPassword: false, hasGoogle: false });
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [passwordForm, setPasswordForm] = useState(EMPTY_PASSWORD_FORM);
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getAccountProviders().then((result) => {
+      if (!cancelled) setProviders(result);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.uid]);
+
+  const isAddingPassword = providers.ready && !providers.hasPassword;
+
+  const closePasswordForm = () => {
+    setPasswordOpen(false);
+    setPasswordForm(EMPTY_PASSWORD_FORM);
+    setPasswordError('');
+  };
+
+  const validatePasswordForm = () => {
+    if (!isAddingPassword && !passwordForm.current) {
+      return 'Escribe tu contraseña actual';
+    }
+
+    if (passwordForm.next.length < MIN_PASSWORD_LENGTH) {
+      return `La nueva contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres`;
+    }
+
+    if (passwordForm.next !== passwordForm.confirm) {
+      return 'Las contraseñas no coinciden';
+    }
+
+    if (!isAddingPassword && passwordForm.next === passwordForm.current) {
+      return 'La nueva contraseña debe ser distinta de la actual';
+    }
+
+    return null;
+  };
+
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+
+    const validationError = validatePasswordForm();
+
+    if (validationError) {
+      setPasswordError(validationError);
+      return;
+    }
+
+    setPasswordSaving(true);
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    try {
+      if (isAddingPassword) {
+        await addPasswordToAccount(passwordForm.next);
+        setProviders((prev) => ({ ...prev, hasPassword: true }));
+        setPasswordSuccess('Contraseña añadida. Ya puedes entrar con tu correo y contraseña.');
+      } else {
+        await changePassword(passwordForm.current, passwordForm.next);
+        setPasswordSuccess('Contraseña actualizada correctamente.');
+      }
+
+      closePasswordForm();
+    } catch (error) {
+      setPasswordError(error.message || 'No se pudo completar la operación.');
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
 
   const fullName = `${user?.nombres || ''} ${user?.apellidos || ''}`.trim() || 'Usuario';
   const initials = `${user?.nombres?.[0] || ''}${user?.apellidos?.[0] || ''}`.toUpperCase() || 'U';
@@ -386,49 +471,139 @@ export default function Profile() {
                   Configuración de Cuenta
                 </h3>
 
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between pb-6 border-b">
-                    <div>
-                      <p className={`font-semibold transition-colors ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
-                        Autenticación de Dos Factores
-                      </p>
-                      <p className={`text-sm transition-colors ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                        Aumenta la seguridad de tu cuenta
-                      </p>
-                    </div>
-                    <button className="px-4 py-2 rounded-lg font-semibold text-sm border transition-colors border-gray-400 text-gray-700 hover:bg-gray-100">
-                      Activar
-                    </button>
+                {passwordSuccess && (
+                  <div className={`mb-6 rounded-lg px-4 py-3 text-sm border ${
+                    isDark ? 'bg-emerald-950/40 border-emerald-800 text-emerald-300' : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                  }`}>
+                    {passwordSuccess}
                   </div>
+                )}
 
-                  <div className="flex items-center justify-between pb-6 border-b">
-                    <div>
-                      <p className={`font-semibold transition-colors ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
-                        Cambiar Contraseña
-                      </p>
-                      <p className={`text-sm transition-colors ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                        Actualiza tu contraseña regularmente
-                      </p>
-                    </div>
-                    <button className="px-4 py-2 rounded-lg font-semibold text-sm border transition-colors border-gray-400 text-gray-700 hover:bg-gray-100">
-                      Cambiar
-                    </button>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <p className={`font-semibold transition-colors ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
+                      {isAddingPassword ? 'Añadir Contraseña' : 'Cambiar Contraseña'}
+                    </p>
+                    <p className={`text-sm transition-colors ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                      {isAddingPassword
+                        ? 'Tu cuenta entra solo con Google. Añade una contraseña para poder entrar también con tu correo.'
+                        : 'Actualiza tu contraseña regularmente'}
+                    </p>
                   </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className={`font-semibold transition-colors ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
-                        Descargar Datos
-                      </p>
-                      <p className={`text-sm transition-colors ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                        Obtén una copia de tus datos personales
-                      </p>
-                    </div>
-                    <button className="px-4 py-2 rounded-lg font-semibold text-sm border transition-colors border-gray-400 text-gray-700 hover:bg-gray-100">
-                      Descargar
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => (passwordOpen ? closePasswordForm() : setPasswordOpen(true))}
+                    disabled={!providers.ready}
+                    className={`px-4 py-2 rounded-lg font-semibold text-sm border transition-colors flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed ${
+                      isDark
+                        ? 'border-gray-700 text-gray-200 hover:bg-gray-800'
+                        : 'border-gray-400 text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    {passwordOpen ? 'Cancelar' : isAddingPassword ? 'Añadir' : 'Cambiar'}
+                  </button>
                 </div>
+
+                {passwordOpen && (
+                  <form onSubmit={handlePasswordSubmit} className={`mt-6 pt-6 border-t space-y-4 ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
+                    {passwordError && (
+                      <div className={`rounded-lg px-4 py-3 text-sm border ${
+                        isDark ? 'bg-rose-950/40 border-rose-800 text-rose-300' : 'bg-rose-50 border-rose-200 text-rose-800'
+                      }`}>
+                        {passwordError}
+                      </div>
+                    )}
+
+                    {isAddingPassword && (
+                      <p className={`text-sm rounded-lg px-4 py-3 border ${
+                        isDark ? 'bg-gray-800/60 border-gray-700 text-gray-300' : 'bg-gray-50 border-gray-200 text-gray-600'
+                      }`}>
+                        Es posible que Google te pida confirmar tu identidad en una ventana emergente.
+                        Es un paso de seguridad: sin él, cualquiera que encontrara tu sesión abierta
+                        podría ponerle una contraseña a tu cuenta.
+                      </p>
+                    )}
+
+                    {!isAddingPassword && (
+                      <div>
+                        <label htmlFor="current-password" className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                          Contraseña actual
+                        </label>
+                        <input
+                          id="current-password"
+                          type="password"
+                          autoComplete="current-password"
+                          value={passwordForm.current}
+                          onChange={(e) => setPasswordForm((prev) => ({ ...prev, current: e.target.value }))}
+                          className={`w-full px-4 py-2 rounded-lg border transition-colors focus:outline-none focus:ring-2 ${
+                            isDark
+                              ? 'bg-gray-800 border-gray-700 text-gray-100 focus:ring-gray-600'
+                              : 'bg-white border-gray-300 text-gray-900 focus:ring-gray-300'
+                          }`}
+                        />
+                      </div>
+                    )}
+
+                    <div>
+                      <label htmlFor="new-password" className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Nueva contraseña
+                      </label>
+                      <input
+                        id="new-password"
+                        type="password"
+                        autoComplete="new-password"
+                        value={passwordForm.next}
+                        onChange={(e) => setPasswordForm((prev) => ({ ...prev, next: e.target.value }))}
+                        className={`w-full px-4 py-2 rounded-lg border transition-colors focus:outline-none focus:ring-2 ${
+                          isDark
+                            ? 'bg-gray-800 border-gray-700 text-gray-100 focus:ring-gray-600'
+                            : 'bg-white border-gray-300 text-gray-900 focus:ring-gray-300'
+                        }`}
+                      />
+                      <p className={`text-xs mt-1.5 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                        Mínimo {MIN_PASSWORD_LENGTH} caracteres.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label htmlFor="confirm-password" className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Confirmar nueva contraseña
+                      </label>
+                      <input
+                        id="confirm-password"
+                        type="password"
+                        autoComplete="new-password"
+                        value={passwordForm.confirm}
+                        onChange={(e) => setPasswordForm((prev) => ({ ...prev, confirm: e.target.value }))}
+                        className={`w-full px-4 py-2 rounded-lg border transition-colors focus:outline-none focus:ring-2 ${
+                          isDark
+                            ? 'bg-gray-800 border-gray-700 text-gray-100 focus:ring-gray-600'
+                            : 'bg-white border-gray-300 text-gray-900 focus:ring-gray-300'
+                        }`}
+                      />
+                    </div>
+
+                    <div className="flex gap-3 justify-end pt-2">
+                      <button
+                        type="button"
+                        onClick={closePasswordForm}
+                        disabled={passwordSaving}
+                        className={`px-4 py-2 rounded-lg font-semibold text-sm border transition-colors disabled:opacity-50 ${
+                          isDark ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={passwordSaving}
+                        className="px-4 py-2 rounded-lg font-semibold text-sm text-white bg-[#5D4037] hover:bg-[#4A302A] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {passwordSaving ? 'Guardando...' : isAddingPassword ? 'Añadir contraseña' : 'Actualizar contraseña'}
+                      </button>
+                    </div>
+                  </form>
+                )}
               </div>
             </div>
           </div>

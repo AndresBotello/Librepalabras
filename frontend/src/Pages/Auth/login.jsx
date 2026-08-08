@@ -1,10 +1,10 @@
-import React, { useState, useContext, useMemo } from 'react';
+import React, { useState, useContext, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, User, Phone, Calendar, ArrowRight } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, User, Phone, Calendar, ArrowRight, X, CheckCircle2 } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { ThemeContext } from '../../context/ThemeContext';
-import { loginWithEmail, loginWithGoogle, registerWithEmail } from '../../services/auth';
+import { loginWithEmail, loginWithGoogle, registerWithEmail, sendPasswordReset } from '../../services/auth';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { homeRouteForRole } from '../../utils/roles';
 import gendersData from '../../config/genders.json';
@@ -17,6 +17,11 @@ export default function Login({ initialMode = 'login' }) {
   const [rememberMe, setRememberMe] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetSending, setResetSending] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetError, setResetError] = useState('');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -149,6 +154,62 @@ export default function Login({ initialMode = 'login' }) {
       setStatusMessage(error.message || 'No se pudo iniciar sesión con Google.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const openReset = () => {
+    // Si ya escribió el correo arriba, no se lo hacemos teclear otra vez.
+    setResetEmail(formData.email);
+    setResetError('');
+    setResetSent(false);
+    setResetOpen(true);
+  };
+
+  const closeReset = () => {
+    if (resetSending) return;
+    setResetOpen(false);
+  };
+
+  useEffect(() => {
+    if (!resetOpen) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape' && !resetSending) {
+        setResetOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [resetOpen, resetSending]);
+
+  const handleResetSubmit = async (e) => {
+    e.preventDefault();
+    setResetError('');
+
+    const email = resetEmail.trim();
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setResetError('Ingresa un correo electrónico válido');
+      return;
+    }
+
+    setResetSending(true);
+
+    try {
+      await sendPasswordReset(email);
+      setResetSent(true);
+    } catch (error) {
+      setResetError(error.message || 'No se pudo enviar el correo. Intenta de nuevo.');
+    } finally {
+      setResetSending(false);
     }
   };
 
@@ -403,11 +464,15 @@ export default function Login({ initialMode = 'login' }) {
                   />
                   <span className={isDark ? 'text-gray-300' : 'text-gray-700'}>Mantener sesión</span>
                 </label>
-                <a href="#" className={`font-medium transition-colors ${
-                  isDark ? 'text-amber-400 hover:text-amber-300' : 'text-[#5D4037] hover:underline'
-                }`}>
+                <button
+                  type="button"
+                  onClick={openReset}
+                  className={`font-medium transition-colors hover:underline ${
+                    isDark ? 'text-amber-400 hover:text-amber-300' : 'text-[#5D4037]'
+                  }`}
+                >
                   ¿Olvidaste tu contraseña?
-                </a>
+                </button>
               </div>
 
               {/* Submit Button */}
@@ -522,6 +587,117 @@ export default function Login({ initialMode = 'login' }) {
         </div>
 
       </div>
+
+      {/* Modal de recuperación de contraseña */}
+      {resetOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="reset-title"
+        >
+          <div
+            className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm animate-modal-overlay"
+            onClick={closeReset}
+          />
+
+          <div className={`relative z-10 w-full max-w-md rounded-2xl border shadow-2xl animate-modal-panel transition-colors ${
+            isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
+          }`}>
+            <div className={`flex items-start justify-between gap-4 px-6 py-4 border-b ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
+              <h2 id="reset-title" className={`text-lg font-bold tracking-tight ${isDark ? 'text-gray-100' : 'text-[#5D4037]'}`}>
+                Recuperar contraseña
+              </h2>
+              <button
+                type="button"
+                onClick={closeReset}
+                disabled={resetSending}
+                aria-label="Cerrar"
+                className={`p-1.5 rounded-lg flex-shrink-0 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                  isDark ? 'hover:bg-gray-800 text-gray-400 hover:text-gray-200' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {resetSent ? (
+              <div className="px-6 py-8 text-center">
+                <CheckCircle2 className={`w-12 h-12 mx-auto mb-4 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
+                <p className={`text-sm font-semibold mb-2 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                  Revisa tu correo
+                </p>
+                <p className={`text-sm leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Si hay una cuenta registrada con <span className="font-medium break-all">{resetEmail.trim()}</span>,
+                  te enviamos un enlace para crear una contraseña nueva. Puede tardar un par de minutos
+                  y a veces llega a la carpeta de spam.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setResetOpen(false)}
+                  className="w-full mt-6 text-white font-semibold py-2.5 px-4 rounded-xl text-sm tracking-wider uppercase bg-[#5D4037] hover:bg-[#4A302A] transition-colors"
+                >
+                  Entendido
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleResetSubmit} className="px-6 py-5">
+                <p className={`text-sm leading-relaxed mb-5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Escribe el correo de tu cuenta y te enviaremos un enlace para crear una
+                  contraseña nueva. Sirve también si entraste con Google y quieres volver a
+                  usar correo y contraseña.
+                </p>
+
+                {resetError && (
+                  <div className={`mb-4 rounded-xl px-4 py-3 text-sm border ${
+                    isDark ? 'bg-rose-950/40 border-rose-800 text-rose-300' : 'bg-rose-50 border-rose-200 text-rose-800'
+                  }`}>
+                    {resetError}
+                  </div>
+                )}
+
+                <label htmlFor="reset-email" className={labelClasses}>
+                  Correo electrónico
+                </label>
+                <div className="relative">
+                  <Mail className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${
+                    isDark ? 'text-gray-500' : 'text-gray-400'
+                  }`} />
+                  <input
+                    id="reset-email"
+                    type="email"
+                    autoFocus
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    placeholder="tucorreo@ejemplo.com"
+                    className={`${inputBaseClasses} pl-10 pr-4`}
+                  />
+                </div>
+
+                <div className="flex gap-3 mt-6">
+                  <button
+                    type="button"
+                    onClick={closeReset}
+                    disabled={resetSending}
+                    className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold border transition-colors disabled:opacity-50 ${
+                      isDark ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={resetSending}
+                    className="flex-1 text-white font-semibold py-2.5 px-4 rounded-xl text-sm tracking-wider uppercase bg-[#5D4037] hover:bg-[#4A302A] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {resetSending ? 'Enviando...' : 'Enviar enlace'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>

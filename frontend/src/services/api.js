@@ -283,6 +283,13 @@ export function updateUserRole(uid, role) {
   });
 }
 
+export function updateUserStatus(uid, disabled) {
+  return request(`/admin/users/${uid}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ disabled }),
+  });
+}
+
 export function toggleCommentLike(workId, commentId) {
   return request(`/literature/${workId}/comment/${commentId}/like`, {
     method: 'POST',

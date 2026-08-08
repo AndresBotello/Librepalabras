@@ -77,6 +77,17 @@ export async function authenticateRequest(req, res, next) {
     }
 
     const session = await resolveSession(sessionCookie);
+
+    // La cookie sigue siendo criptográficamente válida hasta que caduque, así
+    // que el corte de acceso de una cuenta desactivada se aplica aquí.
+    if (session.user?.disabled) {
+      return res.status(403).json({
+        ok: false,
+        message: 'Tu cuenta está desactivada. Contacta con un administrador.',
+        code: 'account-disabled',
+      });
+    }
+
     req.auth = session.auth;
     req.user = session.user;
 
@@ -97,8 +108,13 @@ export async function attachUserIfPresent(req, res, next) {
   try {
     if (firebaseAdminReady && adminAuth && req.cookies.session) {
       const session = await resolveSession(req.cookies.session);
-      req.auth = session.auth;
-      req.user = session.user;
+
+      // Una cuenta desactivada se trata como visitante anónimo en las rutas
+      // públicas: ve el contenido abierto, pero nada le cuenta como suyo.
+      if (!session.user?.disabled) {
+        req.auth = session.auth;
+        req.user = session.user;
+      }
     }
   } catch {
     req.auth = null;

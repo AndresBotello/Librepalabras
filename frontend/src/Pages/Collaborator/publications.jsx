@@ -66,6 +66,26 @@ export default function Publications() {
     });
   };
 
+  useEffect(() => {
+    if (!editingId) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        handleCancelEdit();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [editingId]);
+
   const handleFileUpload = async (e, type) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -263,13 +283,44 @@ export default function Publications() {
 
       {/* Modal de edición */}
       {editingId && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className={`rounded-lg shadow-lg max-w-2xl w-full max-h-screen overflow-y-auto ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
-            <div className={`sticky top-0 px-6 py-4 border-b ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
-              <h2 className={`text-2xl font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>Editar Publicación</h2>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="edit-work-title"
+        >
+          {/* Overlay */}
+          <div
+            className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm animate-modal-overlay"
+            onClick={handleCancelEdit}
+          />
+
+          {/* Modal: cabecera y pie fijos, con el formulario desplazándose entre
+              ambos, para que "Guardar Cambios" esté siempre a la vista. */}
+          <div
+            className={`relative z-10 w-full max-w-2xl max-h-[85vh] rounded-xl border shadow-2xl flex flex-col animate-modal-panel transition-colors ${
+              isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
+            }`}
+          >
+            <div className={`flex items-center justify-between gap-4 px-6 py-4 border-b flex-shrink-0 ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
+              <h2 id="edit-work-title" className={`text-xl font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                Editar Publicación
+              </h2>
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                aria-label="Cerrar"
+                className={`p-1.5 rounded-lg flex-shrink-0 transition-colors ${
+                  isDark ? 'hover:bg-gray-800 text-gray-400 hover:text-gray-200' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div className="px-6 py-5 space-y-6 overflow-y-auto flex-1">
               <div>
                 <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                   Título
@@ -373,7 +424,7 @@ export default function Publications() {
               )}
             </div>
 
-            <div className={`sticky bottom-0 flex gap-3 justify-end px-6 py-4 border-t ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+            <div className={`flex gap-3 justify-end px-6 py-4 border-t flex-shrink-0 rounded-b-xl ${isDark ? 'bg-gray-900/60 border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
               <button
                 onClick={handleCancelEdit}
                 className={`px-4 py-2 rounded-lg font-semibold transition-colors ${isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-100' : 'bg-gray-200 hover:bg-gray-300 text-gray-900'}`}

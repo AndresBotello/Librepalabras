@@ -130,7 +130,18 @@ export default function Home() {
 
             <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-serif font-bold text-stone-100 mb-8 leading-[1.1] tracking-tight">
               Donde las palabras <br className="hidden sm:block" />
-              <span className="italic font-normal bg-gradient-to-r from-amber-200 via-amber-400 to-yellow-500 bg-clip-text text-transparent animate-gradient">
+              {/* `bg-clip-text` recorta el degradado a la caja del span, pero la
+                  cursiva inclina las letras y la última se sale por la derecha:
+                  esa parte se queda sin pintar y el glifo aparece cortado. El
+                  padding agranda la caja y el margen negativo lo descuenta para
+                  que el texto siga centrado.
+
+                  `box-decoration-clone` es imprescindible: sin él, el padding
+                  solo se aplica al principio y al final del span entero, así que
+                  cuando el título se parte en varias líneas (móvil) las líneas
+                  intermedias se seguían cortando. Con clone, cada línea recibe
+                  su propio padding y su propio degradado. */}
+              <span className="italic font-normal bg-gradient-to-r from-amber-200 via-amber-400 to-yellow-500 bg-clip-text text-transparent box-decoration-clone pr-[0.14em] -mr-[0.14em]">
                 encuentran su libertad
               </span>
             </h1>

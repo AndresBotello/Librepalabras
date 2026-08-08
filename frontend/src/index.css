@@ -6,12 +6,33 @@
   font-family: 'Lato', sans-serif;
 }
 
+/* La navbar es `fixed`, así que no ocupa sitio y el body reserva su altura a
+   mano. Estos valores tienen que coincidir exactamente con el `h-16 sm:h-20`
+   de Navbar.jsx: si el body reserva de más, entre la navbar y el contenido
+   asoma el fondo del body como una franja. */
 html {
-  scroll-padding-top: 80px;
+  scroll-padding-top: 64px;
 }
 
 body {
-  padding-top: 80px;
+  padding-top: 64px;
+  /* Mismo color que la navbar, para que cualquier píxel suelto (redondeos al
+     hacer zoom, el rebote al llegar al final del scroll) no se vea blanco. */
+  background-color: #f3f4f6;
+}
+
+html.dark body {
+  background-color: #111827;
+}
+
+@media (min-width: 640px) {
+  html {
+    scroll-padding-top: 80px;
+  }
+
+  body {
+    padding-top: 80px;
+  }
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -72,4 +93,31 @@ select:focus-visible {
 
 .skip-link:focus {
   top: 0;
+}
+
+/* Entrada de los diálogos modales: el fondo funde y el panel sube un poco.
+   Sin esto el modal aparece de golpe y se siente como un salto de página. */
+@keyframes modal-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-panel-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.animate-modal-overlay {
+  animation: modal-overlay-in 150ms ease-out both;
+}
+
+.animate-modal-panel {
+  animation: modal-panel-in 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-modal-overlay,
+  .animate-modal-panel {
+    animation: none;
+  }
 }

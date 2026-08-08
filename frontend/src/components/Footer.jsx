@@ -18,7 +18,7 @@ export default function Footer() {
                   <line x1="12" y1="4" x2="12" y2="20" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
                 </svg>
               </div>
-              <span className={`font-semibold text-sm tracking-wide transition-colors ${isDark ? 'text-gray-100' : 'text-[#5D4037]'}`}>Liberapalabras</span>
+              <span className={`font-semibold text-sm tracking-wide transition-colors ${isDark ? 'text-gray-100' : 'text-[#5D4037]'}`}>Librepalabras</span>
             </div>
             <p className={`text-sm transition-colors ${isDark ? 'text-gray-400' : 'text-[#5D4037]'}`}>
               Conecta con la comunidad literaria más vibrante del Valle del César.
@@ -59,7 +59,7 @@ export default function Footer() {
         {/* Bottom */}
         <div className={`border-t pt-6 flex flex-col md:flex-row items-center justify-between transition-colors ${isDark ? 'border-gray-800' : 'border-gray-300'}`}>
           <p className={`text-xs transition-colors ${isDark ? 'text-gray-400' : 'text-[#5D4037]'}`}>
-            © 2024 Liberapalabras - Valledupar, Colombia. Todos los derechos reservados.
+            © 2026 Librepalabras - Valledupar, Colombia. Todos los derechos reservados.
           </p>
           <div className="flex gap-6 mt-4 md:mt-0">
             <a href="#" className={`text-xs transition-colors ${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-[#5D4037]'}`}>

@@ -4,7 +4,8 @@ import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import AdminSidebar from '../../components/AdminSidebar';
 import EditUserModal from '../../components/EditUserModal';
-import { getAllUsers, updateUserRole, getUserById, updateUserById } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+import { getAllUsers, updateUserRole, getUserById, updateUserById, updateUserStatus } from '../../services/api';
 
 // Íconos SVG para una estética formal e integrada
 const SearchIcon = () => (
@@ -25,9 +26,15 @@ const EditIcon = () => (
   </svg>
 );
 
-const TrashIcon = () => (
+const BanIcon = () => (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+  </svg>
+);
+
+const RestoreIcon = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
   </svg>
 );
 
@@ -39,6 +46,7 @@ const AlertIcon = () => (
 
 export default function Users() {
   const { isDark } = useContext(ThemeContext);
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -46,7 +54,7 @@ export default function Users() {
   const [editingUser, setEditingUser] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [savingUser, setSavingUser] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [statusConfirm, setStatusConfirm] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const usersPerPage = 10;
@@ -92,9 +100,13 @@ export default function Users() {
       if (response.ok) {
         setEditingUser(response.user);
       } else {
+        // Sin esto el modal se queda con el esqueleto de carga para siempre y
+        // el error solo se ve al cerrarlo a mano.
+        setModalOpen(false);
         setError('No se pudo cargar la información del usuario');
       }
     } catch (err) {
+      setModalOpen(false);
       setError('Error al cargar usuario: ' + err.message);
     } finally {
       setSavingUser(false);
@@ -116,18 +128,30 @@ export default function Users() {
     }
   };
 
-  const handleDeleteClick = (uid, name) => {
-    setDeleteConfirm({ uid, name });
+  const handleStatusClick = (user) => {
+    setStatusConfirm({ uid: user.uid, name: user.name, disabled: Boolean(user.disabled) });
   };
 
-  const handleConfirmDelete = async () => {
-    if (!deleteConfirm) return;
+  const handleConfirmStatus = async () => {
+    if (!statusConfirm) return;
+
+    // Desactivar es lo contrario del estado actual: si está bloqueado, se reactiva.
+    const nextDisabled = !statusConfirm.disabled;
+
     try {
-      setUpdating(deleteConfirm.uid);
-      setUsers(users.filter(u => u.uid !== deleteConfirm.uid));
-      setDeleteConfirm(null);
+      setUpdating(statusConfirm.uid);
+      setError('');
+      await updateUserStatus(statusConfirm.uid, nextDisabled);
+      setUsers(users.map(u => (
+        u.uid === statusConfirm.uid
+          ? { ...u, disabled: nextDisabled, status: nextDisabled ? 'Desactivado' : u.lastLoginAt ? 'Activo' : 'Inactivo' }
+          : u
+      )));
+      setStatusConfirm(null);
     } catch (err) {
-      setError('Error al eliminar usuario: ' + err.message);
+      setError(
+        (nextDisabled ? 'Error al desactivar usuario: ' : 'Error al reactivar usuario: ') + err.message
+      );
     } finally {
       setUpdating(null);
     }
@@ -295,11 +319,15 @@ export default function Users() {
                             {/* Badge Estado con indicador de punto */}
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-                                user.status === 'Activo'
+                                user.disabled
+                                  ? isDark ? 'bg-rose-950/80 text-rose-300 border border-rose-800/50' : 'bg-rose-50 text-rose-700 border border-rose-200'
+                                  : user.status === 'Activo'
                                   ? isDark ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-800/50' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                   : isDark ? 'bg-slate-800 text-slate-400 border border-slate-700' : 'bg-slate-100 text-slate-600 border border-slate-200'
                               }`}>
-                                <span className={`w-1.5 h-1.5 rounded-full ${user.status === 'Activo' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                                <span className={`w-1.5 h-1.5 rounded-full ${
+                                  user.disabled ? 'bg-rose-500' : user.status === 'Activo' ? 'bg-emerald-500' : 'bg-slate-400'
+                                }`} />
                                 {user.status}
                               </span>
                             </td>
@@ -317,13 +345,22 @@ export default function Users() {
                                   <EditIcon />
                                 </button>
                                 <button
-                                  onClick={() => handleDeleteClick(user.uid, user.name)}
-                                  title="Eliminar usuario"
-                                  className={`p-2 rounded-lg transition-colors ${
-                                    isDark ? 'hover:bg-rose-950/50 text-rose-400' : 'hover:bg-rose-50 text-rose-600'
+                                  onClick={() => handleStatusClick(user)}
+                                  disabled={user.uid === currentUser?.uid || updating === user.uid}
+                                  title={
+                                    user.uid === currentUser?.uid
+                                      ? 'No puedes desactivar tu propia cuenta'
+                                      : user.disabled
+                                      ? 'Reactivar usuario'
+                                      : 'Desactivar usuario'
+                                  }
+                                  className={`p-2 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
+                                    user.disabled
+                                      ? isDark ? 'hover:bg-emerald-950/50 text-emerald-400' : 'hover:bg-emerald-50 text-emerald-600'
+                                      : isDark ? 'hover:bg-rose-950/50 text-rose-400' : 'hover:bg-rose-50 text-rose-600'
                                   }`}
                                 >
-                                  <TrashIcon />
+                                  {user.disabled ? <RestoreIcon /> : <BanIcon />}
                                 </button>
                               </div>
                             </td>
@@ -408,31 +445,40 @@ export default function Users() {
         isLoading={savingUser}
       />
 
-      {/* Modal de Confirmación de Eliminación Renovado */}
-      {deleteConfirm && (
+      {/* Modal de Confirmación de Desactivación / Reactivación */}
+      {statusConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" onClick={() => setDeleteConfirm(null)} />
-          <div className={`relative z-10 w-full max-w-sm rounded-xl border shadow-xl p-6 transition-all ${
+          <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm animate-modal-overlay" onClick={() => setStatusConfirm(null)} />
+          <div className={`relative z-10 w-full max-w-sm rounded-xl border shadow-xl p-6 animate-modal-panel transition-colors ${
             isDark ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900'
           }`}>
-            <div className="flex items-center gap-3 text-rose-500 mb-3">
-              <div className={`p-2 rounded-lg ${isDark ? 'bg-rose-950/50' : 'bg-rose-50'}`}>
+            <div className={`flex items-center gap-3 mb-3 ${statusConfirm.disabled ? 'text-emerald-500' : 'text-rose-500'}`}>
+              <div className={`p-2 rounded-lg ${
+                statusConfirm.disabled
+                  ? isDark ? 'bg-emerald-950/50' : 'bg-emerald-50'
+                  : isDark ? 'bg-rose-950/50' : 'bg-rose-50'
+              }`}>
                 <AlertIcon />
               </div>
-              <h3 className="text-base font-semibold">Confirmar eliminación</h3>
+              <h3 className="text-base font-semibold">
+                {statusConfirm.disabled ? 'Reactivar usuario' : 'Desactivar usuario'}
+              </h3>
             </div>
-            
+
             <p className={`text-sm ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-              ¿Estás seguro de que deseas eliminar a <span className="font-semibold text-slate-900 dark:text-slate-100">{deleteConfirm.name}</span>?
+              ¿Deseas {statusConfirm.disabled ? 'reactivar' : 'desactivar'} a{' '}
+              <span className="font-semibold text-slate-900 dark:text-slate-100">{statusConfirm.name}</span>?
             </p>
             <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Esta acción es irreversible y eliminará todos los permisos del usuario.
+              {statusConfirm.disabled
+                ? 'Podrá volver a iniciar sesión y usar la plataforma con normalidad.'
+                : 'Perderá el acceso a la plataforma y se cerrará su sesión actual. Sus obras y datos se conservan, y puedes reactivarlo cuando quieras.'}
             </p>
 
             <div className="flex items-center justify-end gap-2 mt-6">
               <button
-                onClick={() => setDeleteConfirm(null)}
-                disabled={updating === deleteConfirm.uid}
+                onClick={() => setStatusConfirm(null)}
+                disabled={updating === statusConfirm.uid}
                 className={`px-4 py-2 rounded-lg text-xs font-medium border transition-colors ${
                   isDark ? 'border-slate-700 hover:bg-slate-800 text-slate-300' : 'border-slate-200 hover:bg-slate-50 text-slate-700'
                 }`}
@@ -440,11 +486,17 @@ export default function Users() {
                 Cancelar
               </button>
               <button
-                onClick={handleConfirmDelete}
-                disabled={updating === deleteConfirm.uid}
-                className="px-4 py-2 rounded-lg text-xs font-medium text-white bg-rose-600 hover:bg-rose-700 transition-colors shadow-sm disabled:opacity-50"
+                onClick={handleConfirmStatus}
+                disabled={updating === statusConfirm.uid}
+                className={`px-4 py-2 rounded-lg text-xs font-medium text-white transition-colors shadow-sm disabled:opacity-50 ${
+                  statusConfirm.disabled ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'
+                }`}
               >
-                {updating === deleteConfirm.uid ? 'Eliminando...' : 'Eliminar'}
+                {updating === statusConfirm.uid
+                  ? 'Procesando...'
+                  : statusConfirm.disabled
+                  ? 'Reactivar'
+                  : 'Desactivar'}
               </button>
             </div>
           </div>

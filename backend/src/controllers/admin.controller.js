@@ -1,5 +1,6 @@
-import { listUsers, setUserRole } from '../services/user.service.js';
+import { getUserProfile, listUsers, setUserDisabled, setUserRole } from '../services/user.service.js';
 import { adminDb, VALID_ROLES, isValidRole } from '../config/firebaseAdmin.js';
+import { invalidateUserCache } from '../middlewares/auth.middleware.js';
 import { deleteFile } from '../services/upload.service.js';
 
 export async function testAdminAuth(req, res) {
@@ -51,7 +52,9 @@ export async function getAllUsers(_req, res) {
         photoURL: user.photoURL || null,
         createdAt: user.createdAt || new Date().toISOString(),
         lastLoginAt: user.lastLoginAt || null,
-        status: user.lastLoginAt ? 'Activo' : 'Inactivo',
+        disabled: Boolean(user.disabled),
+        disabledAt: user.disabledAt || null,
+        status: user.disabled ? 'Desactivado' : user.lastLoginAt ? 'Activo' : 'Inactivo',
       };
     });
 
@@ -242,6 +245,65 @@ export async function updateUserRole(req, res) {
     message: 'Rol actualizado correctamente',
     user: updatedUser,
   });
+}
+
+export async function updateUserStatus(req, res) {
+  try {
+    const { uid } = req.params;
+    const { disabled } = req.body;
+
+    if (!uid) {
+      return res.status(400).json({
+        ok: false,
+        message: 'uid es obligatorio',
+      });
+    }
+
+    if (typeof disabled !== 'boolean') {
+      return res.status(400).json({
+        ok: false,
+        message: 'disabled debe ser true o false',
+      });
+    }
+
+    // Sin esto un admin podría dejarse fuera de su propio panel y no habría
+    // forma de volver a entrar desde la interfaz.
+    if (uid === req.auth?.uid) {
+      return res.status(400).json({
+        ok: false,
+        message: 'No puedes desactivar tu propia cuenta',
+      });
+    }
+
+    const target = await getUserProfile(uid);
+
+    if (!target) {
+      return res.status(404).json({
+        ok: false,
+        message: 'Usuario no encontrado',
+      });
+    }
+
+    const updatedUser = await setUserDisabled(uid, disabled);
+
+    // El perfil se cachea 30 s por petición; sin invalidarlo el usuario seguiría
+    // navegando media docena de peticiones más después de desactivarlo.
+    invalidateUserCache(uid);
+
+    return res.json({
+      ok: true,
+      message: disabled
+        ? 'Usuario desactivado correctamente'
+        : 'Usuario reactivado correctamente',
+      user: updatedUser,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      message: 'Error al actualizar el estado del usuario',
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 }
 
 export async function getPdfFiles(req, res) {

@@ -3,15 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ThemeContext } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 
-const IconDashboard = ({ active, isDark }) => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <rect x="3" y="3" width="7" height="7" />
-    <rect x="14" y="3" width="7" height="7" />
-    <rect x="14" y="14" width="7" height="7" />
-    <rect x="3" y="14" width="7" height="7" />
-  </svg>
-);
-
 const IconPublish = ({ active, isDark }) => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -81,8 +72,8 @@ export default function CollaboratorSidebar() {
 
   // El juez escribe obra propia igual que un colaborador, pero en vez de
   // inscribirse al concurso vuelve a su panel de calificación.
+  // Dashboard no va en esta lista: ya tiene su acceso rápido destacado arriba.
   const menuItems = [
-    { icon: IconDashboard, label: 'Dashboard', path: '/collaborator/dashboard' },
     { icon: IconPublish, label: 'Nueva Publicación', path: '/collaborator/create' },
     { icon: IconPublish, label: 'Mis Publicaciones', path: '/collaborator/publications' },
     isJudge

@@ -6,6 +6,7 @@ import { ThemeProvider } from './context/ThemeContext'
 import { AuthProvider } from './context/AuthContext.jsx'
 import AppRoutes from './Routes/AppRoutes.jsx'
 import ScrollToTop from './components/ScrollToTop.jsx'
+import SeoMeta from './components/SeoMeta.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -13,6 +14,7 @@ createRoot(document.getElementById('root')).render(
       <AuthProvider>
         <Router>
           <ScrollToTop />
+          <SeoMeta />
           <AppRoutes />
         </Router>
       </AuthProvider>

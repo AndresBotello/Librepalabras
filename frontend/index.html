@@ -2,14 +2,88 @@
 <html lang="es" translate="no">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- El traductor automático del navegador reemplaza los nodos de texto por
-         elementos <font> y React acaba borrando nodos que ya no son suyos
-         ("removeChild/insertBefore ... not a child of this node"). Con el idioma
-         bien declarado y notranslate, no se dispara. -->
+
+    <link rel="icon" type="image/x-icon" href="/Librepalabras.ico" />
+    <link rel="apple-touch-icon" href="/Librepalabras.png" />
+
     <meta name="google" content="notranslate" />
-    <title>Librepalabras</title>
+
+
+    <title>Librepalabras | Libre Palabras, revista literaria de Valledupar y el Caribe</title>
+    <meta
+      name="description"
+      content="Librepalabras (Libre Palabras) es el ecosistema literario del Cesar: cuentos, ensayo, poesía y memoria de Valledupar y el Caribe colombiano. Lee a nuestros autores, participa en los concursos y publica tu obra."
+    />
+    <link rel="canonical" href="https://librepalabras.com/" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="author" content="Librepalabras" />
+    <meta name="theme-color" content="#5D4037" />
+
+    <!-- Compartir en WhatsApp, Facebook y LinkedIn -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Librepalabras" />
+    <meta property="og:locale" content="es_CO" />
+    <meta property="og:url" content="https://librepalabras.com/" />
+    <meta property="og:title" content="Librepalabras | Libre Palabras, revista literaria de Valledupar y el Caribe" />
+    <meta
+      property="og:description"
+      content="El ecosistema literario del Cesar: cuentos, ensayo, poesía y memoria de Valledupar y el Caribe colombiano."
+    />
+    <meta property="og:image" content="https://librepalabras.com/Librepalabras.png" />
+    <meta property="og:image:width" content="256" />
+    <meta property="og:image:height" content="256" />
+    <meta property="og:image:alt" content="Logo de Librepalabras" />
+
+    <!-- Compartir en X/Twitter -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Librepalabras | Libre Palabras, revista literaria de Valledupar y el Caribe" />
+    <meta
+      name="twitter:description"
+      content="El ecosistema literario del Cesar: cuentos, ensayo, poesía y memoria de Valledupar y el Caribe colombiano."
+    />
+    <meta name="twitter:image" content="https://librepalabras.com/Librepalabras.png" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://librepalabras.com/#organization",
+            "name": "Librepalabras",
+            "alternateName": [
+              "Libre Palabras",
+              "Libre palabras",
+              "LibrePalabras",
+              "Revista Librepalabras",
+              "Revista Libre Palabras"
+            ],
+            "url": "https://librepalabras.com/",
+            "logo": {
+              "@type": "ImageObject",
+              "url": "https://librepalabras.com/Librepalabras.png",
+              "width": 256,
+              "height": 256
+            },
+            "description": "Ecosistema literario del Cesar: cuentos, ensayo, poesía y memoria de Valledupar y el Caribe colombiano.",
+            "areaServed": {
+              "@type": "Place",
+              "name": "Valledupar, Cesar, Colombia"
+            }
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://librepalabras.com/#website",
+            "name": "Librepalabras",
+            "alternateName": "Libre Palabras",
+            "url": "https://librepalabras.com/",
+            "inLanguage": "es-CO",
+            "publisher": { "@id": "https://librepalabras.com/#organization" }
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
