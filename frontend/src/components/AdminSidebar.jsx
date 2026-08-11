@@ -1,7 +1,8 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ThemeContext } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { getCommentReportsCount } from '../services/api';
 
 const IconModeration = ({ active, isDark }) => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -32,20 +33,6 @@ const IconSettings = ({ active, isDark }) => (
   </svg>
 );
 
-const IconReports = ({ active, isDark }) => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <line x1="12" y1="2" x2="12" y2="22" />
-    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-  </svg>
-);
-
-const IconNotifications = ({ active, isDark }) => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-  </svg>
-);
-
 const IconMagazine = ({ active, isDark }) => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
@@ -71,32 +58,84 @@ const IconBooks = ({ active, isDark }) => (
   </svg>
 );
 
+const IconComments = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+  </svg>
+);
+
+const IconHomeContent = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <path d="M3 9h18" />
+    <path d="M9 21V9" />
+  </svg>
+);
+
+const IconInvite = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="8.5" cy="7" r="4" />
+    <line x1="20" y1="8" x2="20" y2="14" />
+    <line x1="23" y1="11" x2="17" y2="11" />
+  </svg>
+);
+
+const IconHealth = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+  </svg>
+);
+
 export default function AdminSidebar() {
   const { isDark } = useContext(ThemeContext);
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(true);
+  const [pendingReports, setPendingReports] = useState(0);
 
   const handleLogout = async () => {
     await logout();
     navigate('/');
   };
 
+  // El contador de reportes se consulta una vez por montaje: es una agregación
+  // `count()` de Firestore, así que no descarga documentos.
+  useEffect(() => {
+    let cancelled = false;
+
+    getCommentReportsCount()
+      .then((response) => {
+        if (!cancelled && response.ok) {
+          setPendingReports(response.pendingCount || 0);
+        }
+      })
+      .catch(() => {
+        // Un fallo aquí solo significa que no se pinta el contador.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [location.pathname]);
+
   const menuItems = [
-    { icon: IconModeration, label: 'Moderación', path: '/admin/moderation' },
+    { icon: IconModeration, label: 'Moderación de obras', path: '/admin/moderation' },
+    { icon: IconComments, label: 'Comentarios reportados', path: '/admin/comentarios', badge: pendingReports },
     { icon: IconUsers, label: 'Usuarios', path: '/admin/users' },
+    { icon: IconInvite, label: 'Invitaciones', path: '/admin/invitaciones' },
     { icon: IconFiles, label: 'Archivos', path: '/admin/files' },
     { icon: IconBooks, label: 'Venta de Libros', path: '/admin/publishbook' },
     { icon: IconMagazine, label: 'Revista Poleversia', path: '/admin/poleversia' },
     { icon: IconContest, label: 'Convocatorias', path: '/admin/concursos' },
     { icon: IconContest, label: 'Calificar Concursos', path: '/concursos/panel' },
-    { icon: IconSettings, label: 'Configuración', path: '/admin/settings' },
   ];
 
   const additionalItems = [
-    { icon: IconReports, label: 'Reportes', path: '#' },
-    { icon: IconNotifications, label: 'Notificaciones', path: '#' },
+    { icon: IconHomeContent, label: 'Portada del sitio', path: '/admin/home' },
+    { icon: IconHealth, label: 'Estado del sistema', path: '/admin/salud' },
+    { icon: IconSettings, label: 'Configuración', path: '/admin/settings' },
   ];
 
   const isActive = (path) => location.pathname === path;
@@ -179,9 +218,14 @@ export default function AdminSidebar() {
                   }`}
                 >
                   <Icon active={active} isDark={isDark} />
-                  <span className={`font-medium text-sm ${active ? 'font-semibold' : 'font-medium'}`}>
+                  <span className={`flex-1 font-medium text-sm ${active ? 'font-semibold' : 'font-medium'}`}>
                     {item.label}
                   </span>
+                  {item.badge > 0 && (
+                    <span className="min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full bg-red-600 text-white text-[10px] font-bold">
+                      {item.badge > 9 ? '9+' : item.badge}
+                    </span>
+                  )}
                 </Link>
               );
             })}
@@ -193,24 +237,32 @@ export default function AdminSidebar() {
           {/* Additional Options */}
           <div className="mt-8">
             <p className={`text-xs font-semibold tracking-widest uppercase mb-4 transition-colors ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-              Más
+              Sitio y sistema
             </p>
             <div className="space-y-1">
               {additionalItems.map((item, index) => {
                 const Icon = item.icon;
+                const active = isActive(item.path);
                 return (
-                  <a
+                  <Link
                     key={index}
-                    href={item.path}
+                    to={item.path}
+                    onClick={() => setIsOpen(false)}
                     className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
-                      isDark
-                        ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      active
+                        ? isDark
+                          ? 'bg-[#5D4037] text-white shadow-md'
+                          : 'bg-yellow-50 text-[#5D4037] shadow-md'
+                        : isDark
+                          ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                     }`}
                   >
                     <Icon isDark={isDark} />
-                    <span className="font-medium text-sm">{item.label}</span>
-                  </a>
+                    <span className={`font-medium text-sm ${active ? 'font-semibold' : ''}`}>
+                      {item.label}
+                    </span>
+                  </Link>
                 );
               })}
             </div>

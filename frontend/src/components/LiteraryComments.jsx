@@ -1,13 +1,38 @@
 import React, { useState } from 'react';
-import { addComment, deleteComment, toggleCommentLike } from '../services/api';
+import {
+  REPORT_REASON_LABELS,
+  addComment,
+  deleteComment,
+  reportComment,
+  toggleCommentLike,
+} from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useDialog } from '../context/DialogContext';
 
 export default function LiteraryComments({ workId, comments = [], isDark, onCommentAdded, authorId }) {
+  const { confirm, notify } = useDialog();
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(false);
   const [likeLoading, setLikeLoading] = useState({});
+  // Qué comentario tiene abierto el selector de motivo, y cuáles ya se
+  // reportaron en esta sesión (para no ofrecer denunciar dos veces lo mismo).
+  const [reportingId, setReportingId] = useState(null);
+  const [reportedIds, setReportedIds] = useState([]);
+  const [reportFeedback, setReportFeedback] = useState(null);
   const { user, isAuthenticated } = useAuth();
   const userId = user?.uid;
+
+  const handleReport = async (commentId, reason) => {
+    setReportingId(null);
+
+    try {
+      const response = await reportComment(workId, commentId, reason);
+      setReportedIds((prev) => [...prev, commentId]);
+      setReportFeedback({ type: 'success', text: response.message });
+    } catch (error) {
+      setReportFeedback({ type: 'error', text: error.message });
+    }
+  };
 
   const handleSubmitComment = async (e) => {
     e.preventDefault();
@@ -28,7 +53,17 @@ export default function LiteraryComments({ workId, comments = [], isDark, onComm
   };
 
   const handleDeleteComment = async (commentId) => {
-    if (!confirm('¿Eliminar este comentario?')) return;
+    const comment = comments.find(c => c.id === commentId);
+
+    const confirmed = await confirm({
+      title: 'Eliminar comentario',
+      message: 'El comentario desaparecerá de la obra. No se puede deshacer.',
+      detail: comment?.text,
+      confirmLabel: 'Eliminar',
+      variant: 'danger',
+    });
+
+    if (!confirmed) return;
 
     try {
       await deleteComment(workId, commentId);
@@ -40,7 +75,7 @@ export default function LiteraryComments({ workId, comments = [], isDark, onComm
 
   const handleToggleLike = async (commentId) => {
     if (!isAuthenticated) {
-      alert('Inicia sesión para dar like');
+      notify.info('Inicia sesión para dar me gusta.');
       return;
     }
 
@@ -151,25 +186,93 @@ export default function LiteraryComments({ workId, comments = [], isDark, onComm
                     </div>
                   </div>
 
-                  {/* Botón eliminar - solo para autor del comentario o autor de la obra */}
-                  {(userId === comment.userId || userId === authorId) && (
-                    <button
-                      onClick={() => handleDeleteComment(comment.id)}
-                      className={`text-xs px-2 py-1 rounded transition-colors ${
-                        isDark
-                          ? 'bg-red-900 text-red-200 hover:bg-red-800'
-                          : 'bg-red-100 text-red-800 hover:bg-red-200'
-                      }`}
-                    >
-                      Eliminar
-                    </button>
-                  )}
+                  <div className="flex items-start gap-2 shrink-0">
+                    {/* Reportar: para cualquier usuario con sesión salvo el
+                        propio autor del comentario. No borra nada; solo abre un
+                        caso para que un moderador decida. */}
+                    {isAuthenticated && userId !== comment.userId && (
+                      reportedIds.includes(comment.id) ? (
+                        <span className={`text-xs px-2 py-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                          Reportado
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => setReportingId(reportingId === comment.id ? null : comment.id)}
+                          aria-label="Reportar este comentario"
+                          title="Reportar este comentario"
+                          className={`text-xs px-2 py-1 rounded transition-colors ${
+                            isDark
+                              ? 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                              : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                          }`}
+                        >
+                          ⚑
+                        </button>
+                      )
+                    )}
+
+                    {/* Eliminar: autor del comentario o autor de la obra */}
+                    {(userId === comment.userId || userId === authorId) && (
+                      <button
+                        onClick={() => handleDeleteComment(comment.id)}
+                        className={`text-xs px-2 py-1 rounded transition-colors ${
+                          isDark
+                            ? 'bg-red-900 text-red-200 hover:bg-red-800'
+                            : 'bg-red-100 text-red-800 hover:bg-red-200'
+                        }`}
+                      >
+                        Eliminar
+                      </button>
+                    )}
+                  </div>
                 </div>
+
+                {reportingId === comment.id && (
+                  <div className={`mt-3 pt-3 border-t ${isDark ? 'border-gray-600' : 'border-gray-200'}`}>
+                    <p className={`text-xs font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                      ¿Por qué reportas este comentario?
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(REPORT_REASON_LABELS).map(([value, label]) => (
+                        <button
+                          key={value}
+                          onClick={() => handleReport(comment.id, value)}
+                          className={`text-xs px-3 py-1.5 rounded-full transition-colors ${
+                            isDark
+                              ? 'bg-gray-600 text-gray-200 hover:bg-amber-800'
+                              : 'bg-gray-100 text-gray-700 hover:bg-amber-100'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => setReportingId(null)}
+                        className={`text-xs px-3 py-1.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })
         )}
       </div>
+
+      {reportFeedback && (
+        <p
+          role="status"
+          className={`text-xs mt-3 px-3 py-2 rounded ${
+            reportFeedback.type === 'success'
+              ? isDark ? 'bg-emerald-950 text-emerald-300' : 'bg-emerald-50 text-emerald-800'
+              : isDark ? 'bg-rose-950 text-rose-300' : 'bg-rose-50 text-rose-800'
+          }`}
+        >
+          {reportFeedback.text}
+        </p>
+      )}
     </div>
   );
 }

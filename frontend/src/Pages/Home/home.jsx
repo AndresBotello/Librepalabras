@@ -3,15 +3,21 @@ import { Link } from 'react-router-dom';
 import { ThemeContext } from '../../context/ThemeContext';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
-import { getAllAuthors } from '../../services/api';
+import { getAllAuthors, getHomeContent } from '../../services/api';
+
+// Imagen original del banner. Se usa mientras el admin no suba otra desde
+// /admin/home, para que la portada nunca quede sin fondo.
+const DEFAULT_HERO_IMAGE = 'https://res.cloudinary.com/j7q2huvz/image/upload/v1785971697/69478894-7be6-4384-be37-40fc593636eb_f9ibui.webp';
 
 export default function Home() {
   const { isDark } = useContext(ThemeContext);
   const [authors, setAuthors] = useState([]);
+  const [home, setHome] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadAuthors();
+    loadHomeContent();
   }, []);
 
   const loadAuthors = async () => {
@@ -26,6 +32,25 @@ export default function Home() {
       setLoading(false);
     }
   };
+
+  const loadHomeContent = async () => {
+    try {
+      const response = await getHomeContent();
+      if (response.ok) {
+        setHome(response.home);
+      }
+    } catch (err) {
+      // La portada tiene que verse igual aunque la configuración no cargue:
+      // sin `home`, cada campo cae en su valor original de diseño.
+      console.error('Error cargando el contenido de la portada:', err);
+    }
+  };
+
+  const heroImage = home?.heroImage || DEFAULT_HERO_IMAGE;
+  const customTitle = home?.heroTitle?.trim();
+  const customSubtitle = home?.heroSubtitle?.trim();
+  const showAnnouncement = home?.announcementActive && home?.announcementText?.trim();
+  const featuredWorks = home?.featuredWorks || [];
 
   return (
     <>
@@ -102,7 +127,7 @@ export default function Home() {
           {/* Imagen de fondo. Es decorativa (el texto va encima), así que el alt
               va vacío para que un lector de pantalla no la anuncie. */}
           <img
-            src="https://res.cloudinary.com/j7q2huvz/image/upload/v1785971697/69478894-7be6-4384-be37-40fc593636eb_f9ibui.webp"
+            src={heroImage}
             alt=""
             fetchPriority="high"
             className="absolute inset-0 w-full h-full object-cover z-0 scale-105 pointer-events-none"
@@ -128,27 +153,48 @@ export default function Home() {
               Ecosistema Literario del Cesar
             </div>
 
+            {/* Sin título personalizado se conserva el original con su
+                degradado en dos partes. Con uno, se pinta entero en degradado:
+                partirlo en dos obligaría al admin a conocer el truco de maquetado. */}
             <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-serif font-bold text-stone-100 mb-8 leading-[1.1] tracking-tight">
-              Donde las palabras <br className="hidden sm:block" />
-              {/* `bg-clip-text` recorta el degradado a la caja del span, pero la
-                  cursiva inclina las letras y la última se sale por la derecha:
-                  esa parte se queda sin pintar y el glifo aparece cortado. El
-                  padding agranda la caja y el margen negativo lo descuenta para
-                  que el texto siga centrado.
+              {customTitle ? (
+                <span className="bg-gradient-to-r from-amber-200 via-amber-400 to-yellow-500 bg-clip-text text-transparent box-decoration-clone pr-[0.14em] -mr-[0.14em]">
+                  {customTitle}
+                </span>
+              ) : (
+                <>
+                  Donde las palabras <br className="hidden sm:block" />
+                  {/* `bg-clip-text` recorta el degradado a la caja del span, pero la
+                      cursiva inclina las letras y la última se sale por la derecha:
+                      esa parte se queda sin pintar y el glifo aparece cortado. El
+                      padding agranda la caja y el margen negativo lo descuenta para
+                      que el texto siga centrado.
 
-                  `box-decoration-clone` es imprescindible: sin él, el padding
-                  solo se aplica al principio y al final del span entero, así que
-                  cuando el título se parte en varias líneas (móvil) las líneas
-                  intermedias se seguían cortando. Con clone, cada línea recibe
-                  su propio padding y su propio degradado. */}
-              <span className="italic font-normal bg-gradient-to-r from-amber-200 via-amber-400 to-yellow-500 bg-clip-text text-transparent box-decoration-clone pr-[0.14em] -mr-[0.14em]">
-                encuentran su libertad
-              </span>
+                      `box-decoration-clone` es imprescindible: sin él, el padding
+                      solo se aplica al principio y al final del span entero, así que
+                      cuando el título se parte en varias líneas (móvil) las líneas
+                      intermedias se seguían cortando. Con clone, cada línea recibe
+                      su propio padding y su propio degradado. */}
+                  <span className="italic font-normal bg-gradient-to-r from-amber-200 via-amber-400 to-yellow-500 bg-clip-text text-transparent box-decoration-clone pr-[0.14em] -mr-[0.14em]">
+                    encuentran su libertad
+                  </span>
+                </>
+              )}
             </h1>
 
             <p className="text-stone-300 text-lg sm:text-xl md:text-2xl mb-12 max-w-2xl mx-auto font-light leading-relaxed tracking-wide">
-              Un portal para explorar la memoria, el ensayo y la narrativa viva de Valledupar y el Caribe colombiano.
+              {customSubtitle
+                || 'Un portal para explorar la memoria, el ensayo y la narrativa viva de Valledupar y el Caribe colombiano.'}
             </p>
+
+            {home?.heroCtaLabel?.trim() && (
+              <Link
+                to={home.heroCtaLink || '/stories'}
+                className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-amber-500 text-stone-950 font-bold text-sm sm:text-base hover:bg-amber-400 transition-colors shadow-2xl shadow-amber-900/30"
+              >
+                {home.heroCtaLabel} <span className="text-lg">→</span>
+              </Link>
+            )}
           </div>
           
           {/* Indicador de scroll para guiar al usuario */}
@@ -157,6 +203,84 @@ export default function Home() {
             <svg className="w-5 h-5 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
           </div>
         </section>
+
+        {/* ================= AVISO EN PORTADA ================= */}
+        {showAnnouncement && (
+          <div
+            role="status"
+            className={`px-4 py-4 text-center text-sm sm:text-base font-medium border-b ${
+              isDark
+                ? 'bg-amber-950/60 text-amber-200 border-amber-900/50'
+                : 'bg-amber-50 text-amber-900 border-amber-200'
+            }`}
+          >
+            <span className="mr-2" aria-hidden="true">📣</span>
+            {home.announcementText}
+          </div>
+        )}
+
+        {/* ================= OBRAS DESTACADAS ================= */}
+        {featuredWorks.length > 0 && (
+          <section className={`py-20 px-4 sm:px-8 transition-colors ${isDark ? 'bg-stone-950' : 'bg-white'}`}>
+            <div className="max-w-7xl mx-auto">
+              <div className="mb-12">
+                <span className="text-xs font-bold tracking-[0.2em] uppercase text-amber-600 dark:text-amber-400">
+                  Selección del equipo
+                </span>
+                <h2 className={`text-4xl sm:text-5xl font-serif font-bold mt-3 ${isDark ? 'text-stone-100' : 'text-stone-900'}`}>
+                  Obras Destacadas
+                </h2>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {featuredWorks.map((work) => (
+                  <Link
+                    key={work.id}
+                    to={`/literature?work=${work.id}`}
+                    className={`group rounded-2xl border overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-amber-900/10 ${
+                      isDark
+                        ? 'bg-stone-900/40 border-stone-800 hover:border-amber-500/40'
+                        : 'bg-white border-stone-200 hover:border-amber-600/40'
+                    }`}
+                  >
+                    {work.cover && (
+                      <div className="h-52 overflow-hidden">
+                        <img
+                          src={work.cover}
+                          alt=""
+                          loading="lazy"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                        />
+                      </div>
+                    )}
+
+                    <div className="p-6">
+                      {work.genre && (
+                        <span className="inline-block px-2.5 py-0.5 text-[10px] font-bold tracking-widest uppercase rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 mb-3 border border-amber-500/20">
+                          {work.genre}
+                        </span>
+                      )}
+
+                      <h3 className={`text-xl font-serif font-bold mb-1.5 leading-snug ${isDark ? 'text-stone-100' : 'text-stone-900'}`}>
+                        {work.title}
+                      </h3>
+
+                      <p className={`text-sm mb-3 ${isDark ? 'text-stone-400' : 'text-stone-500'}`}>
+                        {work.author}
+                      </p>
+
+                      {work.description && (
+                        <p className={`text-sm leading-relaxed line-clamp-3 ${isDark ? 'text-stone-400' : 'text-stone-600'}`}>
+                          {work.description}
+                        </p>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* ================= SECCIONES PRINCIPALES (BENTO) ================= */}
         <section className={`relative py-24 px-4 sm:px-8 transition-colors ${isDark ? 'bg-[#0c0a09]' : 'bg-[#FAF8F5]'}`}>

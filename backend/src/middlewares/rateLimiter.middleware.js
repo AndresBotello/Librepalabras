@@ -33,6 +33,16 @@ export const contestSubmissionRateLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Denunciar es gratis para quien lo hace y cuesta trabajo a quien modera: sin
+// tope, una sola persona podría llenar la cola del admin de ruido.
+export const reportRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hora
+  max: 15,
+  message: 'Demasiados reportes seguidos. Intenta de nuevo más tarde.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 export const likeRateLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minuto
   max: 30, // máximo 30 likes por IP en 1 minuto

@@ -19,6 +19,10 @@ import AdminSettings from '../Pages/Admin/settings.jsx';
 import PublishBook from '../Pages/Admin/publishbook.jsx';
 import AdminPoliversia from '../Pages/Admin/poliversia.jsx';
 import AdminConcursos from '../Pages/Admin/concursos.jsx';
+import AdminComentarios from '../Pages/Admin/comentarios.jsx';
+import AdminHome from '../Pages/Admin/home.jsx';
+import AdminInvitaciones from '../Pages/Admin/invitaciones.jsx';
+import AdminSalud from '../Pages/Admin/salud.jsx';
 import CollaboratorDashboard from '../Pages/Collaborator/dashboard.jsx';
 import CollaboratorPublications from '../Pages/Collaborator/publications.jsx';
 import CollaboratorAnalytics from '../Pages/Collaborator/analytics.jsx';
@@ -80,6 +84,10 @@ export default function AppRoutes() {
       <Route path="/admin/poleversia" element={<AdminRoute><AdminPoliversia /></AdminRoute>} />
       <Route path="/admin/poliversia" element={<Navigate to="/admin/poleversia" replace />} />
       <Route path="/admin/concursos" element={<AdminRoute><AdminConcursos /></AdminRoute>} />
+      <Route path="/admin/comentarios" element={<AdminRoute><AdminComentarios /></AdminRoute>} />
+      <Route path="/admin/home" element={<AdminRoute><AdminHome /></AdminRoute>} />
+      <Route path="/admin/invitaciones" element={<AdminRoute><AdminInvitaciones /></AdminRoute>} />
+      <Route path="/admin/salud" element={<AdminRoute><AdminSalud /></AdminRoute>} />
       <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
 
       {/* Autoría: abierta también al juez. */}

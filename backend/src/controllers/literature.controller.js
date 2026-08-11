@@ -4,6 +4,8 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { createHash, randomUUID } from 'crypto';
 import { default as xss } from 'xss';
+import { NOTIFICATION_TYPES, createNotification } from '../services/notification.service.js';
+import { REPORT_REASONS, createReport } from '../services/commentReport.service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -423,7 +425,10 @@ export async function reviewWork(req, res) {
 
     await docRef.update(updateData);
 
-    const updated = { id: doc.id, ...doc.data(), ...updateData };
+    const work = doc.data();
+    const updated = { id: doc.id, ...work, ...updateData };
+
+    await notifyWorkReviewed(updated, status, reason);
 
     return res.json({
       ok: true,
@@ -680,6 +685,113 @@ export async function getAllAuthors(req, res) {
     return res.status(500).json({
       ok: false,
       message: 'Error al obtener autores',
+      error: error.message,
+    });
+  }
+}
+
+/**
+ * Aprobar una obra genera dos avisos distintos, y por eso no se puede resolver
+ * con uno solo: al autor le importa el veredicto sobre SU obra (incluido el
+ * rechazo, que nadie más debe ver) y al resto de la plataforma le importa que
+ * hay algo nuevo que leer.
+ *
+ * `createNotification` ya absorbe sus propios errores, así que un fallo aquí no
+ * revierte la revisión: la obra queda aprobada aunque el aviso no salga.
+ */
+async function notifyWorkReviewed(work, status, reason) {
+  const workLink = `/literature?work=${work.id}`;
+
+  if (status === 'approved') {
+    await Promise.all([
+      createNotification({
+        type: NOTIFICATION_TYPES.WORK_APPROVED,
+        title: 'Tu obra fue aprobada',
+        body: `"${work.title}" ya está publicada y visible para todos.`,
+        link: workLink,
+        targetUid: work.authorId,
+      }),
+      createNotification({
+        type: NOTIFICATION_TYPES.WORK_PUBLISHED,
+        title: 'Nueva obra publicada',
+        body: `${work.author || 'Un autor'} publicó "${work.title}".`,
+        link: workLink,
+      }),
+    ]);
+
+    return;
+  }
+
+  await createNotification({
+    type: NOTIFICATION_TYPES.WORK_REJECTED,
+    title: 'Tu obra necesita cambios',
+    body: reason
+      ? `"${work.title}": ${reason}`
+      : `"${work.title}" no fue aprobada. Revisa las normas de publicación.`,
+    link: '/collaborator/publications',
+    targetUid: work.authorId,
+  });
+}
+
+/**
+ * Denunciar un comentario. Deliberadamente NO borra nada: solo abre un caso
+ * para que un administrador decida. Si el reporte bastara para ocultar el
+ * comentario, cualquier usuario podría censurar a otro reportándolo.
+ */
+export async function reportComment(req, res) {
+  try {
+    const { id, commentId } = req.params;
+    const { reason } = req.body;
+
+    if (!REPORT_REASONS.includes(reason)) {
+      return res.status(400).json({
+        ok: false,
+        message: `El motivo debe ser uno de: ${REPORT_REASONS.join(', ')}`,
+      });
+    }
+
+    const doc = await adminDb.collection('literature').doc(id).get();
+
+    if (!doc.exists) {
+      return res.status(404).json({ ok: false, message: 'Obra no encontrada' });
+    }
+
+    const work = doc.data();
+    const comment = (work.comments || []).find(c => c.id === commentId);
+
+    if (!comment) {
+      return res.status(404).json({ ok: false, message: 'Comentario no encontrado' });
+    }
+
+    if (comment.userId === req.auth.uid) {
+      return res.status(400).json({
+        ok: false,
+        message: 'No puedes reportar tu propio comentario',
+      });
+    }
+
+    const { alreadyResolved } = await createReport({
+      workId: id,
+      workTitle: work.title,
+      commentId,
+      commentText: comment.text,
+      commentUserId: comment.userId,
+      commentUserName: comment.userName,
+      reportedBy: req.auth.uid,
+      reporterName: req.user?.nombres || req.user?.name || 'Anónimo',
+      reason,
+    });
+
+    return res.json({
+      ok: true,
+      message: alreadyResolved
+        ? 'Ya habías reportado este comentario y un moderador lo revisó.'
+        : 'Gracias. Un moderador revisará el comentario.',
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      message: 'Error al reportar el comentario',
       error: error.message,
     });
   }

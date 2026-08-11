@@ -481,3 +481,142 @@ export function deletePdfFile(id) {
     method: 'DELETE',
   });
 }
+// ============================================================
+// Notificaciones
+// ============================================================
+
+export function getNotifications() {
+  return request('/notifications');
+}
+
+export function markAllNotificationsRead() {
+  return request('/notifications/read-all', { method: 'POST' });
+}
+
+export function markNotificationRead(id) {
+  return request(`/notifications/${id}/read`, { method: 'POST' });
+}
+
+/** Solo admin: redacta un aviso manual para toda la plataforma. */
+export function createAnnouncement(payload) {
+  return request('/notifications/admin', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getNotificationHistory(limit = 60) {
+  return request(`/notifications/admin/all?limit=${limit}`);
+}
+
+export function deleteNotification(id) {
+  return request(`/notifications/admin/${id}`, { method: 'DELETE' });
+}
+
+// ============================================================
+// Configuración del sitio y portada
+// ============================================================
+
+export function getSiteConfig() {
+  return request('/site/config');
+}
+
+export function getHomeContent() {
+  return request('/site/home');
+}
+
+export function getAdminSettings() {
+  return request('/site/admin/settings');
+}
+
+export function updateAdminSettings(payload) {
+  return request('/site/admin/settings', {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateHomeContent(payload) {
+  return request('/site/admin/home', {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+// ============================================================
+// Moderación de comentarios
+// ============================================================
+
+export const REPORT_REASON_LABELS = {
+  spam: 'Spam o publicidad',
+  ofensivo: 'Lenguaje ofensivo',
+  acoso: 'Acoso a una persona',
+  desinformacion: 'Información falsa',
+  otro: 'Otro motivo',
+};
+
+export function reportComment(workId, commentId, reason) {
+  return request(`/literature/${workId}/comment/${commentId}/report`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export function getCommentReports(status = 'pending') {
+  return request(`/admin/comment-reports?status=${status}`);
+}
+
+export function getCommentReportsCount() {
+  return request('/admin/comment-reports/count');
+}
+
+/** `action`: 'dismiss' deja el comentario, 'remove' lo elimina. */
+export function resolveCommentReport(id, action) {
+  return request(`/admin/comment-reports/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ action }),
+  });
+}
+
+// ============================================================
+// Invitaciones
+// ============================================================
+
+export function getInvitations(status = 'all') {
+  return request(`/admin/invitations?status=${status}`);
+}
+
+export function createInvitation(email, role) {
+  return request('/admin/invitations', {
+    method: 'POST',
+    body: JSON.stringify({ email, role }),
+  });
+}
+
+export function revokeInvitation(id) {
+  return request(`/admin/invitations/${id}`, { method: 'DELETE' });
+}
+
+/** Público: valida el token del enlace antes de mostrar el formulario. */
+export function getInvitationByToken(token) {
+  return request(`/invitations/${encodeURIComponent(token)}`);
+}
+
+// ============================================================
+// Estado del sistema
+// ============================================================
+
+export function getSystemHealth() {
+  return request('/admin/health');
+}
+
+export function clearErrorLogs() {
+  return request('/admin/health/errors', { method: 'DELETE' });
+}
+
+export function deleteOrphanFile(publicId, resourceType) {
+  return request('/admin/health/orphans/delete', {
+    method: 'POST',
+    body: JSON.stringify({ publicId, resourceType }),
+  });
+}

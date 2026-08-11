@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticateRequest, attachUserIfPresent } from '../middlewares/auth.middleware.js';
 import { authorizeRoles, AUTHOR_ROLES } from '../middlewares/role.middleware.js';
-import { commentRateLimiter, likeRateLimiter } from '../middlewares/rateLimiter.middleware.js';
+import { commentRateLimiter, likeRateLimiter, reportRateLimiter } from '../middlewares/rateLimiter.middleware.js';
 import {
   createWork,
   getApprovedWorks,
@@ -17,6 +17,7 @@ import {
   toggleCommentLike,
   toggleWorkLike,
   getAllAuthors,
+  reportComment,
 } from '../controllers/literature.controller.js';
 
 const router = Router();
@@ -41,6 +42,7 @@ router.post('/:id/rate', authenticateRequest, addRating);
 router.post('/:id/comment', authenticateRequest, commentRateLimiter, addComment);
 router.delete('/:id/comment/:commentId', authenticateRequest, deleteComment);
 router.post('/:id/comment/:commentId/like', authenticateRequest, likeRateLimiter, toggleCommentLike);
+router.post('/:id/comment/:commentId/report', authenticateRequest, reportRateLimiter, reportComment);
 router.post('/:id/like', attachUserIfPresent, likeRateLimiter, toggleWorkLike);
 router.get('/:id', getWorkById);
 

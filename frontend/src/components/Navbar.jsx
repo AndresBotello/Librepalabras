@@ -4,6 +4,7 @@ import { Menu, X, LayoutDashboard, UserCog, LogOut, ChevronDown } from 'lucide-r
 import { ThemeContext } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { ROLE_LABELS, homeRouteForRole } from '../utils/roles';
+import NotificationBell from './NotificationBell';
 
 export default function Navbar() {
   const { isDark, toggleTheme } = useContext(ThemeContext);
@@ -127,6 +128,9 @@ export default function Navbar() {
             >
               {isDark ? '☀️' : '🌙'}
             </button>
+            {/* La campana sí se muestra en móvil: los avisos no dependen del
+                menú de escritorio, que va oculto por debajo de `sm`. */}
+            {isAuthenticated && <NotificationBell />}
             {isAuthenticated ? (
               <div className="hidden sm:block relative" ref={userMenuRef}>
                 <button

@@ -1,6 +1,7 @@
 import { adminAuth, authSessionMaxAgeMs, firebaseAdminReady } from '../config/firebaseAdmin.js';
 import { upsertUserProfile, updateUserProfile } from '../services/user.service.js';
 import { invalidateUserCache, primeUserCache } from '../middlewares/auth.middleware.js';
+import { acceptInvitation, findValidInvitation } from '../services/invitation.service.js';
 
 const sessionCookieOptions = {
   httpOnly: true,
@@ -19,7 +20,7 @@ export async function createSession(req, res) {
       });
     }
 
-    const { idToken, profile } = req.body;
+    const { idToken, profile, inviteToken } = req.body;
 
     if (!idToken) {
       return res.status(400).json({
@@ -36,12 +37,32 @@ export async function createSession(req, res) {
 
     const additionalData = profile ? validateAndSanitizeProfile(profile) : {};
 
+    // La invitación se comprueba ANTES de escribir el perfil, porque el rol que
+    // trae solo se aplica en el momento de crearlo. Se valida contra el correo
+    // ya verificado por Firebase, no contra lo que diga el cuerpo de la petición.
+    const invitation = inviteToken
+      ? await findValidInvitation(inviteToken)
+      : null;
+
+    const invitedRole = invitation?.email === (decodedClaims.email || '').toLowerCase()
+      ? invitation.role
+      : null;
+
     // Emitir la cookie y escribir el perfil son independientes entre sí:
     // en paralelo el login cuesta un viaje de red menos.
     const [sessionCookie, userProfile] = await Promise.all([
       adminAuth.createSessionCookie(idToken, { expiresIn: authSessionMaxAgeMs }),
-      upsertUserProfile(decodedClaims, additionalData),
+      upsertUserProfile(decodedClaims, additionalData, { invitedRole }),
     ]);
+
+    // Se marca como aceptada solo si el perfil quedó realmente con ese rol: si
+    // la cuenta ya existía, la invitación no surtió efecto y debe seguir viva.
+    if (invitedRole && userProfile?.joinedByInvitation) {
+      await acceptInvitation(inviteToken, {
+        uid: decodedClaims.uid,
+        email: decodedClaims.email,
+      });
+    }
 
     // La cookie se emite en paralelo con la lectura del perfil, pero solo se
     // entrega si la cuenta sigue activa: sin `Set-Cookie` no hay sesión.

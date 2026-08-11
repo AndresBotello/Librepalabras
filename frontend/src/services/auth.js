@@ -59,7 +59,7 @@ async function withFriendlyErrors(operation) {
   }
 }
 
-async function syncSession(user, profileData = null) {
+async function syncSession(user, profileData = null, inviteToken = null) {
   // Sin `true`: el token acaba de emitirse al iniciar sesión, forzar el refresco
   // agrega un viaje extra a securetoken.googleapis.com sin ningún beneficio.
   const idToken = await user.getIdToken();
@@ -67,6 +67,12 @@ async function syncSession(user, profileData = null) {
 
   if (profileData) {
     payload.profile = profileData;
+  }
+
+  // El backend contrasta el token de invitación contra el correo ya verificado
+  // por Firebase antes de aplicar el rol: aquí solo lo transportamos.
+  if (inviteToken) {
+    payload.inviteToken = inviteToken;
   }
 
   // El backend ya devuelve el perfil completo: lo propagamos para no tener que
@@ -87,19 +93,19 @@ export async function loginWithEmail(email, password, rememberMe = false) {
   });
 }
 
-export async function registerWithEmail(email, password, profileData = {}, rememberMe = false) {
+export async function registerWithEmail(email, password, profileData = {}, rememberMe = false, inviteToken = null) {
   return withFriendlyErrors(async () => {
     await setAuthPersistence(rememberMe);
     const credentials = await createUserWithEmailAndPassword(auth, email, password);
-    return syncSession(credentials.user, profileData);
+    return syncSession(credentials.user, profileData, inviteToken);
   });
 }
 
-export async function loginWithGoogle(rememberMe = false) {
+export async function loginWithGoogle(rememberMe = false, inviteToken = null) {
   return withFriendlyErrors(async () => {
     await setAuthPersistence(rememberMe);
     const credentials = await signInWithPopup(auth, googleProvider);
-    return syncSession(credentials.user);
+    return syncSession(credentials.user, null, inviteToken);
   });
 }
 

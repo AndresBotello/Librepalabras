@@ -1,5 +1,6 @@
 import React, { useContext } from 'react';
 import { ThemeContext } from '../../context/ThemeContext';
+import { useNotify } from '../../context/DialogContext';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import CollaboratorSidebar from '../../components/CollaboratorSidebar';
@@ -7,6 +8,7 @@ import LiteraryWorkForm from '../../components/LiteraryWorkForm';
 
 export default function CreatePost() {
   const { isDark } = useContext(ThemeContext);
+  const notify = useNotify();
 
   return (
     <div className={`min-h-screen flex flex-col transition-colors ${isDark ? 'bg-gray-950' : 'bg-white'}`}>
@@ -65,7 +67,7 @@ export default function CreatePost() {
               {/* Form */}
               <div className={`rounded-lg p-8 transition-colors ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'}`}>
                 <LiteraryWorkForm isDark={isDark} onSuccess={() => {
-                  alert('¡Obra enviada correctamente! Será revisada pronto.');
+                  notify.success('¡Obra enviada correctamente! Será revisada pronto.');
                 }} />
               </div>
 

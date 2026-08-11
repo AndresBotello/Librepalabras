@@ -1,0 +1,246 @@
+import { adminDb } from '../config/firebaseAdmin.js';
+
+/**
+ * Dos documentos únicos en `siteConfig`: los ajustes operativos (`settings`) y
+ * el contenido editable de la portada (`home`).
+ *
+ * El middleware de mantenimiento consulta los ajustes en CADA petición, así que
+ * leer Firestore cada vez multiplicaría por dos el coste de todo el backend.
+ * Se cachean en memoria con un TTL corto y se invalidan al guardar: un cambio
+ * del admin se aplica al instante en el proceso que lo atendió, y como mucho
+ * TTL segundos más tarde en el resto.
+ */
+
+const COLLECTION = 'siteConfig';
+const SETTINGS_DOC = 'settings';
+const HOME_DOC = 'home';
+const CACHE_TTL = 15000;
+
+export const DEFAULT_SETTINGS = {
+  siteTitle: 'Liberapalabras',
+  maintenanceMode: false,
+  maintenanceMessage: 'Estamos realizando tareas de mantenimiento. Volvemos en unos minutos.',
+  maxUploadMb: 10,
+  autoModeration: true,
+  allowRegistrations: true,
+};
+
+/**
+ * Los textos van vacíos a propósito. Un campo vacío significa "no configurado",
+ * y la portada usa entonces su diseño original. Así, hasta que el admin escriba
+ * algo, el sitio se ve exactamente igual que antes de existir esta función.
+ */
+export const DEFAULT_HOME = {
+  heroTitle: '',
+  heroSubtitle: '',
+  heroImage: '',
+  heroCtaLabel: '',
+  heroCtaLink: '/stories',
+  announcementText: '',
+  announcementActive: false,
+  featuredWorkIds: [],
+};
+
+const cache = new Map();
+
+function collection() {
+  if (!adminDb) {
+    throw new Error('Firebase Admin no está configurado.');
+  }
+
+  return adminDb.collection(COLLECTION);
+}
+
+async function readDoc(docId, defaults) {
+  const cached = cache.get(docId);
+
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
+
+  if (!adminDb) {
+    return { ...defaults };
+  }
+
+  let data = { ...defaults };
+
+  try {
+    const snapshot = await collection().doc(docId).get();
+
+    if (snapshot.exists) {
+      // Los valores por defecto van debajo a propósito: si mañana se añade un
+      // ajuste nuevo, los documentos ya guardados lo heredan sin migración.
+      data = { ...defaults, ...snapshot.data() };
+    }
+  } catch (error) {
+    // Si Firestore no responde, el sitio debe seguir en pie con los valores por
+    // defecto antes que devolver un 500 en cada petición.
+    console.error(`No se pudo leer siteConfig/${docId}:`, error.message);
+  }
+
+  cache.set(docId, { data, timestamp: Date.now() });
+  return data;
+}
+
+async function writeDoc(docId, updates, defaults, updatedBy) {
+  const payload = {
+    ...updates,
+    updatedAt: new Date().toISOString(),
+    updatedBy: updatedBy || null,
+  };
+
+  await collection().doc(docId).set(payload, { merge: true });
+  cache.delete(docId);
+
+  return readDoc(docId, defaults);
+}
+
+export function invalidateSiteConfigCache() {
+  cache.clear();
+}
+
+export function getSettings() {
+  return readDoc(SETTINGS_DOC, DEFAULT_SETTINGS);
+}
+
+export function getHomeContent() {
+  return readDoc(HOME_DOC, DEFAULT_HOME);
+}
+
+/** Solo se guardan las claves conocidas, y cada una con su validación. */
+export async function updateSettings(input = {}, updatedBy = null) {
+  const updates = {};
+
+  if (input.siteTitle !== undefined) {
+    const value = String(input.siteTitle).trim();
+
+    if (value.length < 2 || value.length > 60) {
+      throw Object.assign(new Error('El nombre del sitio debe tener entre 2 y 60 caracteres'), { status: 400 });
+    }
+
+    updates.siteTitle = value;
+  }
+
+  if (input.maintenanceMode !== undefined) {
+    if (typeof input.maintenanceMode !== 'boolean') {
+      throw Object.assign(new Error('maintenanceMode debe ser true o false'), { status: 400 });
+    }
+
+    updates.maintenanceMode = input.maintenanceMode;
+  }
+
+  if (input.maintenanceMessage !== undefined) {
+    updates.maintenanceMessage = String(input.maintenanceMessage).trim().slice(0, 300)
+      || DEFAULT_SETTINGS.maintenanceMessage;
+  }
+
+  if (input.maxUploadMb !== undefined) {
+    const value = Number(input.maxUploadMb);
+
+    // El techo real lo pone Multer (50 MB en upload.routes.js); dejar guardar
+    // más sería anunciar un límite que el servidor no acepta.
+    if (!Number.isFinite(value) || value < 1 || value > 50) {
+      throw Object.assign(new Error('El tamaño máximo debe estar entre 1 y 50 MB'), { status: 400 });
+    }
+
+    updates.maxUploadMb = Math.round(value);
+  }
+
+  if (input.autoModeration !== undefined) {
+    if (typeof input.autoModeration !== 'boolean') {
+      throw Object.assign(new Error('autoModeration debe ser true o false'), { status: 400 });
+    }
+
+    updates.autoModeration = input.autoModeration;
+  }
+
+  if (input.allowRegistrations !== undefined) {
+    if (typeof input.allowRegistrations !== 'boolean') {
+      throw Object.assign(new Error('allowRegistrations debe ser true o false'), { status: 400 });
+    }
+
+    updates.allowRegistrations = input.allowRegistrations;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    throw Object.assign(new Error('No hay ajustes que actualizar'), { status: 400 });
+  }
+
+  return writeDoc(SETTINGS_DOC, updates, DEFAULT_SETTINGS, updatedBy);
+}
+
+const MAX_FEATURED = 6;
+
+export async function updateHomeContent(input = {}, updatedBy = null) {
+  const updates = {};
+
+  const textFields = {
+    heroTitle: 120,
+    heroSubtitle: 300,
+    heroCtaLabel: 40,
+    announcementText: 300,
+  };
+
+  for (const [field, maxLength] of Object.entries(textFields)) {
+    if (input[field] !== undefined) {
+      updates[field] = String(input[field]).trim().slice(0, maxLength);
+    }
+  }
+
+  if (input.heroCtaLink !== undefined) {
+    const value = String(input.heroCtaLink).trim();
+
+    // Solo rutas internas: un enlace absoluto en el botón principal de la
+    // portada convertiría el panel de admin en un vector de phishing.
+    if (value && !value.startsWith('/')) {
+      throw Object.assign(new Error('El enlace del botón debe ser una ruta interna que empiece por /'), { status: 400 });
+    }
+
+    updates.heroCtaLink = value || DEFAULT_HOME.heroCtaLink;
+  }
+
+  if (input.heroImage !== undefined) {
+    const value = String(input.heroImage).trim();
+
+    if (value && !isOwnCloudinaryUrl(value)) {
+      throw Object.assign(new Error('La imagen debe subirse desde el panel (URL de Cloudinary propia)'), { status: 400 });
+    }
+
+    updates.heroImage = value;
+  }
+
+  if (input.announcementActive !== undefined) {
+    if (typeof input.announcementActive !== 'boolean') {
+      throw Object.assign(new Error('announcementActive debe ser true o false'), { status: 400 });
+    }
+
+    updates.announcementActive = input.announcementActive;
+  }
+
+  if (input.featuredWorkIds !== undefined) {
+    if (!Array.isArray(input.featuredWorkIds)) {
+      throw Object.assign(new Error('featuredWorkIds debe ser una lista'), { status: 400 });
+    }
+
+    const ids = input.featuredWorkIds
+      .filter((id) => typeof id === 'string' && id.trim())
+      .map((id) => id.trim());
+
+    if (ids.length > MAX_FEATURED) {
+      throw Object.assign(new Error(`Puedes destacar como máximo ${MAX_FEATURED} obras`), { status: 400 });
+    }
+
+    updates.featuredWorkIds = [...new Set(ids)];
+  }
+
+  if (Object.keys(updates).length === 0) {
+    throw Object.assign(new Error('No hay contenido que actualizar'), { status: 400 });
+  }
+
+  return writeDoc(HOME_DOC, updates, DEFAULT_HOME, updatedBy);
+}
+
+function isOwnCloudinaryUrl(url) {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  return Boolean(cloudName) && url.startsWith(`https://res.cloudinary.com/${cloudName}/`);
+}

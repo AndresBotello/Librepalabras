@@ -1,6 +1,7 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { ThemeContext } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { useNotify } from '../../context/DialogContext';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import CollaboratorSidebar from '../../components/CollaboratorSidebar';
@@ -13,6 +14,7 @@ const MIN_PASSWORD_LENGTH = 6;
 export default function Profile() {
   const { isDark } = useContext(ThemeContext);
   const { user, refreshAuth } = useAuth();
+  const notify = useNotify();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [profileImage, setProfileImage] = useState(user?.photoURL || null);
@@ -144,10 +146,10 @@ export default function Profile() {
     try {
       const imageUrl = await uploadProfilePhoto(file);
       setProfileImage(imageUrl);
-      alert('Foto de perfil subida correctamente');
+      notify.success('Foto de perfil subida correctamente.');
     } catch (err) {
       console.error('Error al subir imagen:', err);
-      alert('Error al subir la imagen: ' + (err.message || 'Intenta de nuevo'));
+      notify.error('No se pudo subir la imagen: ' + (err.message || 'Intenta de nuevo.'));
     } finally {
       setLoading(false);
     }
@@ -163,7 +165,7 @@ export default function Profile() {
 
   const handleSaveProfile = async () => {
     if (!user?.uid) {
-      alert('Error: Usuario no identificado');
+      notify.error('No se pudo identificar tu cuenta. Vuelve a iniciar sesión.');
       return;
     }
 
@@ -176,11 +178,11 @@ export default function Profile() {
 
       await updateUserById(user.uid, updateData);
       setIsEditing(false);
-      alert('Perfil actualizado exitosamente');
+      notify.success('Perfil actualizado correctamente.');
       await refreshAuth();
     } catch (err) {
       console.error('Error actualizando perfil:', err);
-      alert('Error al actualizar el perfil: ' + (err.message || 'Intenta de nuevo'));
+      notify.error('No se pudo actualizar el perfil: ' + (err.message || 'Intenta de nuevo.'));
     } finally {
       setLoading(false);
     }

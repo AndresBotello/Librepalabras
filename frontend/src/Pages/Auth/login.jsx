@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, User, Phone, Calendar, ArrowRight, X, CheckCircle2 } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
@@ -7,11 +7,23 @@ import { ThemeContext } from '../../context/ThemeContext';
 import { loginWithEmail, loginWithGoogle, registerWithEmail, sendPasswordReset } from '../../services/auth';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { homeRouteForRole } from '../../utils/roles';
+import { getInvitationByToken } from '../../services/api';
 import gendersData from '../../config/genders.json';
+
+const ROLE_LABELS_INVITE = {
+  admin: 'Administrador',
+  collaborator: 'Colaborador',
+  judge: 'Jurado',
+};
 
 export default function Login({ initialMode = 'login' }) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { applySession, refreshAuth } = useAuth();
+  const inviteToken = searchParams.get('invite');
+  // null = sin comprobar todavía, false = token inválido, objeto = válido.
+  const [invitation, setInvitation] = useState(null);
+  const [inviteChecked, setInviteChecked] = useState(!inviteToken);
   const [isLogin, setIsLogin] = useState(initialMode !== 'register');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
@@ -43,6 +55,37 @@ export default function Login({ initialMode = 'login' }) {
     }
     return edadCalculada;
   }, [formData.fechaNacimiento]);
+
+  /**
+   * Con un enlace de invitación el formulario arranca en modo registro y con el
+   * correo ya puesto y bloqueado: el backend solo aplica el rol si la cuenta se
+   * crea con esa misma dirección, así que dejarlo editable solo serviría para
+   * que alguien se registrara y se quedara sin el rol prometido.
+   */
+  useEffect(() => {
+    if (!inviteToken) return;
+
+    let cancelled = false;
+
+    getInvitationByToken(inviteToken)
+      .then((response) => {
+        if (cancelled) return;
+
+        setInvitation(response.invitation);
+        setIsLogin(false);
+        setFormData((prev) => ({ ...prev, email: response.invitation.email }));
+      })
+      .catch(() => {
+        if (!cancelled) setInvitation(false);
+      })
+      .finally(() => {
+        if (!cancelled) setInviteChecked(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [inviteToken]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -126,7 +169,15 @@ export default function Login({ initialMode = 'login' }) {
           genero: formData.genero,
         };
 
-        sessionUser = await registerWithEmail(formData.email, formData.password, profileData, rememberMe);
+        sessionUser = await registerWithEmail(
+          formData.email,
+          formData.password,
+          profileData,
+          rememberMe,
+          // Solo se manda si el token resultó válido: uno caducado haría que el
+          // backend lo ignorase igualmente, pero así queda explícito.
+          invitation ? inviteToken : null
+        );
       }
 
       // Si por lo que sea el backend no devolvió perfil, caemos al camino largo.
@@ -145,7 +196,7 @@ export default function Login({ initialMode = 'login' }) {
     setStatusMessage('');
 
     try {
-      const sessionUser = await loginWithGoogle(rememberMe);
+      const sessionUser = await loginWithGoogle(rememberMe, invitation ? inviteToken : null);
       const currentUser = sessionUser ? applySession(sessionUser) : await refreshAuth();
 
       setStatusMessage('Google conectado correctamente.');
@@ -292,6 +343,35 @@ export default function Login({ initialMode = 'login' }) {
               </button>
             </div>
 
+            {/* Aviso de invitación. Solo se pinta cuando ya se comprobó el
+                token, para no mostrar "inválida" durante la comprobación. */}
+            {inviteToken && inviteChecked && (
+              invitation ? (
+                <div className={`mb-5 rounded-xl px-4 py-3 text-sm border ${
+                  isDark
+                    ? 'bg-amber-950/40 border-amber-800 text-amber-200'
+                    : 'bg-amber-50 border-amber-200 text-amber-900'
+                }`}>
+                  <p className="font-semibold mb-0.5">
+                    🎟️ {invitation.invitedByName} te invitó como{' '}
+                    {ROLE_LABELS_INVITE[invitation.role] || invitation.role}
+                  </p>
+                  <p className="text-xs opacity-90">
+                    Crea tu cuenta con <strong>{invitation.email}</strong> y el rol se asignará solo.
+                  </p>
+                </div>
+              ) : (
+                <div className={`mb-5 rounded-xl px-4 py-3 text-sm border ${
+                  isDark
+                    ? 'bg-rose-950/40 border-rose-800 text-rose-300'
+                    : 'bg-rose-50 border-rose-200 text-rose-800'
+                }`}>
+                  Esta invitación no existe, ya se usó o caducó. Puedes registrarte igualmente,
+                  pero tendrás el rol por defecto.
+                </div>
+              )
+            )}
+
             {/* Status Message */}
             {statusMessage && (
               <div className={`mb-5 rounded-xl px-4 py-3 text-sm border flex items-center gap-2 animate-fadeIn ${
@@ -423,7 +503,12 @@ export default function Login({ initialMode = 'login' }) {
                     value={formData.email}
                     onChange={handleInputChange}
                     placeholder="usuario@ejemplo.com"
-                    className={`${inputBaseClasses} pl-10 pr-4`}
+                    // Con invitación válida el correo queda fijo: el rol solo se
+                    // aplica si la cuenta se crea con esa dirección exacta.
+                    readOnly={Boolean(invitation) && !isLogin}
+                    className={`${inputBaseClasses} pl-10 pr-4 ${
+                      invitation && !isLogin ? 'opacity-70 cursor-not-allowed' : ''
+                    }`}
                   />
                 </div>
               </div>

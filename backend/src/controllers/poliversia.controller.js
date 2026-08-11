@@ -8,6 +8,7 @@ import {
   incrementEditionViews,
 } from '../services/poliversia.service.js';
 import { deleteFile } from '../services/upload.service.js';
+import { NOTIFICATION_TYPES, createNotification } from '../services/notification.service.js';
 
 const MAX_TITLE_LENGTH = 140;
 const MAX_DESCRIPTION_LENGTH = 800;
@@ -148,6 +149,12 @@ export async function createPoliversiaEdition(req, res) {
       updatedAt: now,
     });
 
+    // Un borrador no se anuncia: la notificación solo sale cuando la edición
+    // queda visible para los lectores.
+    if (created.isPublished) {
+      await notifyMagazinePublished(created);
+    }
+
     return res.status(201).json({ ok: true, message: 'Edición publicada correctamente', edition: created });
   } catch (error) {
     console.error('Error al crear la edición:', error);
@@ -238,7 +245,16 @@ export async function updatePoliversiaEdition(req, res) {
 
     const updated = await updateEdition(id, updates);
 
-    await Promise.all([discardAsset(pdfToDiscard), discardAsset(coverToDiscard)]);
+    // Solo el paso de borrador a publicada avisa. Editar el título de una
+    // edición que ya estaba online no es noticia, y notificarlo cada vez
+    // convertiría la campana en ruido.
+    const justPublished = updates.isPublished === true && existing.isPublished !== true;
+
+    await Promise.all([
+      discardAsset(pdfToDiscard),
+      discardAsset(coverToDiscard),
+      justPublished ? notifyMagazinePublished(updated) : Promise.resolve(),
+    ]);
 
     return res.json({ ok: true, message: 'Edición actualizada correctamente', edition: updated });
   } catch (error) {
@@ -264,4 +280,13 @@ export async function deletePoliversiaEdition(req, res) {
     console.error('Error al eliminar la edición:', error);
     return res.status(500).json({ ok: false, message: 'Error al eliminar la edición' });
   }
+}
+
+function notifyMagazinePublished(edition) {
+  return createNotification({
+    type: NOTIFICATION_TYPES.MAGAZINE_PUBLISHED,
+    title: `Nueva edición de Poleversia: N.º ${edition.edition}`,
+    body: edition.title || 'Ya puedes leer la nueva edición de la revista.',
+    link: '/poleversia',
+  });
 }

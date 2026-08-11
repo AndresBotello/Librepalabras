@@ -24,6 +24,7 @@ import {
   upsertRating,
   writeContestState,
 } from '../services/contest.service.js';
+import { NOTIFICATION_TYPES, createNotification } from '../services/notification.service.js';
 
 const MAX_EDITION_LENGTH = 40;
 
@@ -587,14 +588,29 @@ export async function setContestState(req, res) {
       state.edition = xss(String(edition).trim());
     }
 
+    // El estado anterior se lee ANTES de escribir: solo se avisa cuando la
+    // convocatoria pasa a abierta, no cada vez que el admin toca la edición o
+    // reguarda el mismo estado.
+    const previousStatus = (await readContestStates())[id]?.status;
+
     const states = await writeContestState(id, state);
     const contests = mergeContestStates(states);
+    const contest = contests.find((item) => item.id === id);
+
+    if (status === 'abierto' && previousStatus !== 'abierto') {
+      await createNotification({
+        type: NOTIFICATION_TYPES.CONTEST_OPENED,
+        title: 'Convocatoria abierta',
+        body: `Ya puedes participar en ${contest?.title || 'el concurso'}${contest?.edition ? ` (${contest.edition})` : ''}.`,
+        link: `/concursos/${id}`,
+      });
+    }
 
     return res.json({
       ok: true,
       message: 'Concurso actualizado',
       contests,
-      contest: contests.find((item) => item.id === id),
+      contest,
     });
   } catch (error) {
     console.error('Error al actualizar el concurso:', error);

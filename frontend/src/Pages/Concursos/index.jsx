@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, BookOpen, Clock, Loader2, Trophy, Users } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
+import HomenajeEscallon from '../../components/HomenajeEscallon';
 import { ThemeContext } from '../../context/ThemeContext';
 import useContestCatalog from '../../hooks/useContestCatalog';
 import { getPublishedContestStories } from '../../services/api';
@@ -72,6 +73,9 @@ export default function Concursos() {
             con su propia convocatoria, su jurado y los textos que se publican al final.
           </p>
         </header>
+
+        {/* Abre la página, antes de las convocatorias. */}
+        <HomenajeEscallon />
 
         {/* Acceso a los ganadores de ediciones anteriores */}
         <Link

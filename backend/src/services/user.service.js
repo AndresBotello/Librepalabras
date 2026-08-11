@@ -24,12 +24,13 @@ export async function getUserProfile(uid) {
   };
 }
 
-export async function upsertUserProfile(decodedClaims, additionalData = {}) {
+export async function upsertUserProfile(decodedClaims, additionalData = {}, options = {}) {
   if (!adminDb) {
     return null;
   }
 
   const { uid, email, name, picture } = decodedClaims;
+  const { invitedRole = null } = options;
   const docRef = usersCollection().doc(uid);
   const existing = await docRef.get();
   const preferredRole = getRoleForEmail(email);
@@ -42,13 +43,21 @@ export async function upsertUserProfile(decodedClaims, additionalData = {}) {
   };
 
   if (!existing.exists) {
+    // El rol invitado solo manda al crear la cuenta. ADMIN_EMAILS sigue por
+    // encima: es la lista de confianza del despliegue y una invitación no debe
+    // poder degradar a quien está en ella.
+    const initialRole = preferredRole === 'admin'
+      ? 'admin'
+      : (invitedRole && isValidRole(invitedRole) ? invitedRole : preferredRole || defaultUserRole);
+
     const profile = {
       ...baseProfile,
       photoURL: picture || null,
       ...additionalData,
-      role: preferredRole || defaultUserRole,
+      role: initialRole,
       createdAt: now,
       lastLoginAt: now,
+      ...(invitedRole ? { invitedRole, joinedByInvitation: true } : {}),
     };
 
     await docRef.set(profile);

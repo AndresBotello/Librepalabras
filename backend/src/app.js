@@ -11,6 +11,11 @@ import uploadRoutes from './routes/upload.routes.js';
 import promotionalBooksRoutes from './routes/promotionalBooks.routes.js';
 import poliversiaRoutes from './routes/poliversia.routes.js';
 import contestRoutes from './routes/contest.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
+import siteRoutes from './routes/site.routes.js';
+import invitationRoutes from './routes/invitation.routes.js';
+import { maintenanceGuard } from './middlewares/maintenance.middleware.js';
+import { logError } from './services/errorLog.service.js';
 
 const app = express();
 
@@ -85,6 +90,13 @@ app.get('/health', (_req, res) => {
   });
 });
 
+// El control de mantenimiento va ANTES de las rutas y DESPUÉS de /health, para
+// que el hosting siga viendo el servicio como vivo mientras el sitio está
+// cerrado al público. Deja pasar siempre las rutas de sesión y configuración
+// (ver maintenance.middleware.js): si no, activar el modo dejaría al propio
+// admin sin forma de desactivarlo.
+app.use('/api', maintenanceGuard);
+
 // Rutas con rate limiting más estricto para auth
 app.use('/api/auth/session', authLimiter);
 app.use('/api/auth', authRoutes);
@@ -95,6 +107,9 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/promotional-books', promotionalBooksRoutes);
 app.use('/api/poliversia', poliversiaRoutes);
 app.use('/api/contest', contestRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/site', siteRoutes);
+app.use('/api/invitations', invitationRoutes);
 
 // Una ruta /api inexistente devolvía el HTML de error de Express, que el
 // frontend intenta parsear como JSON y acaba en "Unexpected token <".
@@ -104,8 +119,13 @@ app.use('/api', (_req, res) => {
 
 // Último recurso: cualquier error que se escape de un controlador. El detalle
 // se queda en los logs del servidor, nunca viaja al navegador en producción.
-app.use((error, _req, res, _next) => {
+app.use((error, req, res, _next) => {
   console.error('Error no controlado:', error);
+
+  // Además de la consola, queda registrado para que el panel de salud pueda
+  // mostrarlo. No se espera al resultado: la respuesta al usuario no debe
+  // depender de que Firestore acepte la escritura del log.
+  logError(error, req);
 
   res.status(error.status || 500).json({
     ok: false,

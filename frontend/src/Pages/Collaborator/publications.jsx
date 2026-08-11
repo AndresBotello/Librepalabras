@@ -1,6 +1,7 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { ThemeContext } from '../../context/ThemeContext';
 import { AuthContext } from '../../context/AuthContext';
+import { useNotify } from '../../context/DialogContext';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import CollaboratorSidebar from '../../components/CollaboratorSidebar';
@@ -10,6 +11,7 @@ import { getMyWorks, updateLiteraryWork, uploadPdf, uploadCover } from '../../se
 export default function Publications() {
   const { isDark } = useContext(ThemeContext);
   const { user } = useContext(AuthContext);
+  const notify = useNotify();
   const [publications, setPublications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -105,13 +107,13 @@ export default function Publications() {
       });
     } catch (err) {
       console.error(`❌ Error al subir ${type}:`, err);
-      alert(`Error al subir ${type}: ${err.message}`);
+      notify.error(`No se pudo subir ${type}: ${err.message}`);
     }
   };
 
   const handleSaveEdit = async () => {
     if (!formData.title.trim() || !formData.content.trim()) {
-      alert('Título y contenido son obligatorios');
+      notify.error('El título y el contenido son obligatorios.');
       return;
     }
 
@@ -141,10 +143,10 @@ export default function Publications() {
       console.log('✅ Publicación guardada exitosamente');
       await fetchPublications();
       handleCancelEdit();
-      alert('Publicación actualizada correctamente');
+      notify.success('Publicación actualizada correctamente.');
     } catch (err) {
       console.error('❌ Error al guardar:', err);
-      alert(`Error al actualizar: ${err.message}`);
+      notify.error(`No se pudo actualizar: ${err.message}`);
     }
   };
 
