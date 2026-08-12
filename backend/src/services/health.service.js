@@ -1,6 +1,5 @@
 import { v2 as cloudinary } from 'cloudinary';
-import { adminDb, firebaseAdminReady } from '../config/firebaseAdmin.js';
-import { isEmailEnabled } from './email.service.js';
+import { adminDb } from '../config/firebaseAdmin.js';
 import { countErrorsSince, listRecentErrors } from './errorLog.service.js';
 
 /**
@@ -11,6 +10,12 @@ import { countErrorsSince, listRecentErrors } from './errorLog.service.js';
  * Cada bloque se resuelve por separado y ninguno puede tumbar al resto: si
  * Cloudinary no responde, el panel sigue mostrando Firestore y los errores.
  * Por eso se usa `allSettled` y cada sección lleva su propio `ok`.
+ *
+ * A propósito NO se informa de la configuración del despliegue: ni proveedores,
+ * ni nombres de cuenta, ni dominios, ni versiones, ni memoria. Nada de eso hace
+ * falta para operar la plataforma y todo ello describe la infraestructura a
+ * quien lo lea. Si algún día vuelve a hacer falta un indicador de "esto está
+ * conectado", que sea un booleano y nunca el valor que lo configura.
  */
 
 const CLOUDINARY_FOLDER = 'librepalaras';
@@ -25,8 +30,6 @@ export async function getSystemHealth() {
 
   return {
     checkedAt: new Date().toISOString(),
-    services: getServiceStatus(),
-    runtime: getRuntimeInfo(),
     storage: unwrap(storage, 'No se pudo consultar Cloudinary'),
     database: unwrap(database, 'No se pudo consultar Firestore'),
     errors: unwrap(errors, 'No se pudo leer el registro de errores'),
@@ -40,48 +43,6 @@ function unwrap(result, fallbackMessage) {
   }
 
   return { ok: false, message: fallbackMessage, error: result.reason?.message || String(result.reason) };
-}
-
-/** Configuración crítica: qué está conectado y qué falta por configurar. */
-function getServiceStatus() {
-  return {
-    firebase: {
-      ok: firebaseAdminReady,
-      label: 'Firebase Admin',
-      detail: firebaseAdminReady ? 'Conectado' : 'Sin credenciales',
-    },
-    cloudinary: {
-      ok: Boolean(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET),
-      label: 'Cloudinary',
-      detail: process.env.CLOUDINARY_CLOUD_NAME
-        ? `Cuenta: ${process.env.CLOUDINARY_CLOUD_NAME}`
-        : 'Sin configurar',
-    },
-    email: {
-      ok: isEmailEnabled(),
-      label: 'Correo (SMTP)',
-      detail: isEmailEnabled()
-        ? 'Activo: las invitaciones se envían por correo'
-        : 'Inactivo: las invitaciones se comparten por enlace',
-    },
-    cors: {
-      ok: Boolean(process.env.CORS_ORIGIN || process.env.CLIENT_URL),
-      label: 'Origen del frontend',
-      detail: process.env.CORS_ORIGIN || process.env.CLIENT_URL || 'Sin definir (solo localhost)',
-    },
-  };
-}
-
-function getRuntimeInfo() {
-  const memory = process.memoryUsage();
-
-  return {
-    nodeVersion: process.version,
-    environment: process.env.NODE_ENV || 'development',
-    uptimeSeconds: Math.round(process.uptime()),
-    memoryUsedMb: Math.round((memory.heapUsed / 1024 / 1024) * 10) / 10,
-    memoryTotalMb: Math.round((memory.rss / 1024 / 1024) * 10) / 10,
-  };
 }
 
 async function getCloudinaryUsage() {

@@ -173,50 +173,6 @@ export default function AdminSalud() {
               </div>
             ) : (
               <>
-                {/* Servicios conectados */}
-                <section className={cardClass}>
-                  <h2 className="text-lg font-bold mb-5">Servicios</h2>
-
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    {Object.entries(health.services).map(([key, service]) => (
-                      <div
-                        key={key}
-                        className={`flex items-start gap-3 px-4 py-3 rounded-lg ${
-                          isDark ? 'bg-slate-800/60' : 'bg-slate-50'
-                        }`}
-                      >
-                        <span
-                          className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${
-                            service.ok ? 'bg-emerald-500' : 'bg-amber-500'
-                          }`}
-                          aria-hidden="true"
-                        />
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold">{service.label}</p>
-                          <p className={`text-xs mt-0.5 break-words ${mutedClass}`}>{service.detail}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <dl className={`grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t text-sm ${
-                    isDark ? 'border-slate-800' : 'border-slate-200'
-                  }`}>
-                    <Stat label="Node" value={health.runtime.nodeVersion} mutedClass={mutedClass} />
-                    <Stat label="Entorno" value={health.runtime.environment} mutedClass={mutedClass} />
-                    <Stat
-                      label="En marcha"
-                      value={formatUptime(health.runtime.uptimeSeconds)}
-                      mutedClass={mutedClass}
-                    />
-                    <Stat
-                      label="Memoria"
-                      value={`${health.runtime.memoryUsedMb} MB`}
-                      mutedClass={mutedClass}
-                    />
-                  </dl>
-                </section>
-
                 {/* Cloudinary */}
                 <section className={cardClass}>
                   <h2 className="text-lg font-bold mb-1">Almacenamiento (Cloudinary)</h2>
@@ -444,10 +400,3 @@ function ErrorBox({ message, detail, isDark }) {
   );
 }
 
-function formatUptime(seconds) {
-  if (seconds < 60) return `${seconds} s`;
-  if (seconds < 3600) return `${Math.round(seconds / 60)} min`;
-  if (seconds < 86400) return `${Math.round(seconds / 3600)} h`;
-
-  return `${Math.round(seconds / 86400)} d`;
-}
