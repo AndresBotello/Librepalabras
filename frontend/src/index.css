@@ -2,6 +2,102 @@
 
 @import "tailwindcss";
 
+/* El interruptor de tema añade la clase `.dark` al <html> (ThemeContext.jsx),
+   pero en Tailwind v4 la variante `dark:` mira `prefers-color-scheme` por
+   defecto: sin esto, las clases `dark:` obedecen al sistema operativo en vez de
+   al interruptor de la web. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+
+@theme {
+  /* --- PRIMARIO: azul vivo y llamativo --- */
+  --color-brand-50:  #eef6fb;
+  --color-brand-100: #d5eaf5;
+  --color-brand-200: #add5eb;
+  --color-brand-300: #78b7dc;
+  --color-brand-400: #4295c8;
+  --color-brand-500: #2878b0;
+  --color-brand-600: #1f5f93;
+  --color-brand-700: #1b4c78;
+  --color-brand-800: #1a4064;
+  --color-brand-900: #1a3754;
+  --color-brand-950: #112338;
+
+  /* --- ACENTO: verde claro puro (sin tonos azules) --- */
+  --color-amber-50:  #f3faf3;
+  --color-amber-100: #e3f5e3;
+  --color-amber-200: #c7eac7;
+  --color-amber-300: #9bd69b;
+  --color-amber-400: #65bb65;
+  --color-amber-500: #3fa03f;
+  --color-amber-600: #318231;
+  --color-amber-700: #2a682a;
+  --color-amber-800: #255425;
+  --color-amber-900: #204620;
+  --color-amber-950: #0f280f;
+
+  --color-yellow-50:  #f3faf3;
+  --color-yellow-100: #e3f5e3;
+  --color-yellow-200: #c7eac7;
+  --color-yellow-300: #9bd69b;
+  --color-yellow-400: #65bb65;
+  --color-yellow-500: #3fa03f;
+  --color-yellow-600: #318231;
+  --color-yellow-700: #2a682a;
+  --color-yellow-800: #255425;
+  --color-yellow-900: #204620;
+  --color-yellow-950: #0f280f;
+
+  /* --- NEUTRO azulado --- */
+  --color-gray-50:  #f4f7f9;
+  --color-gray-100: #e8eef2;
+  --color-gray-200: #d0dce4;
+  --color-gray-300: #a9bdcb;
+  --color-gray-400: #7c98ad;
+  --color-gray-500: #5c7a91;
+  --color-gray-600: #486176;
+  --color-gray-700: #3c4f60;
+  --color-gray-800: #344351;
+  --color-gray-900: #2e3945;
+  --color-gray-950: #1a2229;
+
+  --color-slate-50:  #f4f7f9;
+  --color-slate-100: #e8eef2;
+  --color-slate-200: #d0dce4;
+  --color-slate-300: #a9bdcb;
+  --color-slate-400: #7c98ad;
+  --color-slate-500: #5c7a91;
+  --color-slate-600: #486176;
+  --color-slate-700: #3c4f60;
+  --color-slate-800: #344351;
+  --color-slate-900: #2e3945;
+  --color-slate-950: #1a2229;
+
+  --color-stone-50:  #f4f7f9;
+  --color-stone-100: #e8eef2;
+  --color-stone-200: #d0dce4;
+  --color-stone-300: #a9bdcb;
+  --color-stone-400: #7c98ad;
+  --color-stone-500: #5c7a91;
+  --color-stone-600: #486176;
+  --color-stone-700: #3c4f60;
+  --color-stone-800: #344351;
+  --color-stone-900: #2e3945;
+  --color-stone-950: #1a2229;
+
+  /* --- ÉXITO: verde claro puro --- */
+  --color-emerald-50:  #f3faf3;
+  --color-emerald-100: #e3f5e3;
+  --color-emerald-200: #c7eac7;
+  --color-emerald-300: #9bd69b;
+  --color-emerald-400: #65bb65;
+  --color-emerald-500: #3fa03f;
+  --color-emerald-600: #318231;
+  --color-emerald-700: #2a682a;
+  --color-emerald-800: #255425;
+  --color-emerald-900: #204620;
+  --color-emerald-950: #0f280f;
+}
 * {
   font-family: 'Lato', sans-serif;
 }
@@ -17,12 +113,14 @@ html {
 body {
   padding-top: 64px;
   /* Mismo color que la navbar, para que cualquier píxel suelto (redondeos al
-     hacer zoom, el rebote al llegar al final del scroll) no se vea blanco. */
-  background-color: #f3f4f6;
+     hacer zoom, el rebote al llegar al final del scroll) no se vea blanco.
+     Se toma del token en vez de copiar el hex: así sigue igualando a la navbar
+     si algún día se retoca la paleta. */
+  background-color: var(--color-gray-100);
 }
 
 html.dark body {
-  background-color: #111827;
+  background-color: var(--color-gray-900);
 }
 
 @media (min-width: 640px) {
@@ -75,7 +173,9 @@ a:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
-  outline: 3px solid #FFD700;
+  /* El turquesa del acento: destaca tanto sobre los fondos claros como sobre
+     los oscuros, así que sirve de indicador de foco en los dos temas. */
+  outline: 3px solid var(--color-amber-500);
   outline-offset: 2px;
 }
 
@@ -84,7 +184,7 @@ select:focus-visible {
   position: absolute;
   top: -40px;
   left: 0;
-  background: #5D4037;
+  background: var(--color-brand-700);
   color: white;
   padding: 8px;
   text-decoration: none;

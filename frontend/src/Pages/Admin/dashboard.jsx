@@ -94,7 +94,7 @@ export default function Admin() {
           value: collaborators.toLocaleString(),
           icon: Icons.Pen,
           badge: `${colabPercentage}% del total`,
-          badgeColor: 'bg-purple-500/10 text-purple-500',
+          badgeColor: 'bg-brand-500/10 text-brand-500',
         },
       ]);
 

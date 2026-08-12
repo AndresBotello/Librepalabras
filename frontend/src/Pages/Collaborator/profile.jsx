@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNotify } from '../../context/DialogContext';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
-import CollaboratorSidebar from '../../components/CollaboratorSidebar';
+import AreaSidebar from '../../components/AreaSidebar';
 import { updateUserById, uploadProfilePhoto } from '../../services/api';
 import { getAccountProviders, changePassword, addPasswordToAccount } from '../../services/auth';
 
@@ -193,7 +193,7 @@ export default function Profile() {
       <Navbar />
 
       <div className="flex flex-1">
-        <CollaboratorSidebar />
+        <AreaSidebar />
 
         <div className={`flex-1 flex flex-col overflow-hidden transition-colors ${isDark ? 'bg-gray-950' : 'bg-white'}`}>
           {/* Header */}
@@ -219,11 +219,11 @@ export default function Profile() {
                         src={profileImage}
                         alt="Foto de perfil"
                         className="w-32 h-32 rounded-full object-cover border-4"
-                        style={{ borderColor: isDark ? '#5D4037' : '#D2691E' }}
+                        style={{ borderColor: isDark ? 'var(--color-brand-700)' : 'var(--color-brand-600)' }}
                       />
                     ) : (
                       <div className={`w-32 h-32 rounded-full flex items-center justify-center font-bold text-4xl ${
-                        isDark ? 'bg-[#5D4037] text-white' : 'bg-yellow-100 text-[#5D4037]'
+                        isDark ? 'bg-brand-700 text-white' : 'bg-yellow-100 text-brand-700'
                       }`}>
                         {initials}
                       </div>
@@ -362,7 +362,7 @@ export default function Profile() {
                         {/* Información Personal */}
                         <div className="space-y-2 mb-6">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold transition-colors" style={{color: isDark ? '#9CA3AF' : '#4B5563'}}>
+                            <span className="text-sm font-semibold transition-colors" style={{color: isDark ? 'var(--color-gray-400)' : 'var(--color-gray-600)'}}>
                               Teléfono:
                             </span>
                             <span className={`text-sm transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -370,7 +370,7 @@ export default function Profile() {
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold transition-colors" style={{color: isDark ? '#9CA3AF' : '#4B5563'}}>
+                            <span className="text-sm font-semibold transition-colors" style={{color: isDark ? 'var(--color-gray-400)' : 'var(--color-gray-600)'}}>
                               Género:
                             </span>
                             <span className={`text-sm transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -378,7 +378,7 @@ export default function Profile() {
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold transition-colors" style={{color: isDark ? '#9CA3AF' : '#4B5563'}}>
+                            <span className="text-sm font-semibold transition-colors" style={{color: isDark ? 'var(--color-gray-400)' : 'var(--color-gray-600)'}}>
                               Fecha de Nacimiento:
                             </span>
                             <span className={`text-sm transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -386,7 +386,7 @@ export default function Profile() {
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold transition-colors" style={{color: isDark ? '#9CA3AF' : '#4B5563'}}>
+                            <span className="text-sm font-semibold transition-colors" style={{color: isDark ? 'var(--color-gray-400)' : 'var(--color-gray-600)'}}>
                               Edad:
                             </span>
                             <span className={`text-sm transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -394,8 +394,8 @@ export default function Profile() {
                             </span>
                           </div>
                           {user?.descripcion && (
-                            <div className="mt-4 pt-4 border-t" style={{borderColor: isDark ? '#2d2d2d' : '#e0e0e0'}}>
-                              <span className="text-sm font-semibold transition-colors" style={{color: isDark ? '#9CA3AF' : '#4B5563'}}>
+                            <div className="mt-4 pt-4 border-t" style={{borderColor: isDark ? 'var(--color-gray-800)' : 'var(--color-gray-200)'}}>
+                              <span className="text-sm font-semibold transition-colors" style={{color: isDark ? 'var(--color-gray-400)' : 'var(--color-gray-600)'}}>
                                 Descripción:
                               </span>
                               <p className={`text-sm transition-colors mt-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -407,7 +407,7 @@ export default function Profile() {
 
                         <button
                           onClick={() => setIsEditing(true)}
-                          className="px-6 py-2 rounded-lg font-semibold transition-colors text-sm bg-[#5D4037] text-white hover:bg-[#4A302A]"
+                          className="px-6 py-2 rounded-lg font-semibold transition-colors text-sm bg-brand-700 text-white hover:bg-brand-800"
                         >
                           ✏️ Editar Perfil
                         </button>
@@ -599,7 +599,7 @@ export default function Profile() {
                       <button
                         type="submit"
                         disabled={passwordSaving}
-                        className="px-4 py-2 rounded-lg font-semibold text-sm text-white bg-[#5D4037] hover:bg-[#4A302A] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-4 py-2 rounded-lg font-semibold text-sm text-white bg-brand-700 hover:bg-brand-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {passwordSaving ? 'Guardando...' : isAddingPassword ? 'Añadir contraseña' : 'Actualizar contraseña'}
                       </button>

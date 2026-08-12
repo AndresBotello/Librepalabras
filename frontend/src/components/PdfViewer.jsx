@@ -78,7 +78,7 @@ export default function PdfViewer({ url, isDark }) {
             href={viewUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-3 py-2 rounded text-sm font-semibold text-white bg-[#5D4037] hover:bg-[#4A302A]"
+            className="px-3 py-2 rounded text-sm font-semibold text-white bg-brand-700 hover:bg-brand-800"
           >
             ⬇️ Descargar
           </a>

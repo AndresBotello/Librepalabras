@@ -172,7 +172,7 @@ export default function Settings() {
                   </p>
                   <button
                     onClick={load}
-                    className="mt-4 px-4 py-2 rounded-lg text-sm font-semibold bg-[#5D4037] text-white hover:bg-[#4A302A]"
+                    className="mt-4 px-4 py-2 rounded-lg text-sm font-semibold bg-brand-700 text-white hover:bg-brand-800"
                   >
                     Reintentar
                   </button>
@@ -256,7 +256,7 @@ export default function Settings() {
                       <button
                         onClick={handleSave}
                         disabled={saving || !isDirty}
-                        className="px-6 py-2 rounded-lg font-semibold text-sm bg-[#5D4037] text-white hover:bg-[#4A302A] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="px-6 py-2 rounded-lg font-semibold text-sm bg-brand-700 text-white hover:bg-brand-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
                         {saving ? 'Guardando…' : '💾 Guardar Cambios'}
                       </button>
@@ -300,7 +300,7 @@ function Field({ label, value, isDark }) {
 }
 
 function Toggle({ label, description, checked, onChange, isDark, danger = false }) {
-  const activeColor = danger ? 'bg-amber-600' : 'bg-[#5D4037]';
+  const activeColor = danger ? 'bg-amber-600' : 'bg-brand-700';
 
   return (
     <div className="flex items-start justify-between gap-6">

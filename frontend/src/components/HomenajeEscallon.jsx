@@ -156,7 +156,7 @@ export default function HomenajeEscallon() {
 
         {/* La dedicatoria cierra alineada a la derecha, como una firma. */}
         <p className={`mt-10 text-right font-serif italic text-lg ${
-          isDark ? 'text-amber-400/80' : 'text-[#5D4037]'
+          isDark ? 'text-amber-400/80' : 'text-brand-700'
         }`}>
           A tu memoria, mi hermano …
         </p>

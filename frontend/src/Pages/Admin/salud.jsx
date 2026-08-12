@@ -144,7 +144,7 @@ export default function AdminSalud() {
               <button
                 onClick={load}
                 disabled={loading}
-                className="px-5 py-2 rounded-lg font-semibold text-sm bg-[#5D4037] text-white hover:bg-[#4A302A] disabled:opacity-50 transition-colors"
+                className="px-5 py-2 rounded-lg font-semibold text-sm bg-brand-700 text-white hover:bg-brand-800 disabled:opacity-50 transition-colors"
               >
                 {loading ? 'Comprobando…' : '↻ Actualizar'}
               </button>
@@ -348,7 +348,7 @@ export default function AdminSalud() {
                               target="_blank"
                               rel="noreferrer"
                               className={`text-xs font-semibold px-3 py-1.5 rounded-lg ${
-                                isDark ? 'text-amber-400 hover:bg-slate-700' : 'text-[#5D4037] hover:bg-slate-200'
+                                isDark ? 'text-amber-400 hover:bg-slate-700' : 'text-brand-700 hover:bg-slate-200'
                               }`}
                             >
                               Ver ↗

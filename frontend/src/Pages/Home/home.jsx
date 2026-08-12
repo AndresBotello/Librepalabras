@@ -9,10 +9,48 @@ import { getAllAuthors, getHomeContent } from '../../services/api';
 // /admin/home, para que la portada nunca quede sin fondo.
 const DEFAULT_HERO_IMAGE = 'https://res.cloudinary.com/j7q2huvz/image/upload/v1785971697/69478894-7be6-4384-be37-40fc593636eb_f9ibui.webp';
 
+
+const HOME_CACHE_KEY = 'homeContent';
+const CACHED_FIELDS = [
+  'heroTitle',
+  'heroSubtitle',
+  'heroImage',
+  'heroCtaLabel',
+  'heroCtaLink',
+  'announcementText',
+  'announcementActive',
+];
+
+function readCachedHome() {
+  try {
+    const raw = localStorage.getItem(HOME_CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    // Navegación privada, cuota llena o un JSON corrupto de una versión
+    // anterior: se sigue como hasta ahora, esperando a la API.
+    return null;
+  }
+}
+
+function cacheHome(content) {
+  try {
+    const subset = {};
+
+    for (const field of CACHED_FIELDS) {
+      subset[field] = content?.[field] ?? '';
+    }
+
+    localStorage.setItem(HOME_CACHE_KEY, JSON.stringify(subset));
+  } catch {
+    // Guardar la caché es una mejora, no un requisito: si falla, la portada
+    // funciona igual.
+  }
+}
+
 export default function Home() {
   const { isDark } = useContext(ThemeContext);
   const [authors, setAuthors] = useState([]);
-  const [home, setHome] = useState(null);
+  const [home, setHome] = useState(readCachedHome);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -38,6 +76,7 @@ export default function Home() {
       const response = await getHomeContent();
       if (response.ok) {
         setHome(response.home);
+        cacheHome(response.home);
       }
     } catch (err) {
       // La portada tiene que verse igual aunque la configuración no cargue:
@@ -60,14 +99,14 @@ export default function Home() {
           width: 8px;
         }
         ::-webkit-scrollbar-track {
-          background: ${isDark ? '#0c0a09' : '#FAF8F5'};
+          background: ${isDark ? 'var(--color-gray-950)' : 'var(--color-gray-50)'};
         }
         ::-webkit-scrollbar-thumb {
-          background: ${isDark ? '#44403c' : '#d6d3d1'};
+          background: ${isDark ? 'var(--color-gray-700)' : 'var(--color-gray-300)'};
           border-radius: 4px;
         }
         ::-webkit-scrollbar-thumb:hover {
-          background: ${isDark ? '#78716c' : '#a8a29e'};
+          background: ${isDark ? 'var(--color-gray-600)' : 'var(--color-gray-400)'};
         }
 
         /* 2. Textura de ruido sutil (efecto papel editorial) */
@@ -118,7 +157,7 @@ export default function Home() {
       `}</style>
 
       <div className={`min-h-screen flex flex-col font-sans transition-colors duration-500 ${
-        isDark ? 'bg-[#0c0a09] text-stone-200' : 'bg-[#FAF8F5] text-stone-800'
+        isDark ? 'bg-gray-950 text-stone-200' : 'bg-gray-50 text-stone-800'
       }`}>
         <Navbar />
 
@@ -158,7 +197,7 @@ export default function Home() {
                 partirlo en dos obligaría al admin a conocer el truco de maquetado. */}
             <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-serif font-bold text-stone-100 mb-8 leading-[1.1] tracking-tight">
               {customTitle ? (
-                <span className="bg-gradient-to-r from-amber-200 via-amber-400 to-yellow-500 bg-clip-text text-transparent box-decoration-clone pr-[0.14em] -mr-[0.14em]">
+                <span className="bg-gradient-to-r from-amber-200 via-amber-400 to-brand-300 bg-clip-text text-transparent box-decoration-clone pr-[0.14em] -mr-[0.14em]">
                   {customTitle}
                 </span>
               ) : (
@@ -175,7 +214,7 @@ export default function Home() {
                       cuando el título se parte en varias líneas (móvil) las líneas
                       intermedias se seguían cortando. Con clone, cada línea recibe
                       su propio padding y su propio degradado. */}
-                  <span className="italic font-normal bg-gradient-to-r from-amber-200 via-amber-400 to-yellow-500 bg-clip-text text-transparent box-decoration-clone pr-[0.14em] -mr-[0.14em]">
+                  <span className="italic font-normal bg-gradient-to-r from-amber-200 via-amber-400 to-brand-300 bg-clip-text text-transparent box-decoration-clone pr-[0.14em] -mr-[0.14em]">
                     encuentran su libertad
                   </span>
                 </>
@@ -283,7 +322,7 @@ export default function Home() {
         )}
 
         {/* ================= SECCIONES PRINCIPALES (BENTO) ================= */}
-        <section className={`relative py-24 px-4 sm:px-8 transition-colors ${isDark ? 'bg-[#0c0a09]' : 'bg-[#FAF8F5]'}`}>
+        <section className={`relative py-24 px-4 sm:px-8 transition-colors ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 border-b border-stone-500/20 pb-8">
               <div>
@@ -388,7 +427,7 @@ export default function Home() {
 
         {/* ================= AUTORES DESTACADOS ================= */}
         <section className={`relative py-24 px-4 sm:px-8 border-y transition-colors ${
-          isDark ? 'bg-stone-950 border-stone-800/80' : 'bg-[#F4F0EA] border-stone-200'
+          isDark ? 'bg-stone-950 border-stone-800/80' : 'bg-gray-100 border-stone-200'
         }`}>
           <div className="absolute inset-0 bg-noise pointer-events-none opacity-30" />
           <div className="max-w-7xl mx-auto relative z-10">
@@ -434,7 +473,11 @@ export default function Home() {
                       {author.publications} publicacione{author.publications !== 1 ? 's' : ''}
                     </p>
                     {author.description && (
-                      <p className={`text-sm text-center leading-relaxed mt-4 pt-4 border-t border-stone-500/20 ${isDark ? 'text-stone-300' : 'text-stone-700'}`}>
+                      /* Aquí la biografía es un adelanto, no la ficha completa:
+                         va recortada a cuatro líneas porque las tarjetas de la
+                         portada comparten fila y una semblanza larga estiraría
+                         la sección entera. Los párrafos se respetan igual. */
+                      <p className={`text-sm text-center leading-relaxed mt-4 pt-4 border-t border-stone-500/20 whitespace-pre-line line-clamp-4 ${isDark ? 'text-stone-300' : 'text-stone-700'}`}>
                         {author.description}
                       </p>
                     )}
@@ -456,7 +499,7 @@ export default function Home() {
         </section>
 
         {/* ================= MANIFIESTO EDITORIAL ================= */}
-        <section className={`relative py-24 px-4 sm:px-8 transition-colors ${isDark ? 'bg-[#0c0a09]' : 'bg-[#FAF8F5]'}`}>
+        <section className={`relative py-24 px-4 sm:px-8 transition-colors ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
           <div className="max-w-6xl mx-auto">
             <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-amber-950 via-stone-900 to-stone-950 p-10 sm:p-16 border border-amber-500/20 shadow-2xl text-stone-100 group">
               {/* Glow de fondo animado */}

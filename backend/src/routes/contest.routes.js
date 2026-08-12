@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticateRequest } from '../middlewares/auth.middleware.js';
-import { authorizeRoles, JURY_ROLES } from '../middlewares/role.middleware.js';
+import { authorizeRoles, CONTESTANT_ROLES, JURY_ROLES } from '../middlewares/role.middleware.js';
 import { contestSubmissionRateLimiter } from '../middlewares/rateLimiter.middleware.js';
 import {
   getCatalog,
@@ -30,11 +30,12 @@ router.get('/published/:id', getPublishedStory);
 // Abrir, anunciar o cerrar una convocatoria es decisión del administrador.
 router.patch('/catalog/:id', authenticateRequest, authorizeRoles(['admin']), setContestState);
 
-// Solo colaborador, a propósito: un juez puede publicar obra literaria propia,
-// pero no concursar en el certamen que él mismo califica.
-router.get('/mine', authenticateRequest, authorizeRoles(['collaborator']), getMyStories);
-router.post('/', authenticateRequest, authorizeRoles(['collaborator']), contestSubmissionRateLimiter, submitStory);
-router.patch('/mine/:id', authenticateRequest, authorizeRoles(['collaborator']), updateMyStory);
+// Concursar no exige poder publicar en la biblioteca: un `user` recién
+// registrado puede presentarse. Quien queda fuera es el juez, que no puede
+// concursar en el certamen que él mismo califica.
+router.get('/mine', authenticateRequest, authorizeRoles(CONTESTANT_ROLES), getMyStories);
+router.post('/', authenticateRequest, authorizeRoles(CONTESTANT_ROLES), contestSubmissionRateLimiter, submitStory);
+router.patch('/mine/:id', authenticateRequest, authorizeRoles(CONTESTANT_ROLES), updateMyStory);
 
 // Jurado: panel de calificación y decisión de publicar.
 router.get('/panel', authenticateRequest, authorizeRoles(JURY_ROLES), getEvaluationPanel);

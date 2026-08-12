@@ -3,10 +3,18 @@
  * hacer* en vez de repetir listas de roles, y añadir un rol nuevo se resuelve
  * aquí y no en veinte archivos.
  *
- * Un juez sí puede publicar obra propia; lo que no puede es concursar en el
- * certamen que él mismo califica (esa ruta pide 'collaborator' a secas).
+ * Publicar obra literaria y concursar son capacidades distintas, y por eso hay
+ * dos grupos que no se solapan del todo:
+ *
+ *   - Un juez publica obra propia, pero no concursa en el certamen que él
+ *     mismo califica.
+ *   - Un `user` concursa, pero no publica en la biblioteca: para eso un
+ *     administrador tiene que ascenderlo a colaborador.
+ *   - Un administrador publica, pero se queda fuera del concurso, igual que
+ *     antes de existir estos grupos.
  */
 export const AUTHOR_ROLES = ['admin', 'collaborator', 'judge'];
+export const CONTESTANT_ROLES = ['collaborator', 'user'];
 export const JURY_ROLES = ['admin', 'judge'];
 
 export function authorizeRoles(allowedRoles = []) {

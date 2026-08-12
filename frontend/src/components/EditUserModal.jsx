@@ -269,6 +269,7 @@ export default function EditUserModal({ isOpen, user, isDark, onClose, onSave, i
                 className={`${fieldClass} cursor-pointer`}
               >
                 <option value="">Selecciona rol</option>
+                <option value="user">Usuario</option>
                 <option value="collaborator">Colaborador</option>
                 <option value="judge">Juez</option>
                 <option value="admin">Admin</option>
@@ -295,7 +296,7 @@ export default function EditUserModal({ isOpen, user, isDark, onClose, onSave, i
             type="submit"
             form="edit-user-form"
             disabled={isLoading || isLoadingProfile}
-            className="flex-1 px-4 py-2 rounded-lg text-sm font-medium text-white bg-[#5D4037] hover:bg-[#4A302A] shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 px-4 py-2 rounded-lg text-sm font-medium text-white bg-brand-700 hover:bg-brand-800 shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? 'Guardando...' : 'Guardar'}
           </button>

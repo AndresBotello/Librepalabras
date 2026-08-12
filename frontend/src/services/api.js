@@ -302,8 +302,39 @@ export function toggleWorkLike(workId) {
   });
 }
 
+// ============================================================
+// Catálogo de autores
+// ============================================================
+
+/**
+ * El catálogo que arma el administrador. Antes esta lista se deducía de quién
+ * había subido obra (`/literature/authors/all`); ahora son fichas propias, así
+ * que hay autores sin cuenta y colaboradores que publican sin estar en la lista.
+ */
 export function getAllAuthors() {
-  return request('/literature/authors/all');
+  return request('/authors');
+}
+
+export function getAuthorById(id) {
+  return request(`/authors/${id}`);
+}
+
+export function createAuthor(payload) {
+  return request('/authors', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateAuthor(id, payload) {
+  return request(`/authors/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteAuthor(id) {
+  return request(`/authors/${id}`, { method: 'DELETE' });
 }
 
 // Promotional Books

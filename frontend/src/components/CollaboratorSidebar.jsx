@@ -2,6 +2,7 @@ import React, { useContext, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ThemeContext } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { ROLE_LABELS, canPublishWorks } from '../utils/roles';
 
 const IconPublish = ({ active, isDark }) => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -69,18 +70,29 @@ export default function CollaboratorSidebar() {
   };
 
   const isJudge = user?.role === 'judge';
+  // Quien no publica obra no tiene nada que ver en las pantallas de autoría:
+  // se le ocultan en vez de dejarle chocar contra el guardia de la ruta.
+  const canPublish = canPublishWorks(user?.role);
+
+  const dashboardPath = canPublish ? '/collaborator/dashboard' : '/usuario/dashboard';
 
   // El juez escribe obra propia igual que un colaborador, pero en vez de
   // inscribirse al concurso vuelve a su panel de calificación.
   // Dashboard no va en esta lista: ya tiene su acceso rápido destacado arriba.
   const menuItems = [
-    { icon: IconPublish, label: 'Nueva Publicación', path: '/collaborator/create' },
-    { icon: IconPublish, label: 'Mis Publicaciones', path: '/collaborator/publications' },
+    ...(canPublish
+      ? [
+        { icon: IconPublish, label: 'Nueva Publicación', path: '/collaborator/create' },
+        { icon: IconPublish, label: 'Mis Publicaciones', path: '/collaborator/publications' },
+      ]
+      : []),
     isJudge
       ? { icon: IconContest, label: 'Panel de Calificación', path: '/concursos/panel' }
-      : { icon: IconContest, label: 'Concursos', path: '/collaborator/concurso' },
-    { icon: IconAnalytics, label: 'Estadísticas', path: '/collaborator/analytics' },
-    { icon: IconProfile, label: 'Perfil', path: '/collaborator/profile' },
+      : { icon: IconContest, label: 'Concursos', path: canPublish ? '/collaborator/concurso' : '/usuario/concurso' },
+    ...(canPublish
+      ? [{ icon: IconAnalytics, label: 'Estadísticas', path: '/collaborator/analytics' }]
+      : []),
+    { icon: IconProfile, label: 'Perfil', path: canPublish ? '/collaborator/profile' : '/usuario/perfil' },
   ];
 
   const additionalItems = [
@@ -95,7 +107,7 @@ export default function CollaboratorSidebar() {
       {/* Mobile Toggle Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-40 md:hidden bg-[#5D4037] text-white p-3 rounded-full shadow-lg hover:bg-[#4A302A] transition-colors"
+        className="fixed bottom-6 right-6 z-40 md:hidden bg-brand-700 text-white p-3 rounded-full shadow-lg hover:bg-brand-800 transition-colors"
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <line x1="3" y1="6" x2="21" y2="6" />
@@ -122,13 +134,13 @@ export default function CollaboratorSidebar() {
         <div className="pt-16 md:pt-8 px-6 py-8 flex-1 overflow-y-auto">
           {/* Dashboard Quick Link */}
           <Link
-            to="/collaborator/dashboard"
+            to={dashboardPath}
             onClick={() => setIsOpen(false)}
             className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 mb-6 ${
-              isActive('/collaborator/dashboard')
+              isActive(dashboardPath)
                 ? isDark
-                  ? 'bg-[#5D4037] text-white shadow-md'
-                  : 'bg-yellow-50 text-[#5D4037] shadow-md'
+                  ? 'bg-brand-700 text-white shadow-md'
+                  : 'bg-yellow-50 text-brand-700 shadow-md'
                 : isDark
                   ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
@@ -160,8 +172,8 @@ export default function CollaboratorSidebar() {
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group ${
                     active
                       ? isDark
-                        ? 'bg-[#5D4037] text-white shadow-md'
-                        : 'bg-yellow-50 text-[#5D4037] shadow-md'
+                        ? 'bg-brand-700 text-white shadow-md'
+                        : 'bg-yellow-50 text-brand-700 shadow-md'
                       : isDark
                         ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
                         : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
@@ -210,13 +222,13 @@ export default function CollaboratorSidebar() {
         <div className={`border-t px-6 py-6 space-y-4 ${isDark ? 'border-gray-800 bg-gray-800 bg-opacity-50' : 'border-gray-200 bg-gray-50'}`}>
           <div className="flex items-center gap-3">
             <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm flex-shrink-0 ${
-              isDark ? 'bg-[#5D4037] text-white' : 'bg-yellow-100 text-[#5D4037]'
+              isDark ? 'bg-brand-700 text-white' : 'bg-yellow-100 text-brand-700'
             }`}>
               {(user?.name || user?.email || 'C')[0].toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
               <p className={`text-sm font-semibold transition-colors ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
-                {user?.name || 'Colaborador'}
+                {user?.name || ROLE_LABELS[user?.role] || 'Mi cuenta'}
               </p>
               <p className={`text-xs truncate transition-colors ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
                 {user?.email || 'usuario@liberapalabras.com'}

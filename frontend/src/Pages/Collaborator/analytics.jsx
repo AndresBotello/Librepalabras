@@ -2,7 +2,7 @@ import React, { useContext, useState, useEffect, useMemo } from 'react';
 import { ThemeContext } from '../../context/ThemeContext';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
-import CollaboratorSidebar from '../../components/CollaboratorSidebar';
+import AreaSidebar from '../../components/AreaSidebar';
 import { getMyWorks } from '../../services/api';
 
 // --- Subcomponentes para iconos SVG limpios ---
@@ -98,12 +98,25 @@ export default function Analytics() {
   const commentsOffset = -readsDash;
   const likesOffset = -(readsDash + commentsDash);
 
+  // Los colores del donut y los de su leyenda salen de aquí, de un solo sitio:
+  // antes estaban duplicados (hex en el SVG, clases en la leyenda) y bastaba
+  // tocar la paleta para que el anillo dejara de coincidir con su leyenda.
+  //
+  // En modo oscuro el turquesa baja un paso porque el 500 se sale de la banda
+  // de luminosidad sobre fondo oscuro. Los tres tonos están comprobados como
+  // distinguibles entre sí, también con daltonismo.
+  const seriesColors = {
+    reads: isDark ? 'var(--color-amber-600)' : 'var(--color-amber-500)',
+    comments: 'var(--color-blue-500)',
+    likes: 'var(--color-rose-500)',
+  };
+
   return (
     <div className={`min-h-screen flex flex-col font-sans transition-colors duration-200 ${isDark ? 'bg-gray-950 text-gray-100' : 'bg-gray-50 text-gray-900'}`}>
       <Navbar />
 
       <div className="flex flex-1">
-        <CollaboratorSidebar />
+        <AreaSidebar />
 
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Header */}
@@ -239,7 +252,7 @@ export default function Analytics() {
                           cy="100"
                           r="70"
                           fill="none"
-                          stroke={isDark ? '#1f2937' : '#f3f4f6'}
+                          stroke={isDark ? 'var(--color-gray-800)' : 'var(--color-gray-100)'}
                           strokeWidth="28"
                         />
                         {stats.totalInteractions > 0 && (
@@ -250,7 +263,7 @@ export default function Analytics() {
                               cy="100"
                               r="70"
                               fill="none"
-                              stroke="#fbbf24"
+                              stroke={seriesColors.reads}
                               strokeWidth="28"
                               strokeDasharray={`${readsDash} ${CIRCUMFERENCE}`}
                               strokeDashoffset={readsOffset}
@@ -262,7 +275,7 @@ export default function Analytics() {
                               cy="100"
                               r="70"
                               fill="none"
-                              stroke="#3b82f6"
+                              stroke={seriesColors.comments}
                               strokeWidth="28"
                               strokeDasharray={`${commentsDash} ${CIRCUMFERENCE}`}
                               strokeDashoffset={commentsOffset}
@@ -274,7 +287,7 @@ export default function Analytics() {
                               cy="100"
                               r="70"
                               fill="none"
-                              stroke="#f43f5e"
+                              stroke={seriesColors.likes}
                               strokeWidth="28"
                               strokeDasharray={`${likesDash} ${CIRCUMFERENCE}`}
                               strokeDashoffset={likesOffset}
@@ -301,7 +314,10 @@ export default function Analytics() {
                       isDark ? 'bg-gray-950/40 border-gray-800' : 'bg-gray-50/80 border-gray-200/70'
                     }`}>
                       <div className="flex items-center gap-3">
-                        <div className="w-3.5 h-3.5 rounded-full bg-amber-400 ring-4 ring-amber-400/20" />
+                        <div
+                          className="w-3.5 h-3.5 rounded-full ring-4 ring-amber-500/20"
+                          style={{ backgroundColor: seriesColors.reads }}
+                        />
                         <div>
                           <p className="font-semibold text-sm">Lecturas</p>
                           <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -311,7 +327,10 @@ export default function Analytics() {
                       </div>
                       <div className="text-right">
                         <p className="font-bold text-sm">{stats.totalReads.toLocaleString()}</p>
-                        <p className="text-xs font-semibold text-amber-500">
+                        {/* El paso del color cambia con el tema: el 500 de cada
+                            serie es legible sobre fondo oscuro pero se queda en
+                            2,4:1 sobre el claro, y esto es texto pequeño. */}
+                        <p className={`text-xs font-semibold ${isDark ? 'text-amber-400' : 'text-amber-700'}`}>
                           {stats.totalInteractions > 0 ? ((stats.totalReads / stats.totalInteractions) * 100).toFixed(1) : 0}%
                         </p>
                       </div>
@@ -321,7 +340,10 @@ export default function Analytics() {
                       isDark ? 'bg-gray-950/40 border-gray-800' : 'bg-gray-50/80 border-gray-200/70'
                     }`}>
                       <div className="flex items-center gap-3">
-                        <div className="w-3.5 h-3.5 rounded-full bg-blue-500 ring-4 ring-blue-500/20" />
+                        <div
+                          className="w-3.5 h-3.5 rounded-full ring-4 ring-blue-500/20"
+                          style={{ backgroundColor: seriesColors.comments }}
+                        />
                         <div>
                           <p className="font-semibold text-sm">Comentarios</p>
                           <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -331,7 +353,7 @@ export default function Analytics() {
                       </div>
                       <div className="text-right">
                         <p className="font-bold text-sm">{stats.totalComments.toLocaleString()}</p>
-                        <p className="text-xs font-semibold text-blue-500">
+                        <p className={`text-xs font-semibold ${isDark ? 'text-blue-400' : 'text-blue-700'}`}>
                           {stats.totalInteractions > 0 ? ((stats.totalComments / stats.totalInteractions) * 100).toFixed(1) : 0}%
                         </p>
                       </div>
@@ -341,7 +363,10 @@ export default function Analytics() {
                       isDark ? 'bg-gray-950/40 border-gray-800' : 'bg-gray-50/80 border-gray-200/70'
                     }`}>
                       <div className="flex items-center gap-3">
-                        <div className="w-3.5 h-3.5 rounded-full bg-rose-500 ring-4 ring-rose-500/20" />
+                        <div
+                          className="w-3.5 h-3.5 rounded-full ring-4 ring-rose-500/20"
+                          style={{ backgroundColor: seriesColors.likes }}
+                        />
                         <div>
                           <p className="font-semibold text-sm">Me Gusta</p>
                           <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -351,7 +376,7 @@ export default function Analytics() {
                       </div>
                       <div className="text-right">
                         <p className="font-bold text-sm">{stats.totalLikes.toLocaleString()}</p>
-                        <p className="text-xs font-semibold text-rose-500">
+                        <p className={`text-xs font-semibold ${isDark ? 'text-rose-400' : 'text-rose-700'}`}>
                           {stats.totalInteractions > 0 ? ((stats.totalLikes / stats.totalInteractions) * 100).toFixed(1) : 0}%
                         </p>
                       </div>

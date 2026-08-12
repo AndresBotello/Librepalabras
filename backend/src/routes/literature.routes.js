@@ -16,7 +16,6 @@ import {
   updateWork,
   toggleCommentLike,
   toggleWorkLike,
-  getAllAuthors,
   reportComment,
 } from '../controllers/literature.controller.js';
 
@@ -25,7 +24,7 @@ const router = Router();
 // Rutas públicas - PRIMERO las más específicas
 router.get('/genres', getGenres);
 router.get('/approved', getApprovedWorks);
-router.get('/authors/all', getAllAuthors);
+// Los autores ya no se deducen de aquí: son un catálogo propio en /api/authors.
 
 // Autoría: crear y gestionar obra propia. Antes solo pedían sesión iniciada,
 // así que cualquier usuario autenticado podía publicar; ahora está explícito.

@@ -80,13 +80,13 @@ function MaintenanceScreen({ config, isDark }) {
   return (
     <div
       className={`min-h-screen flex items-center justify-center px-6 transition-colors ${
-        isDark ? 'bg-gray-950 text-gray-100' : 'bg-[#FAF8F5] text-stone-800'
+        isDark ? 'bg-gray-950 text-gray-100' : 'bg-gray-50 text-stone-800'
       }`}
     >
       <div className="max-w-md text-center">
         <div
           className="w-16 h-16 mx-auto mb-6 rounded-2xl flex items-center justify-center text-3xl"
-          style={{ backgroundColor: '#5D4037' }}
+          style={{ backgroundColor: 'var(--color-brand-700)' }}
           aria-hidden="true"
         >
           🛠️

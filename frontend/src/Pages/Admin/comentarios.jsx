@@ -125,7 +125,7 @@ export default function AdminComentarios() {
                   onClick={() => setFilter(item.value)}
                   className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
                     filter === item.value
-                      ? 'bg-[#5D4037] text-white'
+                      ? 'bg-brand-700 text-white'
                       : isDark
                         ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
                         : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
@@ -268,7 +268,7 @@ function ReportCard({ report, isDark, cardClass, busy, onResolve }) {
             target="_blank"
             rel="noreferrer"
             className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-              isDark ? 'text-amber-400 hover:bg-slate-800' : 'text-[#5D4037] hover:bg-slate-100'
+              isDark ? 'text-amber-400 hover:bg-slate-800' : 'text-brand-700 hover:bg-slate-100'
             }`}
           >
             Ver en contexto ↗

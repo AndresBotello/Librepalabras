@@ -66,7 +66,7 @@ export default function PoliversiaCatalog() {
               type="button"
               onClick={() => setSelected(null)}
               className={`inline-flex items-center gap-2 text-sm font-semibold mb-6 transition-colors ${
-                isDark ? 'text-amber-400 hover:text-amber-300' : 'text-[#5D4037] hover:underline'
+                isDark ? 'text-amber-400 hover:text-amber-300' : 'text-brand-700 hover:underline'
               }`}
             >
               <ArrowLeft className="w-4 h-4" />

@@ -386,7 +386,7 @@ export default function LiteraryWorkForm({ isDark, onSuccess }) {
       <button
         type="submit"
         disabled={loading || uploading}
-        className="w-full px-6 py-2 rounded-lg font-semibold text-white bg-[#5D4037] hover:bg-[#4A302A] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full px-6 py-2 rounded-lg font-semibold text-white bg-brand-700 hover:bg-brand-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {uploading ? 'Subiendo archivos...' : loading ? 'Enviando...' : 'Enviar para Revisión'}
       </button>

@@ -196,7 +196,7 @@ export default function AdminHome() {
                 <button
                   onClick={handleSave}
                   disabled={saving || !isDirty}
-                  className="px-5 py-2 rounded-lg font-semibold text-sm bg-[#5D4037] text-white hover:bg-[#4A302A] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="px-5 py-2 rounded-lg font-semibold text-sm bg-brand-700 text-white hover:bg-brand-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {saving ? 'Guardando…' : 'Guardar cambios'}
                 </button>
@@ -347,7 +347,7 @@ export default function AdminHome() {
                       aria-label="Mostrar aviso en portada"
                       onClick={() => handleChange('announcementActive', !content.announcementActive)}
                       className={`relative w-14 h-8 shrink-0 rounded-full transition-colors ${
-                        content.announcementActive ? 'bg-[#5D4037]' : isDark ? 'bg-slate-700' : 'bg-slate-300'
+                        content.announcementActive ? 'bg-brand-700' : isDark ? 'bg-slate-700' : 'bg-slate-300'
                       }`}
                     >
                       <span className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full transition-transform ${
@@ -383,7 +383,7 @@ export default function AdminHome() {
                             isDark ? 'bg-slate-800' : 'bg-slate-100'
                           }`}
                         >
-                          <span className={`text-xs font-bold w-5 shrink-0 ${isDark ? 'text-amber-400' : 'text-[#5D4037]'}`}>
+                          <span className={`text-xs font-bold w-5 shrink-0 ${isDark ? 'text-amber-400' : 'text-brand-700'}`}>
                             {index + 1}
                           </span>
 
@@ -462,7 +462,7 @@ export default function AdminHome() {
                             <span
                               className={`w-4 h-4 shrink-0 rounded border flex items-center justify-center text-[10px] text-white ${
                                 selected
-                                  ? 'bg-[#5D4037] border-[#5D4037]'
+                                  ? 'bg-brand-700 border-brand-700'
                                   : isDark ? 'border-slate-600' : 'border-slate-300'
                               }`}
                               aria-hidden="true"

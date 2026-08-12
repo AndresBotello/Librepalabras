@@ -197,7 +197,7 @@ export default function Moderation() {
                               <td className={`px-6 py-4 text-sm`}>
                                 <button
                                   onClick={() => setSelectedWork(work)}
-                                  className="text-[#5D4037] hover:text-[#4A302A] font-semibold"
+                                  className="text-brand-700 hover:text-brand-800 font-semibold"
                                 >
                                   Revisar
                                 </button>

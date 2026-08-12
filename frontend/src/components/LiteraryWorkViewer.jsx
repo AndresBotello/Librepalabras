@@ -77,7 +77,7 @@ export default function LiteraryWorkViewer({ work, isDark, onUpdate }) {
                   src={workData.cover}
                   alt={workData.title}
                   className="w-full rounded-lg shadow-lg object-cover aspect-[3/4] border-2"
-                  style={{ borderColor: isDark ? '#374151' : '#e5e7eb' }}
+                  style={{ borderColor: isDark ? 'var(--color-gray-700)' : 'var(--color-gray-200)' }}
                   onError={(e) => (e.target.style.display = 'none')}
                 />
               </div>
@@ -141,7 +141,7 @@ export default function LiteraryWorkViewer({ work, isDark, onUpdate }) {
         </div>
 
         {/* Action Buttons - PDF y descarga */}
-        <div className="border-t pt-6 flex flex-wrap gap-3" style={{ borderColor: isDark ? '#374151' : '#e5e7eb' }}>
+        <div className="border-t pt-6 flex flex-wrap gap-3" style={{ borderColor: isDark ? 'var(--color-gray-700)' : 'var(--color-gray-200)' }}>
           {workData.type === 'pdfSale' && (
             <button
               onClick={() => workData.pdfUrl && window.open(workData.pdfUrl, '_blank')}

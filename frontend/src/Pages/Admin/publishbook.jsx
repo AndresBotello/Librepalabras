@@ -232,7 +232,7 @@ export default function PublishBook() {
           <section className={`px-4 sm:px-8 py-10 sm:py-14 transition-colors ${isDark ? 'bg-gray-900 border-b border-gray-800' : 'bg-gray-50 border-b border-gray-200'}`}>
             <div className="max-w-4xl mx-auto">
               <div className="flex items-start gap-3 mb-4">
-                <div className="p-3 rounded-lg" style={{backgroundColor: isDark ? '#5D4037' : '#D2691E'}}>
+                <div className="p-3 rounded-lg" style={{backgroundColor: isDark ? 'var(--color-brand-700)' : 'var(--color-brand-600)'}}>
                   <Plus className="w-6 h-6 text-white" />
                 </div>
                 <div>
@@ -377,7 +377,7 @@ export default function PublishBook() {
                   </div>
                 )}
                 {/* Portada */}
-                <div className="mb-8 pb-8 border-b" style={{borderColor: isDark ? '#2d2d2d' : '#e5e7eb'}}>
+                <div className="mb-8 pb-8 border-b" style={{borderColor: isDark ? 'var(--color-gray-800)' : 'var(--color-gray-200)'}}>
                   <label className={`block text-lg font-semibold mb-4 transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
                     📖 Portada del Libro
                   </label>
@@ -425,7 +425,7 @@ export default function PublishBook() {
                 </div>
 
                 {/* Información Básica */}
-                <div className="mb-8 pb-8 border-b" style={{borderColor: isDark ? '#2d2d2d' : '#e5e7eb'}}>
+                <div className="mb-8 pb-8 border-b" style={{borderColor: isDark ? 'var(--color-gray-800)' : 'var(--color-gray-200)'}}>
                   <h3 className={`text-lg font-semibold mb-6 transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
                     Información Básica
                   </h3>
@@ -557,7 +557,7 @@ export default function PublishBook() {
                 </div>
 
                 {/* Información de Precios */}
-                <div className="mb-8 pb-8 border-b" style={{borderColor: isDark ? '#2d2d2d' : '#e5e7eb'}}>
+                <div className="mb-8 pb-8 border-b" style={{borderColor: isDark ? 'var(--color-gray-800)' : 'var(--color-gray-200)'}}>
                   <h3 className={`text-lg font-semibold mb-6 transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
                     💰 Precios y Descuentos
                   </h3>
@@ -629,7 +629,7 @@ export default function PublishBook() {
                 </div>
 
                 {/* Información Editorial */}
-                <div className="mb-8 pb-8 border-b" style={{borderColor: isDark ? '#2d2d2d' : '#e5e7eb'}}>
+                <div className="mb-8 pb-8 border-b" style={{borderColor: isDark ? 'var(--color-gray-800)' : 'var(--color-gray-200)'}}>
                   <h3 className={`text-lg font-semibold mb-6 transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
                     📋 Información Editorial
                   </h3>

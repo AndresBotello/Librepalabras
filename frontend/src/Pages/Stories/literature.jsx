@@ -5,6 +5,18 @@ import Footer from '../../components/Footer';
 import { ThemeContext } from '../../context/ThemeContext';
 import { getPromotionalBooks } from '../../services/api';
 
+// El mismo velo que oscurece la portada (`from-stone-950/75 via-stone-950/80
+// to-stone-950/95` en home.jsx), escrito a mano porque aquí la imagen va como
+// `background-image` y no como una capa aparte sobre la que poner clases.
+// El color sale del token, así que sigue a la paleta en vez de quedarse en un
+// negro suelto.
+const HERO_OVERLAY = [
+  'linear-gradient(to bottom,',
+  'color-mix(in srgb, var(--color-gray-950) 75%, transparent) 0%,',
+  'color-mix(in srgb, var(--color-gray-950) 80%, transparent) 50%,',
+  'color-mix(in srgb, var(--color-gray-950) 95%, transparent) 100%)',
+].join(' ');
+
 export default function Literature() {
   const { isDark } = useContext(ThemeContext);
   const [viewMode, setViewMode] = useState('grid');
@@ -73,7 +85,7 @@ export default function Literature() {
       <section
         className="relative w-full py-16 sm:py-24 lg:py-32 flex items-center justify-start"
         style={{
-          backgroundImage: 'linear-gradient(135deg, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.1) 100%), url(https://res.cloudinary.com/dtuyckctv/image/upload/v1785045359/69478894-7be6-4384-be37-40fc593636eb_xuegr6.webp)',
+          backgroundImage: `${HERO_OVERLAY}, url(https://res.cloudinary.com/dtuyckctv/image/upload/v1785045359/69478894-7be6-4384-be37-40fc593636eb_xuegr6.webp)`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundAttachment: 'fixed'
@@ -81,11 +93,11 @@ export default function Literature() {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-8 w-full">
           <div className={`max-w-xl p-8 sm:p-12 rounded-lg transition-colors ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
-            <div className={`inline-block px-4 py-2 rounded-full text-xs font-semibold tracking-widest uppercase mb-6 transition-colors ${isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-[#5D4037]'}`}>
+            <div className={`inline-block px-4 py-2 rounded-full text-xs font-semibold tracking-widest uppercase mb-6 transition-colors ${isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-brand-700'}`}>
               Exploración Cultural
             </div>
 
-            <h1 className={`text-4xl sm:text-5xl font-bold mb-6 leading-tight transition-colors ${isDark ? 'text-gray-100' : 'text-[#5D4037]'}`}>
+            <h1 className={`text-4xl sm:text-5xl font-bold mb-6 leading-tight transition-colors ${isDark ? 'text-gray-100' : 'text-brand-700'}`}>
               Nuestros <span className="italic font-serif">Libros</span>
             </h1>
 
@@ -94,7 +106,7 @@ export default function Literature() {
             </p>
 
             <div className="flex gap-4 flex-wrap items-center">
-              <button className="px-6 py-3 rounded-lg font-semibold transition-colors text-white" style={{ backgroundColor: '#5D4037' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#4A302A'} onMouseLeave={(e) => e.target.style.backgroundColor = '#5D4037'}>
+              <button className="px-6 py-3 rounded-lg font-semibold transition-colors text-white" style={{ backgroundColor: 'var(--color-brand-700)' }} onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--color-brand-800)'} onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--color-brand-700)'}>
                 Explorar Sección
               </button>
               <button className={`px-6 py-3 rounded-lg font-semibold transition-colors flex items-center gap-2 ${isDark ? 'text-gray-300 hover:text-gray-100' : 'text-gray-700 hover:text-gray-900'}`}>
@@ -135,7 +147,7 @@ export default function Literature() {
                     } border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}
                   >
                     {/* Portada */}
-                    <div className="relative h-64 overflow-hidden bg-gradient-to-br from-amber-200 to-orange-200">
+                    <div className="relative h-64 overflow-hidden bg-gradient-to-br from-amber-200 to-brand-200">
                       {book.coverImage ? (
                         <img
                           src={book.coverImage}
@@ -319,7 +331,7 @@ export default function Literature() {
                       className="w-full h-96 object-cover rounded-lg"
                     />
                   ) : (
-                    <div className="w-full h-96 bg-gradient-to-br from-amber-200 to-orange-200 rounded-lg flex items-center justify-center">
+                    <div className="w-full h-96 bg-gradient-to-br from-amber-200 to-brand-200 rounded-lg flex items-center justify-center">
                       <span className="text-6xl">📖</span>
                     </div>
                   )}
@@ -373,7 +385,9 @@ export default function Literature() {
                   </div>
 
                   {/* Botón Comprar */}
-                  <button className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors">
+                  {/* Un paso más oscuro que el resto del acento: el turquesa
+                      medio con texto blanco se queda en 3,7:1 y no llega a AA. */}
+                  <button className="w-full bg-amber-700 hover:bg-amber-800 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors">
                     <ShoppingCart className="w-5 h-5" />
                     Comprar Ahora
                   </button>

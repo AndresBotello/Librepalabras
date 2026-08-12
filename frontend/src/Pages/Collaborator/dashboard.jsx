@@ -4,8 +4,9 @@ import { ThemeContext } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
-import CollaboratorSidebar from '../../components/CollaboratorSidebar';
+import AreaSidebar from '../../components/AreaSidebar';
 import { getMyWorks } from '../../services/api';
+import { ROLE_LABELS } from '../../utils/roles';
 
 // Componentes de Iconos SVG para mayor limpieza visual
 const Icons = {
@@ -98,15 +99,18 @@ export default function CollaboratorDashboard() {
       <Navbar />
 
       <div className="flex flex-1 w-full max-w-[1600px] mx-auto">
-        <CollaboratorSidebar />
+        <AreaSidebar />
 
         <main className="flex-1 flex flex-col min-w-0 overflow-y-auto">
           {/* Header principal */}
           <header className={`px-6 lg:px-10 py-8 border-b transition-colors ${isDark ? 'bg-slate-900/50 border-slate-800' : 'bg-white border-slate-200/80'}`}>
             <div className="max-w-6xl mx-auto">
               <div>
+                {/* El título sigue al rol: esta pantalla la comparten
+                    colaborador, juez y administrador, y leer "Panel de
+                    Colaborador" siendo admin parecía una degradación. */}
                 <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-                  Panel de Colaborador
+                  Panel de {ROLE_LABELS[user?.role] || 'Autoría'}
                 </h1>
                 <p className={`mt-1 text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                   Gestiona tus obras literarias, revisa tus métricas e interactúa con el equipo editorial.

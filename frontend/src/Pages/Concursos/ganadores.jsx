@@ -6,10 +6,13 @@ import Footer from '../../components/Footer';
 import { ThemeContext } from '../../context/ThemeContext';
 import { getContestWinners } from '../../services/api';
 
+// Oro, plata y bronce ya no pintan: el podio se ordena con los tres colores de
+// la paleta, de más vivo a más apagado, para que el puesto se lea en la
+// intensidad y no en un color cálido suelto fuera del conjunto.
 const PODIUM = {
   1: { label: 'Primer lugar', light: 'bg-amber-50 text-amber-800 border-amber-300', dark: 'bg-amber-950/50 text-amber-300 border-amber-700' },
-  2: { label: 'Segundo lugar', light: 'bg-stone-100 text-stone-700 border-stone-300', dark: 'bg-stone-800 text-stone-300 border-stone-600' },
-  3: { label: 'Tercer lugar', light: 'bg-orange-50 text-orange-800 border-orange-200', dark: 'bg-orange-950/40 text-orange-300 border-orange-800' },
+  2: { label: 'Segundo lugar', light: 'bg-brand-50 text-brand-800 border-brand-200', dark: 'bg-brand-950/50 text-brand-300 border-brand-700' },
+  3: { label: 'Tercer lugar', light: 'bg-stone-100 text-stone-700 border-stone-300', dark: 'bg-stone-800 text-stone-300 border-stone-600' },
 };
 
 function formatDate(value) {
@@ -68,7 +71,7 @@ export default function Ganadores() {
             type="button"
             onClick={() => setSelected(null)}
             className={`inline-flex items-center gap-2 text-sm font-semibold mb-8 transition-colors ${
-              isDark ? 'text-amber-400 hover:text-amber-300' : 'text-[#5D4037] hover:underline'
+              isDark ? 'text-amber-400 hover:text-amber-300' : 'text-brand-700 hover:underline'
             }`}
           >
             <ArrowLeft className="w-4 h-4" />
@@ -129,7 +132,7 @@ export default function Ganadores() {
         <Link
           to="/concursos"
           className={`inline-flex items-center gap-2 text-sm font-semibold mb-8 transition-colors ${
-            isDark ? 'text-amber-400 hover:text-amber-300' : 'text-[#5D4037] hover:underline'
+            isDark ? 'text-amber-400 hover:text-amber-300' : 'text-brand-700 hover:underline'
           }`}
         >
           <ArrowLeft className="w-4 h-4" />
@@ -240,7 +243,7 @@ export default function Ganadores() {
                             {winner.title}
                           </h3>
 
-                          <p className={`text-xs font-semibold mb-3 ${isDark ? 'text-amber-400' : 'text-[#5D4037]'}`}>
+                          <p className={`text-xs font-semibold mb-3 ${isDark ? 'text-amber-400' : 'text-brand-700'}`}>
                             {winner.authorName}
                           </p>
 

@@ -59,7 +59,7 @@ export default function AdminConcursos() {
   const inputClasses = `px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 transition-all ${
     isDark
       ? 'bg-gray-800 border-gray-700 text-gray-100 focus:ring-amber-500/30 focus:border-amber-500'
-      : 'bg-white border-gray-300 text-gray-800 focus:ring-[#5D4037]/20 focus:border-[#5D4037]'
+      : 'bg-white border-gray-300 text-gray-800 focus:ring-brand-700/20 focus:border-brand-700'
   }`;
 
   return (
@@ -72,7 +72,7 @@ export default function AdminConcursos() {
         <main className="flex-1 px-4 sm:px-8 py-10 overflow-y-auto">
           <div className="max-w-4xl mx-auto">
             <header className="mb-8">
-              <h1 className={`text-2xl sm:text-3xl font-bold ${isDark ? 'text-gray-100' : 'text-[#5D4037]'}`}>
+              <h1 className={`text-2xl sm:text-3xl font-bold ${isDark ? 'text-gray-100' : 'text-brand-700'}`}>
                 Convocatorias
               </h1>
               <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -129,7 +129,7 @@ export default function AdminConcursos() {
                       <div className="flex flex-wrap items-end gap-4">
                         <div>
                           <label className={`block text-xs font-semibold mb-1.5 tracking-wider uppercase ${
-                            isDark ? 'text-gray-300' : 'text-[#5D4037]'
+                            isDark ? 'text-gray-300' : 'text-brand-700'
                           }`}>
                             Edición
                           </label>
@@ -161,7 +161,7 @@ export default function AdminConcursos() {
                                 onClick={() => save(contest, value)}
                                 className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-colors disabled:opacity-50 border ${
                                   active
-                                    ? 'bg-[#5D4037] text-white border-[#5D4037]'
+                                    ? 'bg-brand-700 text-white border-brand-700'
                                     : isDark
                                       ? 'bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-700'
                                       : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'

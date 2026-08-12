@@ -276,11 +276,11 @@ export default function Login({ initialMode = 'login' }) {
   const inputBaseClasses = `w-full py-2.5 border rounded-xl focus:outline-none focus:ring-2 transition-all text-sm ${
     isDark
       ? 'bg-gray-800/90 border-gray-700 text-gray-100 placeholder-gray-500 focus:ring-amber-500/30 focus:border-amber-500'
-      : 'bg-white border-gray-300 text-gray-800 placeholder-gray-400 focus:ring-[#5D4037]/20 focus:border-[#5D4037]'
+      : 'bg-white border-gray-300 text-gray-800 placeholder-gray-400 focus:ring-brand-700/20 focus:border-brand-700'
   }`;
 
   const labelClasses = `block text-xs font-semibold mb-1.5 tracking-wider uppercase transition-colors ${
-    isDark ? 'text-gray-300' : 'text-[#5D4037]'
+    isDark ? 'text-gray-300' : 'text-brand-700'
   }`;
 
   return (
@@ -298,7 +298,7 @@ export default function Login({ initialMode = 'login' }) {
             
             {/* Header */}
             <div className="mb-6 text-center sm:text-left">
-              <h1 className={`text-2xl sm:text-3xl font-bold tracking-tight mb-2 transition-colors ${isDark ? 'text-gray-100' : 'text-[#5D4037]'}`}>
+              <h1 className={`text-2xl sm:text-3xl font-bold tracking-tight mb-2 transition-colors ${isDark ? 'text-gray-100' : 'text-brand-700'}`}>
                 {isLogin ? '¡Hola de nuevo!' : 'Únete a la comunidad'}
               </h1>
               <p className={`text-sm transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -318,7 +318,7 @@ export default function Login({ initialMode = 'login' }) {
                   isLogin
                     ? isDark
                       ? 'bg-gray-700 text-white shadow-sm'
-                      : 'bg-white text-[#5D4037] shadow-sm font-semibold'
+                      : 'bg-white text-brand-700 shadow-sm font-semibold'
                     : isDark
                       ? 'text-gray-400 hover:text-gray-200'
                       : 'text-gray-500 hover:text-gray-800'
@@ -333,7 +333,7 @@ export default function Login({ initialMode = 'login' }) {
                   !isLogin
                     ? isDark
                       ? 'bg-gray-700 text-white shadow-sm'
-                      : 'bg-white text-[#5D4037] shadow-sm font-semibold'
+                      : 'bg-white text-brand-700 shadow-sm font-semibold'
                     : isDark
                       ? 'text-gray-400 hover:text-gray-200'
                       : 'text-gray-500 hover:text-gray-800'
@@ -427,7 +427,7 @@ export default function Login({ initialMode = 'login' }) {
                     <div className="relative flex items-center">
                       <Phone className={`absolute left-3.5 top-3 w-4 h-4 z-10 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
                       <span className={`absolute left-9 font-semibold text-xs border-r pr-2 transition-colors ${
-                        isDark ? 'text-amber-400 border-gray-700' : 'text-[#5D4037] border-gray-200'
+                        isDark ? 'text-amber-400 border-gray-700' : 'text-brand-700 border-gray-200'
                       }`}>
                         +57
                       </span>
@@ -545,7 +545,7 @@ export default function Login({ initialMode = 'login' }) {
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 rounded border-gray-300 text-[#5D4037] focus:ring-[#5D4037]"
+                    className="w-4 h-4 rounded border-gray-300 text-brand-700 focus:ring-brand-700"
                   />
                   <span className={isDark ? 'text-gray-300' : 'text-gray-700'}>Mantener sesión</span>
                 </label>
@@ -553,7 +553,7 @@ export default function Login({ initialMode = 'login' }) {
                   type="button"
                   onClick={openReset}
                   className={`font-medium transition-colors hover:underline ${
-                    isDark ? 'text-amber-400 hover:text-amber-300' : 'text-[#5D4037]'
+                    isDark ? 'text-amber-400 hover:text-amber-300' : 'text-brand-700'
                   }`}
                 >
                   ¿Olvidaste tu contraseña?
@@ -564,7 +564,7 @@ export default function Login({ initialMode = 'login' }) {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-2 mt-6 text-sm tracking-wider uppercase bg-[#5D4037] hover:bg-[#4A302A] active:scale-[0.99] disabled:opacity-50"
+                className="w-full text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-2 mt-6 text-sm tracking-wider uppercase bg-brand-700 hover:bg-brand-800 active:scale-[0.99] disabled:opacity-50"
               >
                 {isSubmitting ? 'Procesando...' : isLogin ? 'Iniciar Sesión' : 'Crear mi Cuenta'}
                 <ArrowRight className="w-4 h-4" />
@@ -630,7 +630,7 @@ export default function Login({ initialMode = 'login' }) {
                   type="button"
                   onClick={() => goToMode(isLogin ? 'register' : 'login')}
                   className={`font-semibold transition-colors hover:underline ${
-                    isDark ? 'text-amber-400' : 'text-[#5D4037]'
+                    isDark ? 'text-amber-400' : 'text-brand-700'
                   }`}
                 >
                   {isLogin ? 'Regístrate aquí' : 'Inicia sesión'}
@@ -659,7 +659,7 @@ export default function Login({ initialMode = 'login' }) {
                 "La literatura es el arte de la palabra, y aquí en el Valle, cada palabra cuenta una historia que merece ser liberada."
               </p>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-tr from-[#5D4037] to-amber-700 rounded-full flex-shrink-0 flex items-center justify-center border border-amber-300/40 shadow-inner">
+                <div className="w-10 h-10 bg-gradient-to-tr from-brand-700 to-amber-700 rounded-full flex-shrink-0 flex items-center justify-center border border-amber-300/40 shadow-inner">
                   <span className="text-white text-xs font-bold tracking-wider">AD</span>
                 </div>
                 <div>
@@ -690,7 +690,7 @@ export default function Login({ initialMode = 'login' }) {
             isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
           }`}>
             <div className={`flex items-start justify-between gap-4 px-6 py-4 border-b ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
-              <h2 id="reset-title" className={`text-lg font-bold tracking-tight ${isDark ? 'text-gray-100' : 'text-[#5D4037]'}`}>
+              <h2 id="reset-title" className={`text-lg font-bold tracking-tight ${isDark ? 'text-gray-100' : 'text-brand-700'}`}>
                 Recuperar contraseña
               </h2>
               <button
@@ -720,7 +720,7 @@ export default function Login({ initialMode = 'login' }) {
                 <button
                   type="button"
                   onClick={() => setResetOpen(false)}
-                  className="w-full mt-6 text-white font-semibold py-2.5 px-4 rounded-xl text-sm tracking-wider uppercase bg-[#5D4037] hover:bg-[#4A302A] transition-colors"
+                  className="w-full mt-6 text-white font-semibold py-2.5 px-4 rounded-xl text-sm tracking-wider uppercase bg-brand-700 hover:bg-brand-800 transition-colors"
                 >
                   Entendido
                 </button>
@@ -773,7 +773,7 @@ export default function Login({ initialMode = 'login' }) {
                   <button
                     type="submit"
                     disabled={resetSending}
-                    className="flex-1 text-white font-semibold py-2.5 px-4 rounded-xl text-sm tracking-wider uppercase bg-[#5D4037] hover:bg-[#4A302A] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 text-white font-semibold py-2.5 px-4 rounded-xl text-sm tracking-wider uppercase bg-brand-700 hover:bg-brand-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {resetSending ? 'Enviando...' : 'Enviar enlace'}
                   </button>

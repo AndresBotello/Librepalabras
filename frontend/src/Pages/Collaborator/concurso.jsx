@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Image as ImageIcon, Loader2, Lock, PenLine, Star } from 'lucide-react';
-import CollaboratorSidebar from '../../components/CollaboratorSidebar';
+import AreaSidebar from '../../components/AreaSidebar';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { ThemeContext } from '../../context/ThemeContext';
@@ -195,11 +195,11 @@ export default function CollaboratorConcurso() {
   const inputClasses = `w-full px-3 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 transition-all ${
     isDark
       ? 'bg-gray-800 border-gray-700 text-gray-100 placeholder-gray-500 focus:ring-amber-500/30 focus:border-amber-500'
-      : 'bg-white border-gray-300 text-gray-800 placeholder-gray-400 focus:ring-[#5D4037]/20 focus:border-[#5D4037]'
+      : 'bg-white border-gray-300 text-gray-800 placeholder-gray-400 focus:ring-brand-700/20 focus:border-brand-700'
   }`;
 
   const labelClasses = `block text-xs font-semibold mb-1.5 tracking-wider uppercase ${
-    isDark ? 'text-gray-300' : 'text-[#5D4037]'
+    isDark ? 'text-gray-300' : 'text-brand-700'
   }`;
 
   return (
@@ -207,12 +207,12 @@ export default function CollaboratorConcurso() {
       <Navbar />
 
       <div className="flex flex-1">
-        <CollaboratorSidebar />
+        <AreaSidebar />
 
         <main className="flex-1 px-4 sm:px-8 py-10 overflow-y-auto">
           <div className="max-w-3xl mx-auto">
             <header className="mb-8">
-              <h1 className={`text-2xl sm:text-3xl font-bold ${isDark ? 'text-gray-100' : 'text-[#5D4037]'}`}>
+              <h1 className={`text-2xl sm:text-3xl font-bold ${isDark ? 'text-gray-100' : 'text-brand-700'}`}>
                 Concursos
               </h1>
               <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -234,7 +234,7 @@ export default function CollaboratorConcurso() {
                       onClick={() => setContestId(item.id)}
                       className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
                         contest?.id === item.id
-                          ? 'bg-[#5D4037] text-white'
+                          ? 'bg-brand-700 text-white'
                           : isDark
                             ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -263,7 +263,7 @@ export default function CollaboratorConcurso() {
             ) : (
               <>
                 <div className={`mb-6 rounded-2xl border p-5 ${isDark ? 'bg-gray-900/60 border-gray-800' : 'bg-amber-50/50 border-amber-200'}`}>
-                  <p className={`font-semibold ${isDark ? 'text-gray-100' : 'text-[#5D4037]'}`}>
+                  <p className={`font-semibold ${isDark ? 'text-gray-100' : 'text-brand-700'}`}>
                     <span>{contest.name}</span>
                     {contest.edition && <span className="font-normal opacity-70">{` · Edición ${contest.edition}`}</span>}
                   </p>
@@ -307,7 +307,7 @@ export default function CollaboratorConcurso() {
                           <span className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                             Calificación del jurado
                           </span>
-                          <span className={`inline-flex items-center gap-1 text-sm font-bold ${isDark ? 'text-amber-400' : 'text-[#5D4037]'}`}>
+                          <span className={`inline-flex items-center gap-1 text-sm font-bold ${isDark ? 'text-amber-400' : 'text-brand-700'}`}>
                             <Star className="w-4 h-4 fill-current" />
                             {formatScore(story.averageScore)} / {CONTEST_MAX_SCORE.toFixed(1)}
                             <span className={`font-normal text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
@@ -324,7 +324,7 @@ export default function CollaboratorConcurso() {
                                 isDark ? 'bg-gray-800/60' : 'bg-white border border-gray-200'
                               }`}
                             >
-                              <span className={`font-bold tabular-nums text-sm ${isDark ? 'text-amber-400' : 'text-[#5D4037]'}`}>
+                              <span className={`font-bold tabular-nums text-sm ${isDark ? 'text-amber-400' : 'text-brand-700'}`}>
                                 {formatScore(rating.score)}
                               </span>
                               <div className="flex-1 min-w-0">
@@ -385,7 +385,7 @@ export default function CollaboratorConcurso() {
                         type="file"
                         accept="image/*"
                         onChange={handleImageChange}
-                        className={`${inputClasses} file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#5D4037] file:text-white`}
+                        className={`${inputClasses} file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-brand-700 file:text-white`}
                       />
                       <p className={`mt-1 text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
                         Imagen, máx. {formatBytes(MAX_IMAGE_BYTES)}
@@ -428,7 +428,7 @@ export default function CollaboratorConcurso() {
                         </div>
                         <div className={`h-2 rounded-full overflow-hidden ${isDark ? 'bg-gray-800' : 'bg-gray-200'}`}>
                           <div
-                            className="h-full bg-[#5D4037] transition-all duration-200"
+                            className="h-full bg-brand-700 transition-all duration-200"
                             style={{ width: `${uploadProgress}%` }}
                           />
                         </div>
@@ -437,7 +437,7 @@ export default function CollaboratorConcurso() {
 
                     <button
                       type="submit"
-                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-[#5D4037] hover:bg-[#4A302A] disabled:opacity-50 transition-colors"
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-brand-700 hover:bg-brand-800 disabled:opacity-50 transition-colors"
                     >
                       {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <PenLine className="w-4 h-4" />}
                       {submitting ? 'Guardando…' : story ? 'Guardar cambios' : 'Inscribir mi cuento'}

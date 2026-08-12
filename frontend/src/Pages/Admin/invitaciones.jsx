@@ -7,6 +7,7 @@ import AdminSidebar from '../../components/AdminSidebar';
 import { createInvitation, getInvitations, revokeInvitation } from '../../services/api';
 
 const ROLES = [
+  { value: 'user', label: 'Usuario', help: 'Lee, comenta y participa en concursos. No publica obra.' },
   { value: 'collaborator', label: 'Colaborador', help: 'Publica obra propia y participa en concursos.' },
   { value: 'judge', label: 'Jurado', help: 'Califica los concursos. No puede concursar.' },
   { value: 'admin', label: 'Administrador', help: 'Acceso total al panel de gestión.' },
@@ -206,7 +207,7 @@ export default function AdminInvitaciones() {
                         key={item.value}
                         className={`block px-4 py-3 rounded-lg border cursor-pointer transition-colors ${
                           role === item.value
-                            ? 'border-[#5D4037] bg-[#5D4037]/10'
+                            ? 'border-brand-700 bg-brand-700/10'
                             : isDark
                               ? 'border-slate-700 hover:border-slate-600'
                               : 'border-slate-200 hover:border-slate-300'
@@ -232,7 +233,7 @@ export default function AdminInvitaciones() {
                 <button
                   type="submit"
                   disabled={creating || !email.trim()}
-                  className="px-5 py-2 rounded-lg font-semibold text-sm bg-[#5D4037] text-white hover:bg-[#4A302A] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="px-5 py-2 rounded-lg font-semibold text-sm bg-brand-700 text-white hover:bg-brand-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {creating ? 'Creando…' : 'Crear invitación'}
                 </button>
@@ -262,7 +263,7 @@ export default function AdminInvitaciones() {
                     />
                     <button
                       onClick={handleCopy}
-                      className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#5D4037] text-white hover:bg-[#4A302A] transition-colors"
+                      className="px-4 py-2 rounded-lg text-sm font-semibold bg-brand-700 text-white hover:bg-brand-800 transition-colors"
                     >
                       {copied ? '✓ Copiado' : 'Copiar'}
                     </button>

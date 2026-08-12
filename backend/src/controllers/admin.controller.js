@@ -1,5 +1,5 @@
 import { getUserProfile, listUsers, setUserDisabled, setUserRole } from '../services/user.service.js';
-import { adminDb, VALID_ROLES, isValidRole } from '../config/firebaseAdmin.js';
+import { adminDb, VALID_ROLES, defaultUserRole, isValidRole } from '../config/firebaseAdmin.js';
 import { invalidateUserCache } from '../middlewares/auth.middleware.js';
 import { deleteFile } from '../services/upload.service.js';
 
@@ -27,6 +27,9 @@ export async function getAdminOverview(_req, res) {
       admins: users.filter((user) => user.role === 'admin').length,
       collaborators: users.filter((user) => user.role === 'collaborator').length,
       judges: users.filter((user) => user.role === 'judge').length,
+      // Desde que el registro deja a la gente como `user`, este es el grupo que
+      // más crece y el que el administrador revisa para ascender a colaborador.
+      readers: users.filter((user) => user.role === defaultUserRole).length,
     },
   });
 }
@@ -44,7 +47,10 @@ export async function getAllUsers(_req, res) {
         apellidos: user.apellidos || '',
         name: fullName,
         email: user.email || '',
-        role: user.role || 'collaborator',
+        role: user.role || defaultUserRole,
+        // La biografía del perfil. La usa el catálogo de autores para rellenar
+        // la ficha con lo que la propia persona escribió sobre sí misma.
+        descripcion: user.descripcion || '',
         telefono: user.telefono || '',
         genero: user.genero || '',
         fechaNacimiento: user.fechaNacimiento || '',

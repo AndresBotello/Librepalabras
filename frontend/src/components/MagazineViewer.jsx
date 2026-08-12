@@ -240,7 +240,7 @@ export default function MagazineViewer({ url, isDark, title }) {
             target="_blank"
             rel="noopener noreferrer"
             download
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-white bg-[#5D4037] hover:bg-[#4A302A] transition-colors"
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-white bg-brand-700 hover:bg-brand-800 transition-colors"
           >
             <Download className="w-4 h-4" />
             <span className="hidden sm:inline">Descargar</span>

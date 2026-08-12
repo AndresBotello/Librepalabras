@@ -50,11 +50,18 @@ export const firebaseAdminReady = Boolean(adminApp);
 export const adminAuth = adminApp ? getAuth(adminApp) : null;
 export const adminDb = adminApp ? getFirestore(adminApp) : null;
 export const authSessionMaxAgeMs = Number(process.env.AUTH_SESSION_MAX_AGE_MS || 5 * 24 * 60 * 60 * 1000);
-export const defaultUserRole = 'collaborator';
+// Con quién se queda una cuenta recién creada. Es `user` a propósito: publicar
+// obra literaria dejó de ser algo que se gana registrándose, y pasar a
+// colaborador lo decide un administrador desde el panel de usuarios.
+export const defaultUserRole = 'user';
 
-// Roles del sistema. `judge` califica y publica cuentos del concurso, pero no
-// puede subir obras ni gestionar la plataforma.
-export const VALID_ROLES = ['admin', 'collaborator', 'judge'];
+// Roles del sistema:
+//   user         lee, comenta, puntúa y concursa; no publica obra literaria
+//   collaborator lo anterior más publicar obra propia
+//   judge        califica cuentos del concurso y publica obra propia, pero no
+//                concursa en el certamen que él mismo califica
+//   admin        todo lo anterior más gestionar la plataforma
+export const VALID_ROLES = ['admin', 'collaborator', 'judge', 'user'];
 
 export function isValidRole(role) {
   return VALID_ROLES.includes(role);
@@ -66,5 +73,5 @@ export const adminEmails = (process.env.ADMIN_EMAILS || '')
 
 export function getRoleForEmail(email) {
   const normalizedEmail = (email || '').trim().toLowerCase();
-  return adminEmails.includes(normalizedEmail) ? 'admin' : 'collaborator';
+  return adminEmails.includes(normalizedEmail) ? 'admin' : defaultUserRole;
 }

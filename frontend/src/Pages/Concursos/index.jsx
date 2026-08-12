@@ -66,7 +66,7 @@ export default function Concursos() {
             Convocatorias
           </span>
           <h1 className={`text-4xl sm:text-5xl font-serif font-bold mb-4 ${isDark ? 'text-stone-100' : 'text-stone-900'}`}>
-            Concursos
+            Concursos Literarios Amhed Escallón Gamarra
           </h1>
           <p className={`max-w-2xl text-base sm:text-lg leading-relaxed ${isDark ? 'text-stone-400' : 'text-stone-600'}`}>
             Los certámenes de Liberapalabras: cuento corto, poesía y microrrelato. Cada uno
@@ -98,7 +98,7 @@ export default function Concursos() {
             </span>
           </span>
           <ArrowRight className={`w-5 h-5 transition-transform group-hover:translate-x-1 ${
-            isDark ? 'text-amber-400' : 'text-[#5D4037]'
+            isDark ? 'text-amber-400' : 'text-brand-700'
           }`} />
         </Link>
 
@@ -171,7 +171,7 @@ export default function Concursos() {
                   </span>
 
                   <span className={`ml-auto inline-flex items-center gap-1 font-semibold transition-transform group-hover:translate-x-0.5 ${
-                    isDark ? 'text-amber-400' : 'text-[#5D4037]'
+                    isDark ? 'text-amber-400' : 'text-brand-700'
                   }`}>
                     <span>{isComingSoon ? 'Ver detalles' : 'Ver cuentos'}</span>
                     <ArrowRight className="w-3.5 h-3.5" />

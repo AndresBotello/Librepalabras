@@ -10,6 +10,22 @@ const IconModeration = ({ active, isDark }) => (
   </svg>
 );
 
+const IconPublish = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+  </svg>
+);
+
+const IconAuthors = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+    <path d="M16 3.5h5" />
+    <path d="M18.5 1v5" />
+  </svg>
+);
+
 const IconUsers = ({ active, isDark }) => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -121,8 +137,12 @@ export default function AdminSidebar() {
   }, [location.pathname]);
 
   const menuItems = [
+    // El administrador siempre pudo publicar obra —AUTHOR_ROLES lo incluye—,
+    // pero no había forma de llegar al formulario desde su propio panel.
+    { icon: IconPublish, label: 'Publicar obra', path: '/collaborator/create' },
     { icon: IconModeration, label: 'Moderación de obras', path: '/admin/moderation' },
     { icon: IconComments, label: 'Comentarios reportados', path: '/admin/comentarios', badge: pendingReports },
+    { icon: IconAuthors, label: 'Autores', path: '/admin/autores' },
     { icon: IconUsers, label: 'Usuarios', path: '/admin/users' },
     { icon: IconInvite, label: 'Invitaciones', path: '/admin/invitaciones' },
     { icon: IconFiles, label: 'Archivos', path: '/admin/files' },
@@ -145,7 +165,7 @@ export default function AdminSidebar() {
       {/* Mobile Toggle Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-40 md:hidden bg-[#5D4037] text-white p-3 rounded-full shadow-lg hover:bg-[#4A302A] transition-colors"
+        className="fixed bottom-6 right-6 z-40 md:hidden bg-brand-700 text-white p-3 rounded-full shadow-lg hover:bg-brand-800 transition-colors"
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <line x1="3" y1="6" x2="21" y2="6" />
@@ -177,8 +197,8 @@ export default function AdminSidebar() {
             className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 mb-6 ${
               isActive('/admin/dashboard')
                 ? isDark
-                  ? 'bg-[#5D4037] text-white shadow-md'
-                  : 'bg-yellow-50 text-[#5D4037] shadow-md'
+                  ? 'bg-brand-700 text-white shadow-md'
+                  : 'bg-yellow-50 text-brand-700 shadow-md'
                 : isDark
                   ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
@@ -210,8 +230,8 @@ export default function AdminSidebar() {
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group ${
                     active
                       ? isDark
-                        ? 'bg-[#5D4037] text-white shadow-md'
-                        : 'bg-yellow-50 text-[#5D4037] shadow-md'
+                        ? 'bg-brand-700 text-white shadow-md'
+                        : 'bg-yellow-50 text-brand-700 shadow-md'
                       : isDark
                         ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
                         : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
@@ -251,8 +271,8 @@ export default function AdminSidebar() {
                     className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
                       active
                         ? isDark
-                          ? 'bg-[#5D4037] text-white shadow-md'
-                          : 'bg-yellow-50 text-[#5D4037] shadow-md'
+                          ? 'bg-brand-700 text-white shadow-md'
+                          : 'bg-yellow-50 text-brand-700 shadow-md'
                         : isDark
                           ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
                           : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
@@ -273,7 +293,7 @@ export default function AdminSidebar() {
         <div className={`border-t px-6 py-6 space-y-4 ${isDark ? 'border-gray-800 bg-gray-800 bg-opacity-50' : 'border-gray-200 bg-gray-50'}`}>
           <div className="flex items-center gap-3">
             <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold flex-shrink-0 ${
-              isDark ? 'bg-[#5D4037] text-white' : 'bg-yellow-100 text-[#5D4037]'
+              isDark ? 'bg-brand-700 text-white' : 'bg-yellow-100 text-brand-700'
             }`}>
               {(user?.name || user?.email || 'A')[0].toUpperCase()}
             </div>

@@ -80,6 +80,7 @@ export function renderInvitationEmail({ inviteUrl, role, invitedByName, siteName
     admin: 'Administrador',
     collaborator: 'Colaborador',
     judge: 'Jurado',
+    user: 'Usuario',
   };
 
   const roleLabel = roleLabels[role] || role;

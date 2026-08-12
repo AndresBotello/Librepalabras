@@ -10,8 +10,7 @@ import {
   Star,
   Trash2,
 } from 'lucide-react';
-import AdminSidebar from '../../components/AdminSidebar';
-import CollaboratorSidebar from '../../components/CollaboratorSidebar';
+import AreaSidebar from '../../components/AreaSidebar';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { ThemeContext } from '../../context/ThemeContext';
@@ -179,12 +178,12 @@ export default function ContestPanel() {
 
       <div className="flex flex-1">
         {/* Cada rol conserva su propia navegación mientras califica. */}
-        {isAdmin ? <AdminSidebar /> : <CollaboratorSidebar />}
+        <AreaSidebar />
 
         <main className="flex-1 px-4 sm:px-8 py-10 overflow-y-auto">
           <div className="max-w-5xl mx-auto">
             <header className="mb-8">
-              <h1 className={`text-2xl sm:text-3xl font-bold ${isDark ? 'text-gray-100' : 'text-[#5D4037]'}`}>
+              <h1 className={`text-2xl sm:text-3xl font-bold ${isDark ? 'text-gray-100' : 'text-brand-700'}`}>
                 Panel de calificación
               </h1>
               <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -235,7 +234,7 @@ export default function ContestPanel() {
                   onClick={() => setFilter(item.value)}
                   className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
                     filter === item.value
-                      ? 'bg-[#5D4037] text-white'
+                      ? 'bg-brand-700 text-white'
                       : isDark
                         ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -332,7 +331,7 @@ function StoryCard({
   const badge = story.isPublished
     ? isDark ? 'bg-emerald-950/50 text-emerald-300' : 'bg-emerald-50 text-emerald-700'
     : story.status === 'calificado'
-      ? isDark ? 'bg-sky-950/50 text-sky-300' : 'bg-sky-50 text-sky-700'
+      ? isDark ? 'bg-brand-950/50 text-brand-300' : 'bg-brand-50 text-brand-700'
       : isDark ? 'bg-amber-950/50 text-amber-300' : 'bg-amber-50 text-amber-700';
 
   const actionButton = `inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 ${
@@ -342,7 +341,7 @@ function StoryCard({
   const inputClasses = `px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 transition-all ${
     isDark
       ? 'bg-gray-800 border-gray-700 text-gray-100 focus:ring-amber-500/30 focus:border-amber-500'
-      : 'bg-white border-gray-300 text-gray-800 focus:ring-[#5D4037]/20 focus:border-[#5D4037]'
+      : 'bg-white border-gray-300 text-gray-800 focus:ring-brand-700/20 focus:border-brand-700'
   }`;
 
   return (
@@ -358,7 +357,7 @@ function StoryCard({
               {CONTEST_STATUS_LABELS[story.status] || story.status}
             </span>
             {story.totalRatings > 0 && (
-              <span className={`inline-flex items-center gap-1 text-xs font-bold ${isDark ? 'text-amber-400' : 'text-[#5D4037]'}`}>
+              <span className={`inline-flex items-center gap-1 text-xs font-bold ${isDark ? 'text-amber-400' : 'text-brand-700'}`}>
                 <Star className="w-3.5 h-3.5 fill-current" />
                 {formatScore(story.averageScore)} / {CONTEST_MAX_SCORE.toFixed(1)}
                 <span className={`font-normal ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
@@ -394,7 +393,7 @@ function StoryCard({
 
           {/* Mi calificación */}
           <form onSubmit={handleRate} className={`rounded-xl border p-4 ${isDark ? 'border-gray-800 bg-gray-950/40' : 'border-gray-200 bg-gray-50'}`}>
-            <p className={`text-xs font-semibold uppercase tracking-wider mb-3 ${isDark ? 'text-gray-300' : 'text-[#5D4037]'}`}>
+            <p className={`text-xs font-semibold uppercase tracking-wider mb-3 ${isDark ? 'text-gray-300' : 'text-brand-700'}`}>
               Mi calificación
             </p>
 
@@ -432,7 +431,7 @@ function StoryCard({
               <button
                 type="submit"
                 disabled={saving}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-[#5D4037] hover:bg-[#4A302A] disabled:opacity-50 transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-brand-700 hover:bg-brand-800 disabled:opacity-50 transition-colors"
               >
                 {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                 {story.myRating ? 'Actualizar' : 'Calificar'}
@@ -443,7 +442,7 @@ function StoryCard({
           {/* Calificaciones del resto del jurado */}
           {story.ratings.length > 0 && (
             <div>
-              <p className={`text-xs font-semibold uppercase tracking-wider mb-3 ${isDark ? 'text-gray-300' : 'text-[#5D4037]'}`}>
+              <p className={`text-xs font-semibold uppercase tracking-wider mb-3 ${isDark ? 'text-gray-300' : 'text-brand-700'}`}>
                 Jurado ({story.ratings.length})
               </p>
               <div className="space-y-2">
@@ -454,7 +453,7 @@ function StoryCard({
                       isDark ? 'bg-gray-800/60' : 'bg-gray-100'
                     }`}
                   >
-                    <span className={`font-bold tabular-nums ${isDark ? 'text-amber-400' : 'text-[#5D4037]'}`}>
+                    <span className={`font-bold tabular-nums ${isDark ? 'text-amber-400' : 'text-brand-700'}`}>
                       {formatScore(rating.score)}
                     </span>
                     <div className="flex-1 min-w-0">
@@ -535,7 +534,7 @@ function ConfirmDialog({ isDark, title, message, confirmLabel, danger, onConfirm
             type="button"
             onClick={onConfirm}
             className={`px-4 py-2 rounded-xl text-sm font-semibold text-white transition-colors ${
-              danger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-[#5D4037] hover:bg-[#4A302A]'
+              danger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-brand-700 hover:bg-brand-800'
             }`}
           >
             {confirmLabel}

@@ -631,64 +631,6 @@ export async function toggleWorkLike(req, res) {
   }
 }
 
-export async function getAllAuthors(req, res) {
-  try {
-    // Obtener todas las obras aprobadas
-    const worksSnapshot = await adminDb.collection('literature').where('status', '==', 'approved').get();
-    const works = worksSnapshot.docs.map(doc => doc.data());
-
-    // Agrupar obras por autor
-    const authorMap = {};
-    works.forEach(work => {
-      if (!authorMap[work.authorId]) {
-        authorMap[work.authorId] = [];
-      }
-      authorMap[work.authorId].push(work);
-    });
-
-    // Obtener información de usuarios
-    const usersSnapshot = await adminDb.collection('users').get();
-    const usersMap = {};
-    usersSnapshot.docs.forEach(doc => {
-      usersMap[doc.id] = doc.data();
-    });
-
-    // Construir lista de autores con estadísticas
-    const authors = Object.entries(authorMap).map(([userId, authorWorks]) => {
-      const firstWork = authorWorks[0];
-      const userData = usersMap[userId];
-      const totalLikes = authorWorks.reduce((sum, work) => sum + (work.likesCount || 0), 0);
-      const primaryGenre = firstWork?.genre || 'Colaborador';
-      const genreInfo = genresData.genres.find(g => g.value === primaryGenre);
-
-      return {
-        id: userId,
-        name: `${userData?.nombres || firstWork?.author || ''} ${userData?.apellidos || ''}`.trim() || 'Anónimo',
-        email: userData?.email || firstWork?.authorEmail || '',
-        description: userData?.descripcion || firstWork?.authorDescription || null,
-        photoURL: userData?.photoURL || null,
-        role: genreInfo?.label || 'Colaborador',
-        category: primaryGenre,
-        publications: authorWorks.length,
-        totalLikes: totalLikes,
-        tags: [...new Set(authorWorks.map(w => w.genre))].slice(0, 3),
-      };
-    }).sort((a, b) => b.publications - a.publications);
-
-    return res.json({
-      ok: true,
-      authors,
-      total: authors.length,
-    });
-  } catch (error) {
-    console.error('Error al obtener autores:', error);
-    return res.status(500).json({
-      ok: false,
-      message: 'Error al obtener autores',
-      error: error.message,
-    });
-  }
-}
 
 /**
  * Aprobar una obra genera dos avisos distintos, y por eso no se puede resolver

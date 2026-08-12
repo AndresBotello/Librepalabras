@@ -3,7 +3,7 @@ import { ThemeContext } from '../../context/ThemeContext';
 import { useNotify } from '../../context/DialogContext';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
-import CollaboratorSidebar from '../../components/CollaboratorSidebar';
+import AreaSidebar from '../../components/AreaSidebar';
 import LiteraryWorkForm from '../../components/LiteraryWorkForm';
 
 export default function CreatePost() {
@@ -15,7 +15,7 @@ export default function CreatePost() {
       <Navbar />
 
       <div className="flex flex-1">
-        <CollaboratorSidebar />
+        <AreaSidebar />
 
         <div className={`flex-1 flex flex-col overflow-hidden transition-colors ${isDark ? 'bg-gray-950' : 'bg-white'}`}>
           {/* Header */}

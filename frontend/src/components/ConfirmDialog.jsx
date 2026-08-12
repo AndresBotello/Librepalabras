@@ -164,7 +164,7 @@ export default function ConfirmDialog({
             className={`px-4 py-2.5 rounded-lg text-sm font-semibold text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
               isDanger
                 ? 'bg-rose-600 hover:bg-rose-700 focus-visible:ring-rose-500'
-                : 'bg-[#5D4037] hover:bg-[#4A302A] focus-visible:ring-[#5D4037]'
+                : 'bg-brand-700 hover:bg-brand-800 focus-visible:ring-brand-700'
             } ${isDark ? 'focus-visible:ring-offset-gray-900' : 'focus-visible:ring-offset-gray-50'}`}
           >
             {confirmLabel}

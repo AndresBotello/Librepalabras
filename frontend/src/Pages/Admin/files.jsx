@@ -229,7 +229,7 @@ export default function Files() {
               {loading ? (
                 <div className="flex items-center justify-center py-12">
                   <div className={`text-center ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#5D4037] mx-auto mb-4"></div>
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-700 mx-auto mb-4"></div>
                     <p>Cargando archivos...</p>
                   </div>
                 </div>

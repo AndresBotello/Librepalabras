@@ -4,7 +4,7 @@ import { AuthContext } from '../../context/AuthContext';
 import { useNotify } from '../../context/DialogContext';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
-import CollaboratorSidebar from '../../components/CollaboratorSidebar';
+import AreaSidebar from '../../components/AreaSidebar';
 import PdfViewer from '../../components/PdfViewer';
 import { getMyWorks, updateLiteraryWork, uploadPdf, uploadCover } from '../../services/api';
 
@@ -166,7 +166,7 @@ export default function Publications() {
       <div className={`min-h-screen flex flex-col transition-colors ${isDark ? 'bg-gray-950' : 'bg-white'}`}>
         <Navbar />
         <div className="flex flex-1">
-          <CollaboratorSidebar />
+          <AreaSidebar />
           <div className="flex-1 flex items-center justify-center">
             <div className={`text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Cargando publicaciones...</div>
           </div>
@@ -181,7 +181,7 @@ export default function Publications() {
       <Navbar />
 
       <div className="flex flex-1">
-        <CollaboratorSidebar />
+        <AreaSidebar />
 
         <div className={`flex-1 flex flex-col overflow-hidden transition-colors ${isDark ? 'bg-gray-950' : 'bg-white'}`}>
           <div className={`px-6 sm:px-10 py-10 sm:py-14 transition-colors ${isDark ? 'bg-gray-900 border-b border-gray-800' : 'bg-gray-50 border-b border-gray-200'}`}>
@@ -194,7 +194,7 @@ export default function Publications() {
                   Administra todas tus publicaciones y envíos literarios. Total: {publications.length}
                 </p>
               </div>
-              <button className="px-6 py-2 rounded-lg font-semibold transition-colors text-sm bg-[#5D4037] text-white hover:bg-[#4A302A] whitespace-nowrap">
+              <button className="px-6 py-2 rounded-lg font-semibold transition-colors text-sm bg-brand-700 text-white hover:bg-brand-800 whitespace-nowrap">
                 📝 Nueva Publicación
               </button>
             </div>
@@ -399,7 +399,7 @@ export default function Publications() {
                     <button
                       type="button"
                       onClick={() => setShowPdfPreview(!showPdfPreview)}
-                      className="text-[#5D4037] hover:underline font-semibold"
+                      className="text-brand-700 hover:underline font-semibold"
                     >
                       {showPdfPreview ? '🙈 Ocultar' : '👁️ Vista previa'} PDF
                     </button>
@@ -435,7 +435,7 @@ export default function Publications() {
               </button>
               <button
                 onClick={handleSaveEdit}
-                className="px-4 py-2 rounded-lg font-semibold text-white bg-[#5D4037] hover:bg-[#4A302A] transition-colors"
+                className="px-4 py-2 rounded-lg font-semibold text-white bg-brand-700 hover:bg-brand-800 transition-colors"
               >
                 Guardar Cambios
               </button>

@@ -22,6 +22,7 @@ import AdminConcursos from '../Pages/Admin/concursos.jsx';
 import AdminComentarios from '../Pages/Admin/comentarios.jsx';
 import AdminHome from '../Pages/Admin/home.jsx';
 import AdminInvitaciones from '../Pages/Admin/invitaciones.jsx';
+import AdminAutores from '../Pages/Admin/autores.jsx';
 import AdminSalud from '../Pages/Admin/salud.jsx';
 import CollaboratorDashboard from '../Pages/Collaborator/dashboard.jsx';
 import CollaboratorPublications from '../Pages/Collaborator/publications.jsx';
@@ -29,6 +30,7 @@ import CollaboratorAnalytics from '../Pages/Collaborator/analytics.jsx';
 import CollaboratorProfile from '../Pages/Collaborator/profile.jsx';
 import CollaboratorCreatePost from '../Pages/Collaborator/createpost.jsx';
 import CollaboratorConcurso from '../Pages/Collaborator/concurso.jsx';
+import UsuarioDashboard from '../Pages/Usuario/dashboard.jsx';
 import ProtectedRoute from './ProtectedRoute.jsx';
 
 function AdminRoute({ children }) {
@@ -40,10 +42,19 @@ function AuthorRoute({ children }) {
   return <ProtectedRoute allowedRoles={[ 'admin', 'collaborator', 'judge' ]}>{children}</ProtectedRoute>;
 }
 
-// Reservado a quien puede concursar: el juez queda fuera para no calificarse
-// a sí mismo.
-function CollaboratorRoute({ children }) {
-  return <ProtectedRoute allowedRoles={[ 'admin', 'collaborator' ]}>{children}</ProtectedRoute>;
+// Reservado a quien puede concursar. Es el mismo conjunto que CONTESTANT_ROLES
+// en el backend, y tiene que seguir siéndolo: antes dejaba entrar al admin, que
+// la API nunca ha aceptado como concursante, así que la pantalla ofrecía algo
+// que terminaba en 403. El juez queda fuera para no calificarse a sí mismo.
+function ContestantRoute({ children }) {
+  return <ProtectedRoute allowedRoles={[ 'collaborator', 'user' ]}>{children}</ProtectedRoute>;
+}
+
+// Área de quien todavía no publica obra. No lleva guardia de rol por encima de
+// la sesión: cualquiera que haya entrado puede verla, y es el destino al que
+// `homeRouteForRole` manda los roles sin área propia.
+function SignedInRoute({ children }) {
+  return <ProtectedRoute>{children}</ProtectedRoute>;
 }
 
 export default function AppRoutes() {
@@ -79,6 +90,7 @@ export default function AppRoutes() {
       <Route path="/admin/dashboard" element={<AdminRoute><Admin /></AdminRoute>} />
       <Route path="/admin/moderation" element={<AdminRoute><Moderation /></AdminRoute>} />
       <Route path="/admin/users" element={<AdminRoute><Users /></AdminRoute>} />
+      <Route path="/admin/autores" element={<AdminRoute><AdminAutores /></AdminRoute>} />
       <Route path="/admin/files" element={<AdminRoute><Files /></AdminRoute>} />
       <Route path="/admin/publishbook" element={<AdminRoute><PublishBook /></AdminRoute>} />
       <Route path="/admin/poleversia" element={<AdminRoute><AdminPoliversia /></AdminRoute>} />
@@ -98,7 +110,13 @@ export default function AppRoutes() {
       <Route path="/collaborator/create" element={<AuthorRoute><CollaboratorCreatePost /></AuthorRoute>} />
 
       {/* Inscripción al concurso: sin jueces. */}
-      <Route path="/collaborator/concurso" element={<CollaboratorRoute><CollaboratorConcurso /></CollaboratorRoute>} />
+      <Route path="/collaborator/concurso" element={<ContestantRoute><CollaboratorConcurso /></ContestantRoute>} />
+
+      {/* Área de quien aún no publica obra. Reaprovecha las pantallas de
+          concurso y perfil, que no dependen de tener obra propia. */}
+      <Route path="/usuario/dashboard" element={<SignedInRoute><UsuarioDashboard /></SignedInRoute>} />
+      <Route path="/usuario/concurso" element={<ContestantRoute><CollaboratorConcurso /></ContestantRoute>} />
+      <Route path="/usuario/perfil" element={<SignedInRoute><CollaboratorProfile /></SignedInRoute>} />
     </Routes>
   );
 }

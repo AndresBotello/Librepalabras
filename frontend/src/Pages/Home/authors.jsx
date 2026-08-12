@@ -1,8 +1,21 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { Search, Bookmark, MessageCircle, ChevronRight, ChevronLeft, Heart } from 'lucide-react';
+import {
+  Search,
+  ChevronRight,
+  ChevronLeft,
+  SlidersHorizontal,
+  X,
+  Sparkles,
+  BookOpen,
+  UserPlus,
+  Send
+} from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { ThemeContext } from '../../context/ThemeContext';
+import SocialIcon from '../../components/SocialIcon';
+import AuthorDetailModal from '../../components/AuthorDetailModal';
+import { platformLabel } from '../../utils/socialLinks';
 import { getAllAuthors } from '../../services/api';
 
 export default function Authors() {
@@ -11,7 +24,10 @@ export default function Authors() {
   const [currentPage, setCurrentPage] = useState(1);
   const [authors, setAuthors] = useState([]);
   const [loading, setLoading] = useState(true);
-  const itemsPerPage = 8; // Incrementado a 8 para adaptarse a la cuadrícula de 4 columnas
+  const itemsPerPage = 8;
+  
+  // Qué autor tiene la ficha abierta. `null` = no hay modal.
+  const [selectedAuthor, setSelectedAuthor] = useState(null);
 
   useEffect(() => {
     loadAuthors();
@@ -30,7 +46,6 @@ export default function Authors() {
     }
   };
 
-  // Filtrar autores solo por búsqueda
   const filteredAuthors = authors.filter(author => {
     const term = searchTerm.toLowerCase();
     return (
@@ -40,215 +55,292 @@ export default function Authors() {
     );
   });
 
-  // Paginación
   const totalPages = Math.ceil(filteredAuthors.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedAuthors = filteredAuthors.slice(startIndex, startIndex + itemsPerPage);
 
   return (
-    <div className={`min-h-screen flex flex-col transition-colors ${isDark ? 'bg-gray-950' : 'bg-white'}`}>
+    <div className={`min-h-screen flex flex-col transition-colors duration-300 font-sans ${isDark ? 'bg-gray-950 text-gray-100' : 'bg-slate-50/50 text-gray-900'}`}>
       <Navbar />
 
       {/* Hero Section */}
-      <section className={`px-4 sm:px-8 py-10 transition-colors ${isDark ? 'bg-gray-900' : 'bg-gradient-to-b from-white to-gray-50'}`}>
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+      <section className="relative overflow-hidden pt-12 pb-16 px-4 sm:px-8 border-b border-gray-200/50 dark:border-gray-800/50">
+        {/* Decorative background glows */}
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-amber-500/10 dark:bg-amber-500/5 rounded-full blur-3xl pointer-events-none -translate-y-1/2" />
+        <div className="absolute bottom-0 right-10 w-80 h-80 bg-rose-500/10 dark:bg-rose-500/5 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            
             {/* Left Content */}
-            <div>
-              <p className={`text-xs font-semibold tracking-widest uppercase mb-2 transition-colors ${isDark ? 'text-yellow-400' : 'text-yellow-600'}`}>
+            <div className="lg:col-span-7">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider mb-4 border transition-colors bg-amber-500/10 text-amber-700 border-amber-500/20 dark:bg-amber-400/10 dark:text-amber-400 dark:border-amber-400/20">
+                <Sparkles size={13} />
                 Comunidad Literaria
-              </p>
-              <h1 className={`text-3xl md:text-4xl font-bold mb-4 leading-tight transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                Nuestros Autores & <span className="italic font-playfair">Colaboradores</span>
+              </div>
+
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6 leading-[1.15]">
+                Nuestros Autores & <br />
+                <span className="font-serif italic text-transparent bg-clip-text bg-gradient-to-r from-amber-600 via-amber-500 to-rose-500 dark:from-amber-300 dark:via-amber-400 dark:to-rose-400">
+                  Colaboradores
+                </span>
               </h1>
-              <p className={`text-sm sm:text-base mb-6 leading-relaxed transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+
+              <p className={`text-base sm:text-lg mb-8 max-w-2xl leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                 Conoce a las mentes brillantes que dan vida a Liberapalabras. Desde novelistas consagrados hasta poetas emergentes, exploramos la diversidad literaria de nuestra región.
               </p>
 
-              <div className="flex gap-3 flex-wrap">
-                <button className="bg-[#5D4037] hover:bg-[#4A302A] text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
-                  👤 Unirse como Colaborador
+              <div className="flex gap-4 flex-wrap">
+                <button className="bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white px-6 py-3 rounded-xl text-sm font-medium shadow-lg shadow-amber-600/20 hover:shadow-amber-600/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2">
+                  <UserPlus size={16} />
+                  Unirse como Colaborador
                 </button>
-                <button className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors border-2 ${isDark ? 'border-gray-600 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}>
+                <button className={`px-6 py-3 rounded-xl text-sm font-medium transition-all border ${
+                  isDark 
+                    ? 'border-gray-800 bg-gray-900/60 text-gray-300 hover:bg-gray-800 hover:border-gray-700' 
+                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100 hover:border-gray-400 shadow-sm'
+                }`}>
                   Conocer el Proceso
                 </button>
               </div>
             </div>
 
-            {/* Right Image */}
-            <div className="relative">
-              <div className={`rounded-xl overflow-hidden h-60 shadow-xl transition-colors ${isDark ? 'bg-gray-800' : 'bg-gray-200'}`}>
-                <img
-                  src="https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=500&h=500&fit=crop"
-                  alt="Biblioteca con autores leyendo sus obras"
-                  className="w-full h-full object-cover"
-                />
+            {/* Right Featured Card/Image */}
+            <div className="lg:col-span-5 relative">
+              <div className="relative group">
+                <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-amber-500 to-rose-500 opacity-20 group-hover:opacity-30 blur transition duration-500"></div>
+                <div className={`relative rounded-2xl overflow-hidden h-72 sm:h-80 shadow-2xl border ${isDark ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-white'}`}>
+                  <img
+                    src="https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=800&h=600&fit=crop"
+                    alt="Biblioteca con autores leyendo sus obras"
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                </div>
               </div>
 
-              {/* Badge */}
-              <div className="absolute -bottom-3 -right-3 bg-yellow-400 text-gray-900 rounded-full p-3 font-bold text-center shadow-lg w-20 h-20 flex items-center justify-center">
-                <span className="text-[11px] leading-tight">+100 OBRAS</span>
+              {/* Floating Badge */}
+              <div className="absolute -bottom-5 -left-5 sm:-left-6 backdrop-blur-md bg-white/90 dark:bg-gray-900/90 border border-amber-500/30 rounded-2xl p-4 shadow-xl flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
+                  <BookOpen size={20} />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider">Catálogo Activo</p>
+                  <p className="text-sm font-bold text-gray-900 dark:text-gray-100">+100 Obras Publicadas</p>
+                </div>
               </div>
             </div>
+
           </div>
         </div>
       </section>
 
       {/* Main Content */}
-      <main className={`flex-1 px-4 sm:px-8 py-10 transition-colors ${isDark ? 'bg-gray-950' : 'bg-white'}`}>
+      <main className="flex-1 px-4 sm:px-8 py-12">
         <div className="max-w-7xl mx-auto">
-          {/* Search Bar */}
-          <div className="mb-8 flex flex-col sm:flex-row gap-3">
-            <div className={`flex-1 relative transition-colors ${isDark ? 'bg-gray-900 border border-gray-800 rounded-lg' : 'bg-gray-100 rounded-lg'}`}>
-              <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          
+          {/* Controls Bar (Search & Filter) */}
+          <div className="mb-10 flex flex-col sm:flex-row gap-4 items-center justify-between">
+            <div className="relative w-full sm:max-w-md">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
               <input
                 type="text"
-                placeholder="Busca por nombre o categoría..."
+                placeholder="Buscar por nombre, especialidad o palabra clave..."
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
                   setCurrentPage(1);
                 }}
-                className={`w-full pl-10 pr-4 py-2.5 text-sm rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-yellow-400 ${isDark ? 'bg-gray-900 text-gray-100 placeholder-gray-500' : 'bg-gray-100 text-gray-900 placeholder-gray-600'}`}
+                className={`w-full pl-11 pr-10 py-3 text-sm rounded-xl font-medium border transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-500/50 ${
+                  isDark 
+                    ? 'bg-gray-900/80 border-gray-800 text-gray-100 placeholder-gray-500 focus:border-amber-500/50' 
+                    : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400 shadow-sm focus:border-amber-500/50'
+                }`}
                 aria-label="Buscar autores"
               />
+              {searchTerm && (
+                <button 
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1"
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
 
             <button
-              className={`px-5 py-2.5 text-sm rounded-lg font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400 ${isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+              className={`w-full sm:w-auto px-5 py-3 text-sm rounded-xl font-medium border transition-all flex items-center justify-center gap-2 ${
+                isDark 
+                  ? 'bg-gray-900 border-gray-800 text-gray-300 hover:bg-gray-800 hover:border-gray-700' 
+                  : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 shadow-sm'
+              }`}
               aria-label="Abrir opciones de filtro"
             >
-              🔽 Filtros
+              <SlidersHorizontal size={15} />
+              <span>Filtros Avanzados</span>
             </button>
           </div>
 
-          {/* Authors Grid - Tarjetas más compactas */}
-          <div id="authors-list" className="mb-10" role="list" aria-label="Lista de autores">
-            <h2 className={`text-2xl font-bold mb-6 transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-              Directorio de Perfiles
-            </h2>
+          {/* Authors Grid */}
+          <div id="authors-list" className="mb-12" role="list" aria-label="Lista de autores">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-2xl font-bold tracking-tight font-serif">
+                Directorio de Perfiles
+              </h2>
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                {filteredAuthors.length} {filteredAuthors.length === 1 ? 'Autor' : 'Autores'}
+              </span>
+            </div>
 
             {loading ? (
-              <div className={`text-center py-10 rounded-lg ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
-                <p className={`text-sm transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Cargando autores...
+              <div className={`text-center py-20 rounded-2xl border border-dashed ${isDark ? 'border-gray-800 bg-gray-900/40' : 'border-gray-200 bg-gray-50/50'}`}>
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-amber-500 border-t-transparent mb-3" />
+                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Cargando catálogo de autores...
                 </p>
               </div>
             ) : paginatedAuthors.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                {paginatedAuthors.map(author => (
-                  <article
-                    key={author.id}
-                    className={`rounded-xl overflow-hidden transition-all hover:shadow-md focus-within:ring-2 focus-within:ring-yellow-400 group flex flex-col justify-between ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'}`}
-                    role="listitem"
-                    aria-label={`${author.name}, ${author.role}`}
-                  >
-                    <div>
-                      {/* Image Container: reducido a h-40 */}
-                      <div className="relative overflow-hidden h-40">
-                        <img
-                          src={author.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(author.name)}&background=random&size=300`}
-                          alt={`Foto de perfil de ${author.name}`}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                        {author.category && (
-                          <div className="absolute top-2.5 left-2.5">
-                            <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-yellow-400 text-gray-900 shadow-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {paginatedAuthors.map(author => {
+                  return (
+                    <article
+                      key={author.id}
+                      className={`group relative rounded-2xl border transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-amber-500/5 flex flex-col justify-between overflow-hidden ${
+                        isDark 
+                          ? 'bg-gray-900/90 border-gray-800/80 hover:border-amber-500/40' 
+                          : 'bg-white border-gray-200/80 hover:border-amber-500/30 shadow-sm'
+                      }`}
+                      role="listitem"
+                      aria-label={`${author.name}, ${author.role}`}
+                    >
+                      {/* Top Header & Avatar */}
+                      <div>
+                        <div className="pt-7 pb-4 flex flex-col items-center px-5 relative">
+                          {/* Category Badge overlayed upper right */}
+                          {author.category && (
+                            <span className="absolute top-4 right-4 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-700 dark:bg-amber-400/10 dark:text-amber-300 border border-amber-500/20">
                               {author.category}
                             </span>
-                          </div>
-                        )}
-                      </div>
+                          )}
 
-                      {/* Content: padding reducido a p-4 */}
-                      <div className="p-4">
-                        <h3 className={`text-base font-bold mb-0.5 truncate transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                          {author.name}
-                        </h3>
-                        <p className={`text-xs font-semibold mb-2 truncate transition-colors ${isDark ? 'text-yellow-400' : 'text-yellow-600'}`}>
-                          {author.role}
-                        </p>
-
-                        <p className={`text-xs leading-relaxed mb-3 line-clamp-2 transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                          {author.description || 'Sin descripción disponible'}
-                        </p>
-
-                        {/* Stats compactas */}
-                        <div className={`flex gap-2 mb-3 py-2 px-3 rounded-lg border ${isDark ? 'bg-gray-950/50 border-gray-800' : 'bg-gray-50 border-gray-100'}`} role="group" aria-label="Estadísticas">
-                          <div className="text-center flex-1">
-                            <p className={`text-sm font-bold transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                              {author.publications || 0}
-                            </p>
-                            <p className={`text-[10px] uppercase font-medium transition-colors ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                              Publicaciones
-                            </p>
+                          {/* Avatar with Glow */}
+                          <div className="relative mb-3">
+                            <img
+                              src={author.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(author.name)}&background=random&size=300`}
+                              alt={`Foto de perfil de ${author.name}`}
+                              className="w-24 h-24 rounded-full object-cover ring-4 ring-gray-100 dark:ring-gray-800 transition-all duration-300 group-hover:scale-105 group-hover:ring-amber-500/50 shadow-md"
+                            />
                           </div>
-                          <div className={`w-px ${isDark ? 'bg-gray-800' : 'bg-gray-200'}`}></div>
-                          <div className="text-center flex-1">
-                            <p className={`text-sm font-bold flex items-center justify-center gap-1 transition-colors ${isDark ? 'text-red-400' : 'text-red-600'}`}>
-                              <Heart size={12} className="fill-current" />
-                              {author.totalLikes || 0}
-                            </p>
-                            <p className={`text-[10px] uppercase font-medium transition-colors ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                              Me gusta
-                            </p>
-                          </div>
+
+                          {/* Name & Role */}
+                          <h3 className="text-lg font-bold font-serif text-center truncate w-full px-2">
+                            {author.name}
+                          </h3>
+                          <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 text-center truncate w-full mb-3">
+                            {author.role}
+                          </p>
                         </div>
 
+                        {/* Bio Section — solo un adelanto de tres líneas. La
+                            biografía entera, con sus párrafos, se lee en el
+                            modal de «Ver detalles». */}
+                        <div className="px-5 pb-3">
+                          <p className={`text-xs leading-relaxed whitespace-pre-line line-clamp-3 transition-colors ${
+                            isDark ? 'text-gray-400' : 'text-gray-600'
+                          }`}>
+                            {author.description || 'Sin descripción disponible.'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Bottom Details & Actions */}
+                      <div className="px-5 pb-5 pt-2">
                         {/* Tags */}
                         {author.tags && author.tags.length > 0 && (
-                          <div className="flex gap-1.5 mb-2 flex-wrap">
+                          <div className="flex gap-1.5 mb-4 flex-wrap">
                             {author.tags.slice(0, 3).map(tag => (
                               <span
                                 key={tag}
-                                className={`text-[10px] px-2 py-0.5 rounded transition-colors ${isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'}`}
+                                className={`text-[10px] px-2 py-0.5 rounded-md font-medium ${
+                                  isDark ? 'bg-gray-800/80 text-gray-400' : 'bg-gray-100 text-gray-600'
+                                }`}
                               >
-                                {tag}
+                                #{tag}
                               </span>
                             ))}
                           </div>
                         )}
-                      </div>
-                    </div>
 
-                    {/* Action buttons */}
-                    <div className="p-4 pt-0 flex gap-2">
-                      <button
-                        aria-label={`Guardar perfil de ${author.name}`}
-                        className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-yellow-400 ${isDark ? 'border border-gray-700 text-gray-300 hover:bg-gray-800' : 'border border-gray-300 text-gray-700 hover:bg-gray-100'}`}
-                      >
-                        <Bookmark size={14} />
-                        <span className="text-xs">Guardar</span>
-                      </button>
-                      <button
-                        aria-label={`Contactar a ${author.name}`}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-xs font-semibold bg-[#5D4037] text-white hover:bg-[#4A302A] transition-all focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                      >
-                        <MessageCircle size={14} />
-                        <span className="text-xs">Contactar</span>
-                      </button>
-                    </div>
-                  </article>
-                ))}
+                        {/* Links & Action Buttons */}
+                        <div className="space-y-3">
+                          {author.links?.length > 0 && (
+                            <div className="flex items-center justify-center gap-2 pt-1 border-t border-gray-100 dark:border-gray-800">
+                              {author.links.map(link => (
+                                <a
+                                  key={link.url}
+                                  href={link.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title={platformLabel(link.url, link.label)}
+                                  aria-label={`${platformLabel(link.url, link.label)} de ${author.name}`}
+                                  className={`p-1.5 rounded-lg transition-colors ${
+                                    isDark
+                                      ? 'text-gray-400 hover:text-amber-400 hover:bg-gray-800'
+                                      : 'text-gray-500 hover:text-amber-700 hover:bg-gray-100'
+                                  }`}
+                                >
+                                  <SocialIcon url={link.url} size={15} />
+                                </a>
+                              ))}
+                            </div>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => setSelectedAuthor(author)}
+                            aria-label={`Ver la ficha completa de ${author.name}`}
+                            className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white transition-all shadow-sm shadow-amber-600/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
+                          >
+                            <BookOpen size={13} />
+                            <span>Ver detalles</span>
+                          </button>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
             ) : (
-              <div className={`text-center py-10 rounded-lg ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
-                <p className={`text-sm transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  No hay autores que coincidan con tu búsqueda.
-                </p>
+              <div className={`text-center py-16 px-6 rounded-2xl border border-dashed ${isDark ? 'border-gray-800 bg-gray-900/30' : 'border-gray-200 bg-gray-50/50'}`}>
+                {authors.length === 0 ? (
+                  <>
+                    <p className="text-base font-bold mb-1">Todavía no hay autores publicados</p>
+                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Estamos preparando el directorio. Vuelve muy pronto.
+                    </p>
+                  </>
+                ) : (
+                  <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    No encontramos autores que coincidan con tu búsqueda.
+                  </p>
+                )}
               </div>
             )}
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 mt-8">
+              <div className="flex items-center justify-center gap-2 mt-12">
                 <button
                   onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                   disabled={currentPage === 1}
                   aria-label="Página anterior"
-                  className={`p-1.5 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed ${isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+                  className={`p-2 rounded-xl transition-all border disabled:opacity-40 disabled:cursor-not-allowed ${
+                    isDark 
+                      ? 'border-gray-800 hover:bg-gray-800 text-gray-300' 
+                      : 'border-gray-200 hover:bg-gray-100 text-gray-700 shadow-sm'
+                  }`}
                 >
-                  <ChevronLeft size={18} />
+                  <ChevronLeft size={16} />
                 </button>
 
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
@@ -256,12 +348,12 @@ export default function Authors() {
                     key={page}
                     onClick={() => setCurrentPage(page)}
                     aria-current={currentPage === page ? 'page' : undefined}
-                    className={`w-8 h-8 rounded-lg font-semibold text-xs transition-all focus:outline-none focus:ring-2 focus:ring-yellow-400 ${
+                    className={`w-9 h-9 rounded-xl font-semibold text-xs transition-all ${
                       currentPage === page
-                        ? 'bg-[#5D4037] text-white'
+                        ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
                         : isDark
-                          ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          ? 'bg-gray-900 border border-gray-800 text-gray-400 hover:bg-gray-800'
+                          : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 shadow-sm'
                     }`}
                   >
                     {page}
@@ -272,39 +364,60 @@ export default function Authors() {
                   onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage === totalPages}
                   aria-label="Página siguiente"
-                  className={`p-1.5 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed ${isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+                  className={`p-2 rounded-xl transition-all border disabled:opacity-40 disabled:cursor-not-allowed ${
+                    isDark 
+                      ? 'border-gray-800 hover:bg-gray-800 text-gray-300' 
+                      : 'border-gray-200 hover:bg-gray-100 text-gray-700 shadow-sm'
+                  }`}
                 >
-                  <ChevronRight size={20} />
+                  <ChevronRight size={16} />
                 </button>
               </div>
             )}
           </div>
 
-          {/* CTA Section */}
+          {/* Banner Call To Action */}
           <section
-            className={`text-center py-10 px-6 rounded-xl transition-colors ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-gray-50 border border-gray-200'}`}
+            className={`relative overflow-hidden text-center py-12 px-6 rounded-3xl border transition-all ${
+              isDark 
+                ? 'bg-gradient-to-b from-gray-900 to-gray-950 border-gray-800' 
+                : 'bg-gradient-to-b from-white to-gray-50 border-gray-200/80 shadow-sm'
+            }`}
             aria-labelledby="cta-heading"
           >
-            <div className="text-3xl mb-2">📖</div>
-            <h2
-              id="cta-heading"
-              className={`text-2xl font-bold mb-3 transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}
-            >
-              ¿Quieres compartir tu obra con nuestra comunidad?
-            </h2>
-            <p className={`text-sm mb-6 max-w-xl mx-auto transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              Buscamos constantemente voces frescas y perspectivas únicas de la región del César y el Caribe colombiano. Únete a nuestro panel de colaboradores.
-            </p>
-            <button
-              className="bg-[#5D4037] hover:bg-[#4A302A] text-white px-7 py-3 rounded-lg font-bold text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400"
-            >
-              Enviar Propuesta Editorial
-            </button>
+            <div className="max-w-2xl mx-auto relative z-10">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto mb-4">
+                <BookOpen size={24} />
+              </div>
+              <h2
+                id="cta-heading"
+                className="text-2xl sm:text-3xl font-bold font-serif mb-3"
+              >
+                ¿Quieres compartir tu obra con nuestra comunidad?
+              </h2>
+              <p className={`text-sm mb-8 leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                Buscamos constantemente voces frescas y perspectivas únicas de la región del Cesar y el Caribe colombiano. Únete a nuestro panel de colaboradores.
+              </p>
+              <button
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white px-8 py-3.5 rounded-xl font-medium text-sm transition-all shadow-lg shadow-amber-600/20 hover:shadow-amber-600/30 transform hover:-translate-y-0.5 active:translate-y-0"
+              >
+                <Send size={15} />
+                Enviar Propuesta Editorial
+              </button>
+            </div>
           </section>
+
         </div>
       </main>
 
       <Footer />
+
+      {selectedAuthor && (
+        <AuthorDetailModal
+          author={selectedAuthor}
+          onClose={() => setSelectedAuthor(null)}
+        />
+      )}
     </div>
   );
 }

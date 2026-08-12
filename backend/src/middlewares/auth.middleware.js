@@ -1,4 +1,4 @@
-import { adminAuth, firebaseAdminReady } from '../config/firebaseAdmin.js';
+import { adminAuth, defaultUserRole, firebaseAdminReady } from '../config/firebaseAdmin.js';
 import { getUserProfile } from '../services/user.service.js';
 
 const userCache = new Map();
@@ -49,11 +49,13 @@ async function resolveSession(sessionCookie) {
 
   return {
     auth: decodedClaims,
+    // Sin perfil en Firestore se asume el rol más bajo: si esta suposición se
+    // equivoca, el peor caso es negar permisos de más, nunca concederlos.
     user: userProfile || {
       uid: decodedClaims.uid,
       email: decodedClaims.email || null,
       photoURL: decodedClaims.picture || null,
-      role: 'collaborator',
+      role: defaultUserRole,
     },
   };
 }

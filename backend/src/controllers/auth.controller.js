@@ -1,4 +1,4 @@
-import { adminAuth, authSessionMaxAgeMs, firebaseAdminReady } from '../config/firebaseAdmin.js';
+import { adminAuth, authSessionMaxAgeMs, defaultUserRole, firebaseAdminReady } from '../config/firebaseAdmin.js';
 import { upsertUserProfile, updateUserProfile } from '../services/user.service.js';
 import { invalidateUserCache, primeUserCache } from '../middlewares/auth.middleware.js';
 import { acceptInvitation, findValidInvitation } from '../services/invitation.service.js';
@@ -80,7 +80,7 @@ export async function createSession(req, res) {
       uid: decodedClaims.uid,
       email: decodedClaims.email || null,
       photoURL: decodedClaims.picture || null,
-      role: 'collaborator',
+      role: defaultUserRole,
     };
 
     primeUserCache(decodedClaims.uid, responseUser);

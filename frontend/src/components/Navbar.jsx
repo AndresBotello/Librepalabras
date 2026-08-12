@@ -71,7 +71,7 @@ export default function Navbar() {
     ) : (
       <span
         className={`${size} rounded-full flex-shrink-0 flex items-center justify-center text-white font-semibold`}
-        style={{ backgroundColor: '#5D4037' }}
+        style={{ backgroundColor: 'var(--color-brand-700)' }}
       >
         {avatarInitial}
       </span>
@@ -87,34 +87,34 @@ export default function Navbar() {
         <div className="max-w-7xl w-full mx-auto flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0">
-            <div className="w-7 sm:w-8 h-7 sm:h-8 rounded flex items-center justify-center" style={{backgroundColor: '#5D4037'}}>
+            <div className="w-7 sm:w-8 h-7 sm:h-8 rounded flex items-center justify-center" style={{backgroundColor: 'var(--color-brand-700)'}}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M2 6C2 4.89543 2.89543 4 4 4H12V18C12 19.1046 11.1046 20 10 20H4C2.89543 20 2 19.1046 2 18V6Z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
                 <path d="M22 6C22 4.89543 21.1046 4 20 4H12V18C12 19.1046 12.8954 20 14 20H20C21.1046 20 22 19.1046 22 18V6Z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
                 <line x1="12" y1="4" x2="12" y2="20" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
             </div>
-            <span className={`font-semibold text-xs sm:text-sm tracking-wide transition-colors ${isDark ? 'text-gray-100' : 'text-[#5D4037]'}`}>Librepalabras</span>
+            <span className={`font-semibold text-xs sm:text-sm tracking-wide transition-colors ${isDark ? 'text-gray-100' : 'text-brand-700'}`}>LiberaPalabras</span>
           </Link>
 
           {/* Navigation Links - Hidden on mobile */}
           <div className="hidden md:flex items-center gap-6 lg:gap-8">
-            <Link to="/" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037]'}`}>
+            <Link to="/" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700'}`}>
               Inicio
             </Link>
-            <Link to="/literature" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037]'}`}>
+            <Link to="/literature" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700'}`}>
               Libros
             </Link>
-            <Link to="/stories" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037]'}`}>
+            <Link to="/stories" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700'}`}>
               Literatura
             </Link>
-            <Link to="/authors" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037]'}`}>
+            <Link to="/authors" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700'}`}>
               Autores
             </Link>
-            <Link to="/concursos" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037]'}`}>
+            <Link to="/concursos" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700'}`}>
               Concursos
             </Link>
-            <Link to="/poleversia" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037]'}`}>
+            <Link to="/poleversia" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700'}`}>
               Revista Poleversia
             </Link>
           </div>
@@ -147,7 +147,7 @@ export default function Navbar() {
                   {renderAvatar('w-8 h-8 text-sm')}
                   <ChevronDown
                     className={`w-4 h-4 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''} ${
-                      isDark ? 'text-gray-400' : 'text-[#5D4037]'
+                      isDark ? 'text-gray-400' : 'text-brand-700'
                     }`}
                   />
                 </button>
@@ -171,7 +171,7 @@ export default function Navbar() {
                         </p>
                         {ROLE_LABELS[user?.role] && (
                           <span className={`inline-block mt-1 text-[10px] font-medium px-1.5 py-0.5 rounded ${
-                            isDark ? 'bg-gray-800 text-amber-300' : 'bg-amber-50 text-[#5D4037]'
+                            isDark ? 'bg-gray-800 text-amber-300' : 'bg-amber-50 text-brand-700'
                           }`}>
                             {ROLE_LABELS[user.role]}
                           </span>
@@ -223,16 +223,16 @@ export default function Navbar() {
               <>
                 <Link
                   to="/login"
-                  className={`text-xs sm:text-sm font-medium transition-colors hidden sm:inline ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037] hover:text-[#4A302A]'}`}
+                  className={`text-xs sm:text-sm font-medium transition-colors hidden sm:inline ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700 hover:text-brand-800'}`}
                 >
                   Iniciar Sesión
                 </Link>
                 <Link
                   to="/register"
                   className="text-xs sm:text-sm font-medium text-white px-2 sm:px-4 py-1 sm:py-2 rounded-lg transition-colors hidden sm:inline"
-                  style={{backgroundColor: '#5D4037'}}
-                  onMouseEnter={(e) => e.target.style.backgroundColor = '#4A302A'}
-                  onMouseLeave={(e) => e.target.style.backgroundColor = '#5D4037'}
+                  style={{backgroundColor: 'var(--color-brand-700)'}}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--color-brand-800)'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--color-brand-700)'}
                 >
                   Crear Cuenta
                 </Link>
@@ -240,7 +240,7 @@ export default function Navbar() {
             )}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className={`md:hidden p-2 transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037] hover:text-gray-900'}`}
+              className={`md:hidden p-2 transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700 hover:text-gray-900'}`}
             >
               {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -260,31 +260,31 @@ export default function Navbar() {
           }`}
         >
           <div className="max-w-7xl mx-auto px-4 py-4 space-y-4">
-            <Link to="/" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037] hover:text-gray-900'}`}>
+            <Link to="/" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700 hover:text-gray-900'}`}>
               Inicio
             </Link>
-            <Link to="/literature" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037] hover:text-gray-900'}`}>
+            <Link to="/literature" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700 hover:text-gray-900'}`}>
               Libros
             </Link>
-            <Link to="/stories" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037] hover:text-gray-900'}`}>
+            <Link to="/stories" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700 hover:text-gray-900'}`}>
               Literatura
             </Link>
-            <Link to="/authors" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037] hover:text-gray-900'}`}>
+            <Link to="/authors" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700 hover:text-gray-900'}`}>
               Autores
             </Link>
-            <Link to="/concursos" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037] hover:text-gray-900'}`}>
+            <Link to="/concursos" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700 hover:text-gray-900'}`}>
               Concursos
             </Link>
-            <Link to="/poleversia" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037] hover:text-gray-900'}`}>
+            <Link to="/poleversia" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700 hover:text-gray-900'}`}>
               Revista Poleversia
             </Link>
-            <div className="pt-4 space-y-3 border-t" style={{borderColor: isDark ? '#374151' : '#e5e7eb'}}>
+            <div className="pt-4 space-y-3 border-t" style={{borderColor: isDark ? 'var(--color-gray-700)' : 'var(--color-gray-200)'}}>
               {isAuthenticated ? (
                 <>
                   <div className="flex items-center gap-3">
                     {renderAvatar('w-10 h-10 text-base')}
                     <div className="min-w-0">
-                      <p className={`text-sm font-semibold truncate transition-colors ${isDark ? 'text-gray-200' : 'text-[#5D4037]'}`}>
+                      <p className={`text-sm font-semibold truncate transition-colors ${isDark ? 'text-gray-200' : 'text-brand-700'}`}>
                         {user?.name || 'Mi cuenta'}
                       </p>
                       <p className={`text-xs truncate transition-colors ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
@@ -296,7 +296,7 @@ export default function Navbar() {
                   <Link
                     to={dashboardPath}
                     onClick={() => setIsMenuOpen(false)}
-                    className={`flex items-center gap-3 text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037] hover:text-gray-900'}`}
+                    className={`flex items-center gap-3 text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700 hover:text-gray-900'}`}
                   >
                     <LayoutDashboard className="w-4 h-4 flex-shrink-0" />
                     {dashboardLabel}
@@ -304,7 +304,7 @@ export default function Navbar() {
                   <Link
                     to={profilePath}
                     onClick={() => setIsMenuOpen(false)}
-                    className={`flex items-center gap-3 text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037] hover:text-gray-900'}`}
+                    className={`flex items-center gap-3 text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700 hover:text-gray-900'}`}
                   >
                     <UserCog className="w-4 h-4 flex-shrink-0" />
                     Editar perfil
@@ -312,9 +312,9 @@ export default function Navbar() {
                   <button
                     onClick={handleLogout}
                     className="w-full flex items-center justify-center gap-2 text-sm font-medium text-white px-4 py-2 rounded-lg transition-colors"
-                    style={{backgroundColor: '#5D4037'}}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4A302A'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#5D4037'}
+                    style={{backgroundColor: 'var(--color-brand-700)'}}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-brand-800)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-brand-700)'}
                   >
                     <LogOut className="w-4 h-4 flex-shrink-0" />
                     Cerrar sesión
@@ -325,7 +325,7 @@ export default function Navbar() {
                   <Link
                     to="/login"
                     onClick={() => setIsMenuOpen(false)}
-                    className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-[#5D4037] hover:text-gray-900'}`}
+                    className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700 hover:text-gray-900'}`}
                   >
                     Iniciar Sesión
                   </Link>
@@ -333,9 +333,9 @@ export default function Navbar() {
                     to="/register"
                     onClick={() => setIsMenuOpen(false)}
                     className="w-full text-sm font-medium text-white px-4 py-2 rounded-lg transition-colors text-center"
-                    style={{backgroundColor: '#5D4037'}}
-                    onMouseEnter={(e) => e.target.style.backgroundColor = '#4A302A'}
-                    onMouseLeave={(e) => e.target.style.backgroundColor = '#5D4037'}
+                    style={{backgroundColor: 'var(--color-brand-700)'}}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--color-brand-800)'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--color-brand-700)'}
                   >
                     Crear Cuenta
                   </Link>

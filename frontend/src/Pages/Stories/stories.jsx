@@ -213,7 +213,7 @@ export default function Stories() {
 
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-300 ${
-      isDark ? 'bg-slate-950 text-slate-100' : 'bg-[#faf7f2] text-stone-900'
+      isDark ? 'bg-slate-950 text-slate-100' : 'bg-gray-50 text-stone-900'
     }`}>
       <Navbar />
 
@@ -404,8 +404,8 @@ export default function Stories() {
             {/* CONTENEDOR TIPO HOJA DE LIBRO (CANVAS DE LECTURA) */}
             <article className={`rounded-xl shadow-xl border transition-all duration-300 overflow-hidden ${
               isDark
-                ? 'bg-[#12151e] border-slate-800 text-slate-200 shadow-black/50'
-                : 'bg-[#fdfcf9] border-stone-200/80 text-stone-900 shadow-stone-900/5'
+                ? 'bg-gray-950 border-slate-800 text-slate-200 shadow-black/50'
+                : 'bg-gray-50 border-stone-200/80 text-stone-900 shadow-stone-900/5'
             }`}>
               
               {/* Encabezado del Manuscrito */}
