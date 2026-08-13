@@ -5,6 +5,7 @@ import { ThemeContext } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { ROLE_LABELS, homeRouteForRole, profileRouteForRole } from '../utils/roles';
 import NotificationBell from './NotificationBell';
+import GenreNavMenu, { GenreNavAccordion } from './GenreNavMenu';
 
 export default function Navbar() {
   const { isDark, toggleTheme } = useContext(ThemeContext);
@@ -47,6 +48,7 @@ export default function Navbar() {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isUserMenuOpen]);
+
 
   // Cada rol tiene su propio punto de partida, y el del juez no se llama
   // "dashboard" en ninguna parte de la app: es su panel de calificación.
@@ -102,12 +104,8 @@ export default function Navbar() {
             <Link to="/" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700'}`}>
               Inicio
             </Link>
-            <Link to="/literature" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700'}`}>
-              Libros
-            </Link>
-            <Link to="/stories" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700'}`}>
-              Literatura
-            </Link>
+            <GenreNavMenu label="Libros" basePath="/literature" allLabel="Todo el catálogo" isDark={isDark} />
+            <GenreNavMenu label="Literatura" basePath="/stories" allLabel="Toda la biblioteca" isDark={isDark} />
             <Link to="/authors" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700'}`}>
               Autores
             </Link>
@@ -266,12 +264,8 @@ export default function Navbar() {
             <Link to="/" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700 hover:text-gray-900'}`}>
               Inicio
             </Link>
-            <Link to="/literature" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700 hover:text-gray-900'}`}>
-              Libros
-            </Link>
-            <Link to="/stories" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700 hover:text-gray-900'}`}>
-              Literatura
-            </Link>
+            <GenreNavAccordion label="Libros" basePath="/literature" isDark={isDark} onNavigate={() => setIsMenuOpen(false)} />
+            <GenreNavAccordion label="Literatura" basePath="/stories" isDark={isDark} onNavigate={() => setIsMenuOpen(false)} />
             <Link to="/authors" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700 hover:text-gray-900'}`}>
               Autores
             </Link>

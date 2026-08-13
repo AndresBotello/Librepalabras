@@ -1,15 +1,16 @@
-import React, { useState, useContext, useEffect } from 'react';
-import { Search, Sliders, Grid, List, Bookmark, X, ShoppingCart } from 'lucide-react';
+import React, { useState, useContext, useEffect, useMemo, useCallback } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { BookOpen, CalendarDays, Feather, MessagesSquare, X, ShoppingCart } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { ThemeContext } from '../../context/ThemeContext';
 import { getPromotionalBooks } from '../../services/api';
+import genresData from '../../config/genres.json';
+import { GenreIcon } from '../../config/genreIcons';
+import { FOCUS_GROUP_NAME } from '../../config/focusGroup';
+import focusGroupLogo from '../../assets/grupo-focal-alfredo-correa.jpeg';
 
-// El mismo velo que oscurece la portada (`from-stone-950/75 via-stone-950/80
-// to-stone-950/95` en home.jsx), escrito a mano porque aquí la imagen va como
-// `background-image` y no como una capa aparte sobre la que poner clases.
-// El color sale del token, así que sigue a la paleta en vez de quedarse en un
-// negro suelto.
+
 const HERO_OVERLAY = [
   'linear-gradient(to bottom,',
   'color-mix(in srgb, var(--color-gray-950) 75%, transparent) 0%,',
@@ -19,11 +20,31 @@ const HERO_OVERLAY = [
 
 export default function Literature() {
   const { isDark } = useContext(ThemeContext);
-  const [viewMode, setViewMode] = useState('grid');
-  const [searchTerm, setSearchTerm] = useState('');
   const [promotionalBooks, setPromotionalBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedBook, setSelectedBook] = useState(null);
+
+  /**
+   * La categoría llega en la URL (?genero=novela) desde el menú "Libros" de la
+   * barra superior. El filtrado se hace aquí y no en el servidor porque el
+   * catálogo ya viene entero: pedirlo otra vez por cada categoría sería una
+   * consulta de más para reordenar lo que ya está en memoria.
+   */
+  const [searchParams, setSearchParams] = useSearchParams();
+  const genreParam = searchParams.get('genero');
+  const selectedGenre = genresData.genres.some((g) => g.value === genreParam) ? genreParam : 'all';
+
+  const setSelectedGenre = useCallback((value) => {
+    setSearchParams(value && value !== 'all' ? { genero: value } : {}, { replace: true });
+  }, [setSearchParams]);
+
+  const genreLabel = genresData.genres.find((g) => g.value === selectedGenre)?.label || selectedGenre;
+
+  const visibleBooks = useMemo(() => (
+    selectedGenre === 'all'
+      ? promotionalBooks
+      : promotionalBooks.filter((book) => book.genre === selectedGenre)
+  ), [promotionalBooks, selectedGenre]);
 
   useEffect(() => {
     loadPromotionalBooks();
@@ -43,38 +64,45 @@ export default function Literature() {
     }
   };
 
+  // Cada tarjeta lleva a su sección real. Antes eran `<button>` sin destino:
+  // se veían pulsables y no hacían nada.
   const sections = [
     {
       id: 1,
       title: 'Revista Poleversia',
-      description: 'Nuestra publicación insignia donde la voz de nuestros autores océano vive, ensayos, crítica y análisis que expanden la literatura.',
+      description: 'Nuestra publicación periódica: ensayo, crítica y análisis. Cada edición se lee completa aquí mismo.',
       image: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=400&h=300&fit=crop',
       category: 'Publicación Periódica',
-      link: 'Explorar sección'
+      to: '/poleversia',
+      link: 'Leer las ediciones',
     },
     {
       id: 2,
-      title: 'Colección de Libros',
-      description: 'Un catálogo curático de obras maestras y nuevos voces. Desde la prensa clásica hasta la contemporánea con acceso digital.',
-      image: 'https://images.unsplash.com/photo-1507842747716-6fed3c493e2a?w=400&h=300&fit=crop',
-      category: 'Biblioteca Digital',
-      link: 'Explorar sección'
+      title: 'Nuestros Autores',
+      description: 'Las voces que sostienen el catálogo: escritores de Valledupar, el Cesar y el Caribe colombiano.',
+      // La imagen anterior devolvía 404 y la tarjeta salía en blanco.
+      image: 'https://images.unsplash.com/photo-1519682337058-a94d519337bc?w=400&h=300&fit=crop',
+      category: 'Quiénes escriben',
+      to: '/authors',
+      link: 'Conocer a los autores',
     },
     {
       id: 3,
-      title: 'Grupo Focal Literario',
-      description: 'El espacio de nuestra comunidad. Espacios de debate, talleres de escritura y encuentros presenciales y virtuales.',
-      image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=300&fit=crop',
+      title: FOCUS_GROUP_NAME,
+      description: 'Cátedras por videollamada y tertulias abiertas al comentario. El espacio de debate de la comunidad.',
+      image: focusGroupLogo,
       category: 'Comunidad',
-      link: 'Explorar sección'
-    }
+      to: '/grupo-focal',
+      link: 'Entrar al grupo focal',
+    },
   ];
 
+  // Iconos de línea en lugar de emojis, como en el resto del sitio.
   const features = [
-    { id: 1, icon: '📘', title: 'Reseñas & Contenido', description: 'Análisis y críticas actualizadas semanalmente por nuestro comité editorial y colaboradores.' },
-    { id: 2, icon: '✦', title: 'Nuevas Voces', description: 'Espacio de difusión y mecenazgo para autores independientes y promesas de la literatura.' },
-    { id: 3, icon: '🎭', title: 'Agenda Cultural', description: 'Recitales poéticos, lanzamientos de libros y talleres interactivos durante todo el año.' },
-    { id: 4, icon: '💭', title: 'Foros de Crítica', description: 'Espacio abierto para la retroalimentación entre autores, lectores y académicos.' }
+    { id: 1, icon: BookOpen, title: 'Reseñas & Contenido', description: 'Análisis y críticas actualizadas semanalmente por nuestro comité editorial y colaboradores.' },
+    { id: 2, icon: Feather, title: 'Nuevas Voces', description: 'Espacio de difusión y mecenazgo para autores independientes y promesas de la literatura.' },
+    { id: 3, icon: CalendarDays, title: 'Agenda Cultural', description: 'Recitales poéticos, lanzamientos de libros y talleres interactivos durante todo el año.' },
+    { id: 4, icon: MessagesSquare, title: 'Foros de Crítica', description: 'Espacio abierto para la retroalimentación entre autores, lectores y académicos.' },
   ];
 
   return (
@@ -105,29 +133,70 @@ export default function Literature() {
               Un viaje a través de las letras que definen nuestro territorio. Descubre publicaciones, archivos históricos y comunidades que mantienen viva la llama de la palabra escrita.
             </p>
 
+            {/* Los dos botones de antes no llevaban a ninguna parte. Ahora uno
+                baja al catálogo y el otro va a la biblioteca de obras; el de
+                "suscripción gratuita" se retiró porque prometía algo que el
+                sitio no ofrece. */}
             <div className="flex gap-4 flex-wrap items-center">
-              <button className="px-6 py-3 rounded-lg font-semibold transition-colors text-white" style={{ backgroundColor: 'var(--color-brand-700)' }} onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--color-brand-800)'} onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--color-brand-700)'}>
-                Explorar Sección
-              </button>
-              <button className={`px-6 py-3 rounded-lg font-semibold transition-colors flex items-center gap-2 ${isDark ? 'text-gray-300 hover:text-gray-100' : 'text-gray-700 hover:text-gray-900'}`}>
-                ✨ Suscripción gratuita
-              </button>
+              <a
+                href="#catalogo"
+                className="px-6 py-3 rounded-lg font-semibold transition-colors text-white"
+                style={{ backgroundColor: 'var(--color-brand-700)' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-brand-800)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-brand-700)'}
+              >
+                Ver el catálogo
+              </a>
+              <Link
+                to="/stories"
+                className={`px-6 py-3 rounded-lg font-semibold transition-colors ${isDark ? 'text-gray-300 hover:text-gray-100' : 'text-gray-700 hover:text-gray-900'}`}
+              >
+                Leer obras gratis →
+              </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Libros en Venta Section */}
-      {promotionalBooks.length > 0 && (
-        <section className={`py-16 sm:py-24 transition-colors ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      {/* Libros en Venta. La sección también se pinta cuando hay una categoría
+          activa aunque no haya libros: al menú de la barra superior se puede
+          llegar a una categoría vacía, y sin esto la página no mostraría nada,
+          como si estuviera rota. */}
+      {(promotionalBooks.length > 0 || selectedGenre !== 'all') && (
+        <section id="catalogo" className={`py-16 sm:py-24 transition-colors ${isDark ? 'bg-gray-900' : 'bg-stone-50'}`}>
           <div className="max-w-7xl mx-auto px-4 sm:px-8">
             <div className="mb-12 text-center">
-              <h2 className={`text-3xl sm:text-4xl font-bold mb-3 transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                ✨ Libros en Venta
+              <span className={`text-xs font-bold tracking-[0.2em] uppercase ${isDark ? 'text-amber-400' : 'text-amber-700'}`}>
+                Catálogo
+              </span>
+              <h2 className={`text-3xl sm:text-4xl font-serif font-bold mt-3 mb-3 transition-colors ${isDark ? 'text-gray-100' : 'text-stone-900'}`}>
+                Libros de la casa
               </h2>
-              <p className={`text-base transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                Ediciones especiales con promociones exclusivas
+              <p className={`text-base transition-colors ${isDark ? 'text-gray-400' : 'text-stone-600'}`}>
+                Ediciones de nuestros autores. Pulsa una portada para ver la ficha completa.
               </p>
+
+              {selectedGenre !== 'all' && (
+                <div className="flex flex-wrap items-center justify-center gap-3 mt-6">
+                  <span className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${
+                    isDark ? 'bg-amber-500/10 text-amber-300' : 'bg-gray-900 text-gray-50'
+                  }`}>
+                    <GenreIcon genre={selectedGenre} />
+                    {genreLabel}
+                    <span className="text-[11px] tabular-nums opacity-70">{visibleBooks.length}</span>
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedGenre('all')}
+                    className={`text-sm font-semibold transition-colors ${
+                      isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-900'
+                    }`}
+                  >
+                    Quitar filtro
+                  </button>
+                </div>
+              )}
             </div>
 
             {loading ? (
@@ -136,84 +205,110 @@ export default function Literature() {
                   Cargando libros...
                 </p>
               </div>
+            ) : visibleBooks.length === 0 ? (
+              <div className={`py-16 text-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                <p className="text-lg mb-2">Todavía no hay libros en {genreLabel}.</p>
+                <button
+                  type="button"
+                  onClick={() => setSelectedGenre('all')}
+                  className={`text-sm font-semibold underline transition-colors ${
+                    isDark ? 'text-amber-400 hover:text-amber-300' : 'text-brand-700 hover:text-brand-800'
+                  }`}
+                >
+                  Ver todo el catálogo
+                </button>
+              </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {promotionalBooks.map((book) => (
-                  <div
-                    key={book.id}
-                    onClick={() => setSelectedBook(book)}
-                    className={`group cursor-pointer rounded-lg overflow-hidden transition-all duration-300 transform hover:scale-105 ${
-                      isDark ? 'bg-gray-800 hover:shadow-xl hover:shadow-gray-900' : 'bg-white hover:shadow-lg'
-                    } border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}
-                  >
-                    {/* Portada */}
-                    <div className="relative h-64 overflow-hidden bg-gradient-to-br from-amber-200 to-brand-200">
-                      {book.coverImage ? (
-                        <img
-                          src={book.coverImage}
-                          alt={book.title}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center">
-                          <span className="text-4xl mb-2">📖</span>
-                          <span className={`text-sm font-semibold line-clamp-2 ${isDark ? 'text-gray-900' : 'text-gray-700'}`}>
-                            {book.title}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Descuento Badge */}
-                      {book.discount > 0 && (
-                        <div className="absolute top-2 right-2 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold">
-                          -{book.discount}%
-                        </div>
-                      )}
-
-                      {/* Overlay */}
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
-                        <span className="text-white text-sm font-semibold">Ver detalles</span>
-                      </div>
-                    </div>
-
-                    {/* Info Card */}
-                    <div className={`p-4 ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
-                      <h3 className={`font-semibold text-sm mb-1 line-clamp-2 transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                        {book.title}
-                      </h3>
-
-                      <p className={`text-xs mb-3 transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                        por {book.author}
-                      </p>
-
-                      {/* Precio */}
-                      <div className="flex items-baseline gap-2 mb-3">
-                        <span className={`text-xl font-bold transition-colors ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>
-                          ${book.price.toFixed(2)}
-                        </span>
-                        {book.originalPrice && (
-                          <span className={`text-sm line-through transition-colors ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                            ${book.originalPrice.toFixed(2)}
-                          </span>
+              /**
+               * Estantería, no escaparate: lo que manda es la portada, en
+               * proporción de libro real y con el lomo sombreado. La ficha
+               * comercial (precio, descuento, disponibilidad) va debajo y en
+               * tamaño pequeño, para que el catálogo se lea como una biblioteca
+               * y no como una tienda de productos.
+               */
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-8 gap-y-12">
+                {visibleBooks.map((book) => (
+                  <article key={book.id} className="group">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedBook(book)}
+                      className="w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 rounded-md"
+                      aria-label={`Ver detalles de ${book.title}`}
+                    >
+                      <div className={`relative aspect-[2/3] rounded-sm rounded-r-md overflow-hidden transition-all duration-300 group-hover:-translate-y-2 ${
+                        isDark
+                          ? 'shadow-lg shadow-black/50 group-hover:shadow-2xl group-hover:shadow-black/70'
+                          : 'shadow-lg shadow-stone-900/25 group-hover:shadow-2xl group-hover:shadow-stone-900/35'
+                      }`}>
+                        {book.coverImage ? (
+                          <img
+                            src={book.coverImage}
+                            alt={`Portada de ${book.title}`}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          /* Sin portada se compone una: papel, filete y título
+                             centrado. Mejor que un emoji sobre un degradado. */
+                          <div className={`w-full h-full flex flex-col items-center justify-center p-4 text-center border ${
+                            isDark ? 'bg-stone-800 border-stone-700' : 'bg-stone-100 border-stone-200'
+                          }`}>
+                            <span className={`w-8 border-t mb-3 ${isDark ? 'border-amber-500/60' : 'border-amber-600/60'}`} />
+                            <span className={`font-serif text-sm leading-snug line-clamp-4 ${isDark ? 'text-stone-200' : 'text-stone-700'}`}>
+                              {book.title}
+                            </span>
+                            <span className={`w-8 border-t mt-3 ${isDark ? 'border-amber-500/60' : 'border-amber-600/60'}`} />
+                          </div>
                         )}
+
+                        {/* Lomo: la sombra del canto izquierdo es lo que hace
+                            que una imagen plana se lea como un libro. */}
+                        <span
+                          aria-hidden="true"
+                          className="absolute inset-y-0 left-0 w-[9%] bg-gradient-to-r from-black/35 via-black/10 to-transparent pointer-events-none"
+                        />
                       </div>
 
-                      {/* Disponibilidad */}
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className={`px-2 py-1 rounded ${
-                          book.availability === 'available'
-                            ? isDark
-                              ? 'bg-green-900/50 text-green-300'
-                              : 'bg-green-100 text-green-800'
-                            : isDark
-                            ? 'bg-yellow-900/50 text-yellow-300'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {book.availability === 'available' ? '✓ Disponible' : 'Limitado'}
-                        </span>
+                      <div className="mt-4">
+                        <h3 className={`font-serif font-bold text-[15px] leading-snug line-clamp-2 ${isDark ? 'text-stone-100' : 'text-stone-900'}`}>
+                          {book.title}
+                        </h3>
+
+                        <p className={`text-xs italic mt-1 line-clamp-1 ${isDark ? 'text-stone-400' : 'text-stone-500'}`}>
+                          {book.author}
+                        </p>
+
+                        <div className={`flex items-baseline gap-2 mt-2.5 text-sm ${isDark ? 'text-stone-300' : 'text-stone-700'}`}>
+                          <span className="font-semibold tabular-nums">
+                            ${book.price.toFixed(2)}
+                          </span>
+                          {book.originalPrice && (
+                            <span className={`text-xs line-through tabular-nums ${isDark ? 'text-stone-600' : 'text-stone-400'}`}>
+                              ${book.originalPrice.toFixed(2)}
+                            </span>
+                          )}
+                          {book.discount > 0 && (
+                            <span className={`text-[10px] font-bold tracking-wider ${isDark ? 'text-amber-400' : 'text-amber-700'}`}>
+                              −{book.discount}%
+                            </span>
+                          )}
+                        </div>
+
+                        <p className={`flex items-center gap-1.5 mt-1.5 text-[11px] ${isDark ? 'text-stone-500' : 'text-stone-500'}`}>
+                          {/* `amber` está redefinido a verde en la paleta del
+                              sitio, así que para "limitado" hace falta un color
+                              que no lo esté; si no, los dos estados se ven
+                              iguales. */}
+                          <span
+                            aria-hidden="true"
+                            className={`w-1.5 h-1.5 rounded-full ${
+                              book.availability === 'available' ? 'bg-emerald-500' : 'bg-orange-500'
+                            }`}
+                          />
+                          {book.availability === 'available' ? 'Disponible' : 'Edición limitada'}
+                        </p>
                       </div>
-                    </div>
-                  </div>
+                    </button>
+                  </article>
                 ))}
               </div>
             )}
@@ -226,38 +321,39 @@ export default function Literature() {
         <div className="max-w-7xl mx-auto px-4 sm:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {sections.map((section) => (
-              <div
+              <Link
                 key={section.id}
-                className={`rounded-lg overflow-hidden transition-all duration-300 hover:shadow-lg group cursor-pointer ${
-                  isDark ? 'bg-gray-900 border border-gray-800 hover:border-gray-700' : 'bg-white border border-gray-200'
+                to={section.to}
+                className={`flex flex-col rounded-lg overflow-hidden transition-all duration-300 hover:shadow-lg group ${
+                  isDark ? 'bg-gray-900 border border-gray-800 hover:border-gray-700' : 'bg-white border border-gray-200 hover:border-gray-300'
                 }`}
               >
                 <div className="h-48 overflow-hidden">
                   <img
                     src={section.image}
-                    alt={section.title}
+                    alt=""
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                   />
                 </div>
 
-                <div className="p-6">
+                <div className="p-6 flex flex-col flex-1">
                   <span className={`text-xs font-semibold tracking-widest uppercase mb-3 block transition-colors ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>
                     {section.category}
                   </span>
 
-                  <h3 className={`text-xl font-bold mb-3 transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                  <h3 className={`text-xl font-serif font-bold mb-3 transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
                     {section.title}
                   </h3>
 
-                  <p className={`text-sm mb-6 leading-relaxed transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  <p className={`text-sm mb-6 leading-relaxed flex-1 transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                     {section.description}
                   </p>
 
-                  <button className={`text-sm font-semibold transition-colors ${isDark ? 'text-amber-400 hover:text-amber-300' : 'text-amber-600 hover:text-amber-700'}`}>
-                    {section.link} →
-                  </button>
+                  <span className={`text-sm font-semibold inline-flex items-center gap-2 group-hover:gap-3 transition-all ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>
+                    {section.link} <span aria-hidden="true">→</span>
+                  </span>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -281,12 +377,12 @@ export default function Literature() {
                 }`}
               >
                 {/* Icon Circle */}
-                <div className={`w-16 h-16 mx-auto mb-6 rounded-full flex items-center justify-center text-2xl transition-all border-2 ${
+                <div className={`w-16 h-16 mx-auto mb-6 rounded-full flex items-center justify-center transition-all border-2 ${
                   isDark
                     ? 'border-gray-600 text-amber-300'
                     : 'border-gray-300 text-amber-700'
                 }`}>
-                  {feature.icon}
+                  <feature.icon className="w-6 h-6" strokeWidth={1.5} />
                 </div>
 
                 <h3 className={`text-lg font-serif font-semibold mb-3 transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>

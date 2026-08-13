@@ -1,15 +1,17 @@
 import React, { useState, useContext, useEffect, useMemo, useCallback } from 'react';
 import {
   Heart, MessageCircle, Share2, Download, ChevronLeft, ChevronRight, BookOpen, Eye, ArrowLeft, Bookmark,
-  Feather, BookMarked, ScrollText, Drama, Newspaper, UserRound, Quote, NotebookPen, Palette, Library,
 } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { Document, Page, pdfjs } from 'react-pdf';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { ThemeContext } from '../../context/ThemeContext';
 import { getApprovedWorks, toggleWorkLike, getWorkById } from '../../services/api';
 import genresData from '../../config/genres.json';
+import { GenreIcon } from '../../config/genreIcons';
 import LiteraryComments from '../../components/LiteraryComments';
+import FeaturedAuthors from '../../components/FeaturedAuthors';
 import LiteraryRatings from '../../components/LiteraryRatings';
 
 if (typeof window !== 'undefined' && 'Worker' in window) {
@@ -17,22 +19,6 @@ if (typeof window !== 'undefined' && 'Worker' in window) {
 }
 
 const WORKS_PER_PAGE = 12;
-
-// Icono de línea por género: sustituye a los emojis para mantener la estética editorial.
-const GENRE_ICONS = {
-  cuento: BookOpen,
-  'poesía': Feather,
-  novela: BookMarked,
-  ensayo: ScrollText,
-  drama: Drama,
-  'crónica': Newspaper,
-  'biografía': UserRound,
-  microrrelato: Quote,
-  cuaderno: NotebookPen,
-  otro: Palette,
-};
-
-const getGenreIcon = (genre) => GENRE_ICONS[genre] || BookOpen;
 
 export default function Stories() {
   const { isDark } = useContext(ThemeContext);
@@ -42,9 +28,23 @@ export default function Stories() {
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [selectedGenre, setSelectedGenre] = useState('all');
   const [likeLoading, setLikeLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+
+  /**
+   * La categoría vive en la URL (?genero=poesía) en vez de en el estado.
+   *
+   * Así el menú de la barra superior puede enlazar directamente a una
+   * categoría, el enlace se puede compartir, y el botón "atrás" del navegador
+   * deshace el filtro en lugar de sacarte de la página.
+   */
+  const [searchParams, setSearchParams] = useSearchParams();
+  const genreParam = searchParams.get('genero');
+  const selectedGenre = genresData.genres.some((g) => g.value === genreParam) ? genreParam : 'all';
+
+  const setSelectedGenre = useCallback((value) => {
+    setSearchParams(value && value !== 'all' ? { genero: value } : {}, { replace: true });
+  }, [setSearchParams]);
 
   useEffect(() => {
     loadWorks();
@@ -75,14 +75,6 @@ export default function Stories() {
   const getGenreInfo = useCallback((genre) => {
     return genresData.genres.find(g => g.value === genre);
   }, []);
-
-  // Obras publicadas por cada género del catálogo de creación.
-  const genreCounts = useMemo(() => {
-    return works.reduce((acc, work) => {
-      acc[work.genre] = (acc[work.genre] || 0) + 1;
-      return acc;
-    }, {});
-  }, [works]);
 
   const filteredWorks = useMemo(() => {
     return selectedGenre === 'all' ? works : works.filter(w => w.genre === selectedGenre);
@@ -222,7 +214,7 @@ export default function Stories() {
           /* =================================================================== */
           /* GALERÍA LITERARIA (VISTA MOSAICO)                                  */
           /* =================================================================== */
-          <div className="max-w-6xl mx-auto">
+          <div className="max-w-7xl mx-auto">
             {/* Encabezado Principal */}
             <header className="mb-10 text-center sm:text-left">
               <h1 className={`text-4xl sm:text-5xl font-serif font-bold tracking-tight mb-3 ${isDark ? 'text-amber-100' : 'text-stone-900'}`}>
@@ -233,54 +225,63 @@ export default function Stories() {
               </p>
             </header>
 
-            {/* Filtros por Género: catálogo completo del formulario de publicación */}
-            <nav className={`mb-12 pb-4 border-b ${isDark ? 'border-slate-800' : 'border-stone-200'}`}>
-              <div className="flex flex-wrap gap-x-1.5 gap-y-2">
-                {[{ value: 'all', label: 'Todas', icon: Library, count: works.length, description: 'El catálogo completo' }]
-                  .concat(genresData.genres.map(genre => ({
-                    value: genre.value,
-                    label: genre.label,
-                    icon: getGenreIcon(genre.value),
-                    count: genreCounts[genre.value] || 0,
-                    description: genre.description,
-                  })))
-                  .map(({ value, label, icon: Icon, count, description }) => {
-                    const isActive = selectedGenre === value;
-                    const isEmpty = count === 0;
-                    return (
-                      <button
-                        key={value}
-                        onClick={() => setSelectedGenre(value)}
-                        disabled={isEmpty}
-                        title={description}
-                        aria-current={isActive ? 'true' : undefined}
-                        className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm font-serif whitespace-nowrap transition-all duration-200 ${
-                          isEmpty
-                            ? isDark
-                              ? 'border-transparent text-slate-700 cursor-not-allowed'
-                              : 'border-transparent text-stone-300 cursor-not-allowed'
-                            : isActive
-                            ? isDark
-                              ? 'border-amber-400/50 bg-amber-500/10 text-amber-300'
-                              : 'border-stone-900 bg-stone-900 text-stone-50'
-                            : isDark
-                            ? 'border-slate-800 text-slate-400 hover:border-slate-600 hover:text-slate-200'
-                            : 'border-stone-200 text-stone-600 hover:border-stone-400 hover:text-stone-900'
-                        }`}
-                      >
-                        <Icon className="w-4 h-4 shrink-0" strokeWidth={1.5} />
-                        <span>{label}</span>
-                        <span className={`text-[11px] font-sans tabular-nums ${isActive ? 'opacity-70' : 'opacity-45'}`}>
-                          {count}
-                        </span>
-                      </button>
-                    );
-                  })}
+            {/* Las categorías se eligen desde el menú de la barra superior. Aquí
+                solo queda la marca de cuál se está viendo: sin ella, llegar
+                filtrado se vería igual que ver el catálogo completo, y no
+                habría forma de quitar el filtro. */}
+            <div className={`mb-12 pb-4 border-b ${isDark ? 'border-slate-800' : 'border-stone-200'}`}>
+              {selectedGenre !== 'all' && (
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-serif ${
+                    isDark ? 'bg-amber-500/10 text-amber-300' : 'bg-stone-900 text-stone-50'
+                  }`}>
+                    <GenreIcon genre={selectedGenre} />
+                    {getGenreInfo(selectedGenre)?.label || selectedGenre}
+                    <span className="text-[11px] font-sans tabular-nums opacity-70">
+                      {filteredWorks.length}
+                    </span>
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedGenre('all')}
+                    className={`text-sm font-semibold transition-colors ${
+                      isDark ? 'text-slate-400 hover:text-slate-200' : 'text-stone-500 hover:text-stone-900'
+                    }`}
+                  >
+                    Quitar filtro
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Dos columnas: las obras a la izquierda y los autores a la
+                derecha. En móvil no hay "al lado", así que la barra baja
+                debajo del listado. */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
+              <div className="lg:col-span-9">
+            {/* Categoría sin obras: al menú de categorías de la barra superior
+                se puede llegar a una vacía, y sin esto la página se quedaba en
+                blanco como si estuviera rota. */}
+            {filteredWorks.length === 0 && (
+              <div className={`py-20 text-center ${isDark ? 'text-slate-400' : 'text-stone-500'}`}>
+                <p className="font-serif text-xl mb-2">
+                  Todavía no hay obras en {getGenreInfo(selectedGenre)?.label || 'esta categoría'}.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setSelectedGenre('all')}
+                  className={`text-sm font-semibold underline transition-colors ${
+                    isDark ? 'text-amber-400 hover:text-amber-300' : 'text-brand-700 hover:text-brand-800'
+                  }`}
+                >
+                  Ver toda la biblioteca
+                </button>
               </div>
-            </nav>
+            )}
 
             {/* Grid de Libros / Portadas */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 sm:gap-8">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 sm:gap-8">
               {paginatedWorks.map((work) => {
                 const genre = getGenreInfo(work.genre);
                 return (
@@ -377,12 +378,23 @@ export default function Stories() {
                 </button>
               </nav>
             )}
+              </div>
+
+              {/* Columna derecha. `sticky` la mantiene a la vista mientras se
+                  recorre el listado, y solo desde `lg`, que es cuando existe
+                  la segunda columna. */}
+              <div className="lg:col-span-3">
+                <div className="lg:sticky lg:top-24">
+                  <FeaturedAuthors isDark={isDark} />
+                </div>
+              </div>
+            </div>
           </div>
         ) : (
           /* =================================================================== */
           /* VISTA DE LECTURA (EXPERIENCIA EDITORIAL ENFOCADA)                  */
           /* =================================================================== */
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-7xl mx-auto">
             {/* Barra de navegación superior */}
             <div className="mb-6 flex items-center justify-between">
               <button
@@ -402,6 +414,12 @@ export default function Stories() {
             </div>
 
             {/* CONTENEDOR TIPO HOJA DE LIBRO (CANVAS DE LECTURA) */}
+
+            {/* Dos columnas también aquí: la lectura conserva su ancho (9 de 12
+                sobre un contenedor más ancho da prácticamente los mismos ~900px
+                de antes) y los autores acompañan a la derecha. */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
+              <div className="lg:col-span-9 min-w-0">
             <article className={`rounded-xl shadow-xl border transition-all duration-300 overflow-hidden ${
               isDark
                 ? 'bg-gray-950 border-slate-800 text-slate-200 shadow-black/50'
@@ -601,6 +619,17 @@ export default function Stories() {
                   onCommentAdded={handleCommentAdded}
                   authorId={selectedWork.authorId}
                 />
+              </div>
+
+            </div>
+              </div>
+
+              {/* Los mismos autores destacados del listado. En móvil baja
+                  debajo del texto. */}
+              <div className="lg:col-span-3">
+                <div className="lg:sticky lg:top-24">
+                  <FeaturedAuthors isDark={isDark} />
+                </div>
               </div>
             </div>
           </div>
