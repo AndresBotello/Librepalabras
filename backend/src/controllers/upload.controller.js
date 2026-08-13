@@ -98,8 +98,11 @@ export async function uploadLiteraryPdf(req, res) {
     return res.status(400).json({ ok: false, message: 'El archivo debe ser un PDF' });
   }
 
-  if (req.file.size > 50 * 1024 * 1024) {
-    return res.status(400).json({ ok: false, message: 'El PDF no puede pesar más de 50MB' });
+  if (req.file.size > MAX_PDF_BYTES) {
+    return res.status(400).json({
+      ok: false,
+      message: `El PDF no puede pesar más de ${formatBytes(MAX_PDF_BYTES)}`,
+    });
   }
 
   try {

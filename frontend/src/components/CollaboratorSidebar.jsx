@@ -2,7 +2,7 @@ import React, { useContext, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ThemeContext } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import { ROLE_LABELS, canPublishWorks } from '../utils/roles';
+import { ROLE_LABELS, canPublishWorks, contestRouteForRole, profileRouteForRole } from '../utils/roles';
 
 const IconPublish = ({ active, isDark }) => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -88,11 +88,11 @@ export default function CollaboratorSidebar() {
       : []),
     isJudge
       ? { icon: IconContest, label: 'Panel de Calificación', path: '/concursos/panel' }
-      : { icon: IconContest, label: 'Concursos', path: canPublish ? '/collaborator/concurso' : '/usuario/concurso' },
+      : { icon: IconContest, label: 'Concursos', path: contestRouteForRole(user?.role) },
     ...(canPublish
       ? [{ icon: IconAnalytics, label: 'Estadísticas', path: '/collaborator/analytics' }]
       : []),
-    { icon: IconProfile, label: 'Perfil', path: canPublish ? '/collaborator/profile' : '/usuario/perfil' },
+    { icon: IconProfile, label: 'Perfil', path: profileRouteForRole(user?.role) },
   ];
 
   const additionalItems = [

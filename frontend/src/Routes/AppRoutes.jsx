@@ -7,6 +7,8 @@ import Authors from '../Pages/Home/authors.jsx';
 import Stories from '../Pages/Stories/stories.jsx';
 import Literature from '../Pages/Stories/literature.jsx';
 import PoliversiaCatalog from '../Pages/Poliversia/catalog.jsx';
+import GrupoFocal from '../Pages/GrupoFocal/index.jsx';
+import GrupoFocalEncuentro from '../Pages/GrupoFocal/encuentro.jsx';
 import Concursos from '../Pages/Concursos/index.jsx';
 import Concurso from '../Pages/Concursos/concurso.jsx';
 import ContestWinners from '../Pages/Concursos/ganadores.jsx';
@@ -18,6 +20,7 @@ import Files from '../Pages/Admin/files.jsx';
 import AdminSettings from '../Pages/Admin/settings.jsx';
 import PublishBook from '../Pages/Admin/publishbook.jsx';
 import AdminPoliversia from '../Pages/Admin/poliversia.jsx';
+import AdminGrupoFocal from '../Pages/Admin/grupofocal.jsx';
 import AdminConcursos from '../Pages/Admin/concursos.jsx';
 import AdminComentarios from '../Pages/Admin/comentarios.jsx';
 import AdminHome from '../Pages/Admin/home.jsx';
@@ -70,6 +73,8 @@ export default function AppRoutes() {
       <Route path="/poleversia" element={<PoliversiaCatalog />} />
       {/* Ruta anterior: se conserva redirigida para no romper enlaces ya compartidos. */}
       <Route path="/poliversia" element={<Navigate to="/poleversia" replace />} />
+      <Route path="/grupo-focal" element={<GrupoFocal />} />
+      <Route path="/grupo-focal/:id" element={<GrupoFocalEncuentro />} />
       <Route path="/concursos" element={<Concursos />} />
       <Route path="/concursos/ganadores" element={<ContestWinners />} />
 
@@ -95,6 +100,7 @@ export default function AppRoutes() {
       <Route path="/admin/publishbook" element={<AdminRoute><PublishBook /></AdminRoute>} />
       <Route path="/admin/poleversia" element={<AdminRoute><AdminPoliversia /></AdminRoute>} />
       <Route path="/admin/poliversia" element={<Navigate to="/admin/poleversia" replace />} />
+      <Route path="/admin/grupo-focal" element={<AdminRoute><AdminGrupoFocal /></AdminRoute>} />
       <Route path="/admin/concursos" element={<AdminRoute><AdminConcursos /></AdminRoute>} />
       <Route path="/admin/comentarios" element={<AdminRoute><AdminComentarios /></AdminRoute>} />
       <Route path="/admin/home" element={<AdminRoute><AdminHome /></AdminRoute>} />

@@ -29,6 +29,7 @@ export const NOTIFICATION_TYPES = {
   WORK_APPROVED: 'work_approved',
   WORK_REJECTED: 'work_rejected',
   MAGAZINE_PUBLISHED: 'magazine_published',
+  FOCUS_GROUP_SESSION: 'focus_group_session',
   CONTEST_OPENED: 'contest_opened',
   ROLE_CHANGED: 'role_changed',
   ANNOUNCEMENT: 'announcement',

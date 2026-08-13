@@ -7,9 +7,28 @@ import Footer from '../../components/Footer';
 import AreaSidebar from '../../components/AreaSidebar';
 import { updateUserById, uploadProfilePhoto } from '../../services/api';
 import { getAccountProviders, changePassword, addPasswordToAccount } from '../../services/auth';
+import { ROLE_LABELS } from '../../utils/roles';
 
 const EMPTY_PASSWORD_FORM = { current: '', next: '', confirm: '' };
 const MIN_PASSWORD_LENGTH = 6;
+
+// Esta pantalla la comparten las cuatro áreas (`/collaborator/profile` y
+// `/usuario/perfil`), así que el rol se muestra tal cual venga de la sesión.
+// Antes sólo distinguía admin de "Colaborador", y un usuario normal se veía
+// etiquetado como colaborador en su propio perfil.
+const ROLE_BADGE_ICONS = {
+  admin: '👑',
+  collaborator: '✍️',
+  judge: '⚖️',
+  user: '📖',
+};
+
+const ROLE_BADGE_COLORS = {
+  admin: { dark: 'bg-red-900 text-red-200', light: 'bg-red-100 text-red-800' },
+  collaborator: { dark: 'bg-blue-900 text-blue-200', light: 'bg-blue-100 text-blue-800' },
+  judge: { dark: 'bg-purple-900 text-purple-200', light: 'bg-purple-100 text-purple-800' },
+  user: { dark: 'bg-emerald-900 text-emerald-200', light: 'bg-emerald-100 text-emerald-800' },
+};
 
 export default function Profile() {
   const { isDark } = useContext(ThemeContext);
@@ -135,8 +154,12 @@ export default function Profile() {
     genero: user?.genero || 'No especificado',
     fechaNacimiento: user?.fechaNacimiento || 'No especificada',
     edad: user?.edad || 'No especificada',
-    role: user?.role || 'collaborator',
+    role: user?.role || 'user',
   };
+
+  const roleLabel = ROLE_LABELS[profile.role] || 'Usuario';
+  const roleIcon = ROLE_BADGE_ICONS[profile.role] || ROLE_BADGE_ICONS.user;
+  const roleColors = ROLE_BADGE_COLORS[profile.role] || ROLE_BADGE_COLORS.user;
 
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -423,15 +446,9 @@ export default function Profile() {
                   </h3>
                   <div className="flex flex-wrap gap-3">
                     <span className={`px-4 py-2 rounded-full text-sm font-semibold ${
-                      profile.role === 'admin'
-                        ? isDark
-                          ? 'bg-red-900 text-red-200'
-                          : 'bg-red-100 text-red-800'
-                        : isDark
-                          ? 'bg-blue-900 text-blue-200'
-                          : 'bg-blue-100 text-blue-800'
+                      isDark ? roleColors.dark : roleColors.light
                     }`}>
-                      {profile.role === 'admin' ? '👑 Administrador' : '✍️ Colaborador'}
+                      {roleIcon} {roleLabel}
                     </span>
                   </div>
                 </div>
@@ -453,7 +470,7 @@ export default function Profile() {
                     Rol
                   </p>
                   <p className={`text-lg font-bold transition-colors ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                    {profile.role === 'admin' ? 'Administrador' : 'Colaborador'}
+                    {roleLabel}
                   </p>
                 </div>
 

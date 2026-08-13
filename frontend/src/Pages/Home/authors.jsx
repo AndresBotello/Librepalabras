@@ -46,11 +46,13 @@ export default function Authors() {
     }
   };
 
+  // Se busca por lo que la tarjeta muestra: nombre y semblanza. El `role` salía
+  // de aquí porque el backend lo fija a "Autor" para todos, así que escribir
+  // "autor" devolvía el directorio entero sin que nada en pantalla lo explicara.
   const filteredAuthors = authors.filter(author => {
     const term = searchTerm.toLowerCase();
     return (
       author.name.toLowerCase().includes(term) ||
-      author.role.toLowerCase().includes(term) ||
       (author.description && author.description.toLowerCase().includes(term))
     );
   });
@@ -145,7 +147,7 @@ export default function Authors() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
               <input
                 type="text"
-                placeholder="Buscar por nombre, especialidad o palabra clave..."
+                placeholder="Buscar por nombre o palabra de su semblanza..."
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
@@ -211,18 +213,13 @@ export default function Authors() {
                           : 'bg-white border-gray-200/80 hover:border-amber-500/30 shadow-sm'
                       }`}
                       role="listitem"
-                      aria-label={`${author.name}, ${author.role}`}
+                      aria-label={author.name}
                     >
-                      {/* Top Header & Avatar */}
+                      {/* La tarjeta es la presentación de la persona: retrato,
+                          nombre y un adelanto de su semblanza. Lo que se derive
+                          de sus obras (recuento, géneros) no entra aquí. */}
                       <div>
                         <div className="pt-7 pb-4 flex flex-col items-center px-5 relative">
-                          {/* Category Badge overlayed upper right */}
-                          {author.category && (
-                            <span className="absolute top-4 right-4 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-700 dark:bg-amber-400/10 dark:text-amber-300 border border-amber-500/20">
-                              {author.category}
-                            </span>
-                          )}
-
                           {/* Avatar with Glow */}
                           <div className="relative mb-3">
                             <img
@@ -232,13 +229,9 @@ export default function Authors() {
                             />
                           </div>
 
-                          {/* Name & Role */}
-                          <h3 className="text-lg font-bold font-serif text-center truncate w-full px-2">
+                          <h3 className="text-lg font-bold font-serif text-center truncate w-full px-2 mb-3">
                             {author.name}
                           </h3>
-                          <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 text-center truncate w-full mb-3">
-                            {author.role}
-                          </p>
                         </div>
 
                         {/* Bio Section — solo un adelanto de tres líneas. La
@@ -255,22 +248,6 @@ export default function Authors() {
 
                       {/* Bottom Details & Actions */}
                       <div className="px-5 pb-5 pt-2">
-                        {/* Tags */}
-                        {author.tags && author.tags.length > 0 && (
-                          <div className="flex gap-1.5 mb-4 flex-wrap">
-                            {author.tags.slice(0, 3).map(tag => (
-                              <span
-                                key={tag}
-                                className={`text-[10px] px-2 py-0.5 rounded-md font-medium ${
-                                  isDark ? 'bg-gray-800/80 text-gray-400' : 'bg-gray-100 text-gray-600'
-                                }`}
-                              >
-                                #{tag}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-
                         {/* Links & Action Buttons */}
                         <div className="space-y-3">
                           {author.links?.length > 0 && (

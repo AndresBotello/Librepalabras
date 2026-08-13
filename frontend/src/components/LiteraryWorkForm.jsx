@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
-import { createLiteraryWork, uploadCover, uploadPdf } from '../services/api';
+import { MAX_PDF_BYTES, createLiteraryWork, formatBytes, uploadCover, uploadPdf } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import genresData from '../config/genres.json';
 
 export default function LiteraryWorkForm({ isDark, onSuccess }) {
+  const { user } = useAuth();
+  const ownName = user?.name || '';
+
   const [formData, setFormData] = useState({
     title: '',
+    author: '',
     genre: '',
     description: '',
     content: '',
@@ -53,8 +58,8 @@ export default function LiteraryWorkForm({ isDark, onSuccess }) {
         setError('El archivo debe ser un PDF');
         return;
       }
-      if (file.size > 50 * 1024 * 1024) {
-        setError('El PDF no puede pesar más de 50MB');
+      if (file.size > MAX_PDF_BYTES) {
+        setError(`El PDF no puede pesar más de ${formatBytes(MAX_PDF_BYTES)}`);
         return;
       }
       setFilePreview(prev => ({ ...prev, pdf: file.name }));
@@ -105,6 +110,9 @@ export default function LiteraryWorkForm({ isDark, onSuccess }) {
 
       const response = await createLiteraryWork({
         title: formData.title,
+        // Vacío significa "fírmala con mi nombre": lo resuelve el backend, que
+        // es quien sabe cómo se llama la cuenta.
+        author: formData.author.trim(),
         genre: formData.genre,
         description: formData.description,
         content: formData.content,
@@ -119,6 +127,7 @@ export default function LiteraryWorkForm({ isDark, onSuccess }) {
         setSuccess('Obra enviada para revisión. El admin la revisará pronto.');
         setFormData({
           title: '',
+          author: '',
           genre: '',
           description: '',
           content: '',
@@ -170,6 +179,27 @@ export default function LiteraryWorkForm({ isDark, onSuccess }) {
         />
         <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
           {formData.title.length}/100
+        </p>
+      </div>
+
+      {/* Autor de la obra */}
+      <div>
+        <label htmlFor="work-author" className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+          Autor de la obra
+        </label>
+        <input
+          id="work-author"
+          type="text"
+          name="author"
+          value={formData.author}
+          onChange={handleChange}
+          placeholder={ownName ? `${ownName} (tú)` : 'Nombre del autor'}
+          maxLength="120"
+          className={`w-full px-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-1 ${isDark ? 'bg-gray-700 border-gray-600 text-gray-100 focus:ring-blue-500' : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500'}`}
+        />
+        <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+          Déjalo vacío para firmarla con tu nombre. Escribe otro para publicar la obra de otra
+          persona: la obra aparecerá a nombre de quien indiques, y seguirá siendo tuya para editarla.
         </p>
       </div>
 
@@ -339,7 +369,7 @@ export default function LiteraryWorkForm({ isDark, onSuccess }) {
                   Sube tu PDF
                 </p>
                 <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                  Máximo 50MB
+                  Máximo {formatBytes(MAX_PDF_BYTES)}
                 </p>
               </div>
             )}

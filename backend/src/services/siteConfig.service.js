@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { adminDb } from '../config/firebaseAdmin.js';
 
 /**
@@ -39,6 +40,7 @@ export const DEFAULT_HOME = {
   announcementText: '',
   announcementActive: false,
   featuredWorkIds: [],
+  events: [],
 };
 
 const cache = new Map();
@@ -170,6 +172,90 @@ export async function updateSettings(input = {}, updatedBy = null) {
 }
 
 const MAX_FEATURED = 6;
+const MAX_EVENTS = 6;
+
+/**
+ * El enlace de un evento SÍ puede salir del sitio, al revés que el botón del
+ * banner: un evento vive donde vive —la inscripción, la videollamada, la
+ * convocatoria del ente que lo organiza— y obligarlo a ser una ruta interna
+ * dejaría la función sin sentido.
+ *
+ * Por eso el filtro es el protocolo: se acepta una ruta interna o una URL
+ * https, y nada más. `javascript:` y `data:` parsean como URL válidas y
+ * convertirían el panel en una forma de inyectar código en la portada.
+ */
+function parseEventLink(value) {
+  const trimmed = String(value ?? '').trim();
+
+  if (!trimmed) return null;
+  if (trimmed.startsWith('/')) return trimmed.slice(0, 500);
+
+  try {
+    const url = new URL(trimmed);
+    return url.protocol === 'https:' ? url.toString().slice(0, 500) : null;
+  } catch {
+    return null;
+  }
+}
+
+function parseEventDate(value) {
+  const trimmed = String(value ?? '').trim();
+
+  if (!trimmed) return '';
+
+  const date = new Date(trimmed);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+/**
+ * Cada evento se sanea campo a campo. Solo el nombre y el enlace son
+ * obligatorios: son lo mínimo para promocionar algo (qué es y dónde ocurre);
+ * la fecha, el lugar y la reseña enriquecen la tarjeta cuando se conocen.
+ */
+function parseEvents(input) {
+  if (!Array.isArray(input)) {
+    throw Object.assign(new Error('events debe ser una lista'), { status: 400 });
+  }
+
+  if (input.length > MAX_EVENTS) {
+    throw Object.assign(new Error(`Puedes promocionar como máximo ${MAX_EVENTS} eventos`), { status: 400 });
+  }
+
+  return input.map((item, index) => {
+    const position = index + 1;
+    const title = String(item?.title ?? '').trim();
+
+    if (!title) {
+      throw Object.assign(new Error(`El evento ${position} necesita un nombre`), { status: 400 });
+    }
+
+    const link = parseEventLink(item?.link);
+
+    if (!link) {
+      throw Object.assign(
+        new Error(`El enlace del evento ${position} debe ser una dirección https:// o una ruta interna que empiece por /`),
+        { status: 400 }
+      );
+    }
+
+    const date = parseEventDate(item?.date);
+
+    if (date === null) {
+      throw Object.assign(new Error(`La fecha del evento ${position} no es válida`), { status: 400 });
+    }
+
+    return {
+      // El id lo pone quien crea la fila para que reordenar en el panel no
+      // remonte los campos de texto; si llega vacío se genera aquí.
+      id: String(item?.id ?? '').trim().slice(0, 60) || randomUUID(),
+      title: title.slice(0, 120),
+      link,
+      date,
+      place: String(item?.place ?? '').trim().slice(0, 100),
+      description: String(item?.description ?? '').trim().slice(0, 300),
+    };
+  });
+}
 
 export async function updateHomeContent(input = {}, updatedBy = null) {
   const updates = {};
@@ -231,6 +317,10 @@ export async function updateHomeContent(input = {}, updatedBy = null) {
     }
 
     updates.featuredWorkIds = [...new Set(ids)];
+  }
+
+  if (input.events !== undefined) {
+    updates.events = parseEvents(input.events);
   }
 
   if (Object.keys(updates).length === 0) {

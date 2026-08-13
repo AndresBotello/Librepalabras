@@ -27,6 +27,7 @@ const TYPE_ICONS = {
   work_approved: '✅',
   work_rejected: '📝',
   magazine_published: '📰',
+  focus_group_session: '🗣️',
   contest_opened: '🏆',
   role_changed: '👤',
   announcement: '📣',

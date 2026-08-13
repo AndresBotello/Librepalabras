@@ -78,7 +78,11 @@ export default function UsuarioDashboard() {
     <div className={`min-h-screen flex flex-col transition-colors ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
       <Navbar />
 
+      {/* El menú va antes del contenido, igual que en el resto de áreas: en
+          escritorio es el orden del DOM el que lo deja a la izquierda. */}
       <div className="flex flex-1 flex-col md:flex-row max-w-7xl w-full mx-auto">
+        <AreaSidebar />
+
         <main className="flex-1 px-4 sm:px-8 py-8">
           <header className="mb-8">
             <h1 className={`font-serif text-3xl sm:text-4xl font-bold mb-2 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
@@ -163,8 +167,6 @@ export default function UsuarioDashboard() {
             </p>
           </section>
         </main>
-
-        <AreaSidebar />
       </div>
 
       <Footer />

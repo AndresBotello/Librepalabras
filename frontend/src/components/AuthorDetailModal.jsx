@@ -151,23 +151,6 @@ export default function AuthorDetailModal({ author, onClose }) {
           }`}>
             {author.description || 'Este autor todavía no tiene biografía.'}
           </p>
-
-          {author.tags?.length > 0 && (
-            <div className={`flex gap-1.5 flex-wrap mt-5 pt-4 border-t ${
-              isDark ? 'border-gray-800' : 'border-gray-100'
-            }`}>
-              {author.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className={`text-[11px] px-2 py-0.5 rounded-md font-medium ${
-                    isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'
-                  }`}
-                >
-                  #{tag}
-                </span>
-              ))}
-            </div>
-          )}
         </div>
       </div>
     </div>

@@ -4,8 +4,10 @@ import { ArrowLeft, BookOpen, Calendar, Clock, Loader2, PenLine, Users } from 'l
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { ThemeContext } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import useContestCatalog from '../../hooks/useContestCatalog';
 import { getPublishedContestStories } from '../../services/api';
+import { canEnterContests, contestRouteForRole } from '../../utils/roles';
 
 function formatDate(value) {
   if (!value) return '';
@@ -35,6 +37,7 @@ export default function ConcursoRoute() {
 
 function Concurso({ slug }) {
   const { isDark } = useContext(ThemeContext);
+  const { user } = useAuth();
   const { contests } = useContestCatalog();
 
   // El estado (abierto / próximamente / cerrado) lo pone el administrador, así
@@ -43,6 +46,13 @@ function Concurso({ slug }) {
   const contestId = contest?.id;
 
   const isComingSoon = contest?.status === 'proximamente';
+
+  // La página pública no decía nada a quien sí puede concursar: un `user` con la
+  // sesión abierta la leía igual que un visitante y tenía que dar con el
+  // formulario por su cuenta. El acceso sale del rol, y cada rol entra por su
+  // área (`/usuario/concurso` o `/collaborator/concurso`).
+  const isOpen = contest?.status === 'abierto';
+  const canEnter = canEnterContests(user?.role);
 
   const [stories, setStories] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -183,6 +193,27 @@ function Concurso({ slug }) {
                 <Users className="w-3.5 h-3.5" />
                 {contest.audience}
               </p>
+
+              {isOpen && canEnter && (
+                <div className="mt-6">
+                  <Link
+                    to={contestRouteForRole(user?.role)}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-brand-700 hover:bg-brand-800 transition-colors"
+                  >
+                    <PenLine className="w-4 h-4" />
+                    Presentar mi cuento
+                  </Link>
+                </div>
+              )}
+
+              {isOpen && !user && (
+                <p className={`mt-6 text-sm ${isDark ? 'text-stone-400' : 'text-stone-600'}`}>
+                  <Link to="/login" className={`font-semibold underline ${isDark ? 'text-amber-400' : 'text-brand-700'}`}>
+                    Inicia sesión
+                  </Link>{' '}
+                  para presentar tu cuento a esta convocatoria.
+                </p>
+              )}
             </header>
 
             {isComingSoon && (

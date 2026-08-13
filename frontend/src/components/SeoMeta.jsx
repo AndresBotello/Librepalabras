@@ -34,6 +34,11 @@ const ROUTE_META = {
     description:
       'Poleversia, la colección editorial de Librepalabras: libros y publicaciones para leer en línea.',
   },
+  '/grupo-focal': {
+    title: 'Grupo Focal Alfredo Correa De Andreís | Librepalabras',
+    description:
+      'Cátedra y Tertulia Alfredo Correa De Andreís: reuniones virtuales y debate abierto sobre memoria, palabra y pensamiento crítico en el Caribe colombiano.',
+  },
   '/authors': {
     title: 'Autores | Librepalabras',
     description:
@@ -66,6 +71,14 @@ const PRIVATE_PREFIXES = ['/admin', '/collaborator', '/login', '/register', '/co
 function resolveMeta(pathname) {
   if (ROUTE_META[pathname]) {
     return ROUTE_META[pathname];
+  }
+
+  // Ficha de un encuentro concreto (/grupo-focal/:id).
+  if (pathname.startsWith('/grupo-focal/')) {
+    return {
+      title: 'Encuentro del Grupo Focal | Librepalabras',
+      description: ROUTE_META['/grupo-focal'].description,
+    };
   }
 
   // Ficha de un concurso concreto (/concursos/:slug): el título real lo pone la

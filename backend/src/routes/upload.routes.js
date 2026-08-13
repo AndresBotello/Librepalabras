@@ -13,11 +13,15 @@ import { MAX_PDF_BYTES, formatBytes } from '../utils/files.js';
 
 const router = Router();
 const storage = multer.memoryStorage();
-const upload = multer({ storage, limits: { fileSize: 50 * 1024 * 1024 } });
-
 // Multer corta la petición en cuanto se pasa del límite, así el servidor no
 // llega a cargar en memoria un archivo que de todos modos íbamos a rechazar.
-const uploadMagazine = multer({ storage, limits: { fileSize: MAX_PDF_BYTES } });
+//
+// El tope es el mismo para todo (MAX_PDF_BYTES): las portadas y las fotos de
+// perfil tienen su propio límite, más bajo, en el controlador. Antes este valía
+// 50 MB mientras el manejador de errores de abajo anunciaba 10, así que un
+// archivo demasiado grande recibía un mensaje que no correspondía al límite
+// real.
+const upload = multer({ storage, limits: { fileSize: MAX_PDF_BYTES } });
 
 router.post('/cover', authenticateRequest, upload.single('file'), uploadCover);
 router.post('/profile-photo', authenticateRequest, upload.single('file'), uploadProfilePhoto);
@@ -28,7 +32,7 @@ router.post(
   authenticateRequest,
   authorizeRoles(['admin']),
   uploadRateLimiter,
-  uploadMagazine.single('file'),
+  upload.single('file'),
   uploadMagazinePdf
 );
 

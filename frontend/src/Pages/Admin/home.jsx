@@ -9,8 +9,63 @@ import {
   updateHomeContent,
   uploadCoverWithProgress,
 } from '../../services/api';
+import { isoToLocalInput, localInputToIso } from '../../utils/datetime';
 
 const MAX_FEATURED = 6;
+const MAX_EVENTS = 6;
+
+const EMPTY_EVENT = { title: '', link: '', date: '', place: '', description: '' };
+
+/**
+ * Los eventos se editan con la fecha en formato `datetime-local` y se guardan
+ * en ISO. La traducción se hace al entrar y al salir para que el resto del
+ * formulario no tenga que pensar en zonas horarias.
+ */
+function eventsForEditing(events) {
+  if (!Array.isArray(events)) return [];
+
+  return events.map((event) => ({
+    ...EMPTY_EVENT,
+    ...event,
+    date: isoToLocalInput(event.date),
+  }));
+}
+
+function eventsForSaving(events = []) {
+  return events.map((event) => ({
+    ...event,
+    date: localInputToIso(event.date),
+  }));
+}
+
+/**
+ * Id de la fila, para que `key` sea estable y reordenar no remonte los campos
+ * de texto (que es como se pierde el foco mientras se escribe).
+ *
+ * `crypto.randomUUID` solo existe en contexto seguro: en localhost y en https
+ * está, pero al abrir el panel por la IP de la red local (`vite --host`, para
+ * probar desde el móvil) es `undefined` y añadir un evento reventaba sin
+ * mostrar nada. El id no es un secreto ni viaja a ninguna parte: cualquier
+ * valor único sirve.
+ */
+/** Mismo criterio que usa la portada para dejar de anunciar un evento. */
+function isPastEvent(event) {
+  if (!event.date) return false;
+
+  const date = new Date(event.date);
+  if (Number.isNaN(date.getTime())) return false;
+
+  date.setHours(23, 59, 59, 999);
+  return date < new Date();
+}
+
+function newRowId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+
+  return `evt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
 
 export default function AdminHome() {
   const { isDark } = useContext(ThemeContext);
@@ -41,8 +96,10 @@ export default function AdminHome() {
         // `featuredWorks` viene resuelto por el backend, pero para editar solo
         // hacen falta los ids: es lo único que se guarda.
         const { featuredWorks, ...editable } = homeRes.home;
-        setContent(editable);
-        setSaved(editable);
+        const prepared = { ...editable, events: eventsForEditing(editable.events) };
+
+        setContent(prepared);
+        setSaved(prepared);
       }
 
       if (worksRes.ok) {
@@ -91,6 +148,42 @@ export default function AdminHome() {
     });
   };
 
+  const addEvent = () => {
+    setContent((prev) => ({
+      ...prev,
+      events: [...(prev.events || []), { ...EMPTY_EVENT, id: newRowId() }],
+    }));
+    setFeedback(null);
+  };
+
+  const updateEvent = (id, key, value) => {
+    setContent((prev) => ({
+      ...prev,
+      events: (prev.events || []).map((item) => (item.id === id ? { ...item, [key]: value } : item)),
+    }));
+    setFeedback(null);
+  };
+
+  const removeEvent = (id) => {
+    setContent((prev) => ({
+      ...prev,
+      events: (prev.events || []).filter((item) => item.id !== id),
+    }));
+    setFeedback(null);
+  };
+
+  const moveEvent = (index, direction) => {
+    setContent((prev) => {
+      const list = [...(prev.events || [])];
+      const target = index + direction;
+
+      if (target < 0 || target >= list.length) return prev;
+
+      [list[index], list[target]] = [list[target], list[index]];
+      return { ...prev, events: list };
+    });
+  };
+
   const handleImageUpload = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -115,11 +208,15 @@ export default function AdminHome() {
     setFeedback(null);
 
     try {
-      const response = await updateHomeContent(content);
+      const response = await updateHomeContent({
+        ...content,
+        events: eventsForSaving(content.events),
+      });
       const { featuredWorks, ...editable } = response.home;
+      const prepared = { ...editable, events: eventsForEditing(editable.events) };
 
-      setContent(editable);
-      setSaved(editable);
+      setContent(prepared);
+      setSaved(prepared);
       setFeedback({ type: 'success', text: response.message });
     } catch (error) {
       setFeedback({ type: 'error', text: error.message });
@@ -128,6 +225,7 @@ export default function AdminHome() {
     }
   };
 
+  const events = content?.events || [];
   const featuredIds = content?.featuredWorkIds || [];
 
   const featuredWorks = useMemo(
@@ -364,6 +462,172 @@ export default function AdminHome() {
                     onChange={(e) => handleChange('announcementText', e.target.value)}
                     className={`${inputClass} resize-none`}
                   />
+                </section>
+
+                {/* Agenda de eventos */}
+                <section className={cardClass}>
+                  <div className="flex flex-wrap items-start justify-between gap-4 mb-1">
+                    <h2 className="text-lg font-bold">Agenda de eventos</h2>
+                    <span className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                      {events.length}/{MAX_EVENTS}
+                    </span>
+                  </div>
+                  <p className={`text-xs mb-6 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                    Se muestran en la portada, encima del catálogo. Los eventos cuya fecha ya pasó
+                    dejan de aparecer solos, sin que tengas que borrarlos.
+                  </p>
+
+                  {events.length === 0 ? (
+                    <p className={`text-sm py-8 text-center rounded-lg border border-dashed ${
+                      isDark ? 'border-slate-700 text-slate-500' : 'border-slate-300 text-slate-500'
+                    }`}>
+                      Todavía no hay eventos anunciados.
+                    </p>
+                  ) : (
+                    <ul className="space-y-4">
+                      {events.map((event, index) => (
+                        <li
+                          key={event.id}
+                          className={`rounded-lg border p-4 ${
+                            isDark ? 'border-slate-700 bg-slate-800/40' : 'border-slate-200 bg-slate-50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-3 mb-4">
+                            <span className={`text-xs font-bold tracking-wider uppercase ${
+                              isDark ? 'text-slate-400' : 'text-slate-500'
+                            }`}>
+                              Evento {index + 1}
+                            </span>
+
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => moveEvent(index, -1)}
+                                disabled={index === 0}
+                                aria-label="Subir evento"
+                                className={`px-2 py-1 rounded text-sm disabled:opacity-30 ${
+                                  isDark ? 'hover:bg-slate-700' : 'hover:bg-slate-200'
+                                }`}
+                              >
+                                ↑
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => moveEvent(index, 1)}
+                                disabled={index === events.length - 1}
+                                aria-label="Bajar evento"
+                                className={`px-2 py-1 rounded text-sm disabled:opacity-30 ${
+                                  isDark ? 'hover:bg-slate-700' : 'hover:bg-slate-200'
+                                }`}
+                              >
+                                ↓
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => removeEvent(event.id)}
+                                className={`px-2 py-1 rounded text-sm font-medium ${
+                                  isDark ? 'text-rose-400 hover:bg-rose-950/50' : 'text-rose-600 hover:bg-rose-50'
+                                }`}
+                              >
+                                Quitar
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="space-y-4">
+                            <div>
+                              <label className={labelClass}>Nombre del evento</label>
+                              <input
+                                type="text"
+                                maxLength={120}
+                                placeholder="Ej.: Recital de poesía en la Biblioteca Departamental"
+                                value={event.title}
+                                onChange={(e) => updateEvent(event.id, 'title', e.target.value)}
+                                className={inputClass}
+                              />
+                            </div>
+
+                            <div>
+                              <label className={labelClass}>Enlace del evento</label>
+                              <input
+                                type="text"
+                                placeholder="https://…"
+                                value={event.link}
+                                onChange={(e) => updateEvent(event.id, 'link', e.target.value)}
+                                className={inputClass}
+                              />
+                              <p className={`text-xs mt-1.5 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+                                Dónde ocurre o dónde se inscribe: videollamada, formulario, publicación.
+                                Debe empezar por «https://», o por «/» si es una página de este sitio.
+                              </p>
+                            </div>
+
+                            <div className="grid sm:grid-cols-2 gap-4">
+                              <div>
+                                <label className={labelClass}>Fecha y hora (opcional)</label>
+                                <input
+                                  type="datetime-local"
+                                  value={event.date}
+                                  onChange={(e) => updateEvent(event.id, 'date', e.target.value)}
+                                  className={inputClass}
+                                />
+                              </div>
+
+                              <div>
+                                <label className={labelClass}>Lugar (opcional)</label>
+                                <input
+                                  type="text"
+                                  maxLength={100}
+                                  placeholder="Valledupar · Virtual"
+                                  value={event.place}
+                                  onChange={(e) => updateEvent(event.id, 'place', e.target.value)}
+                                  className={inputClass}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Un evento con fecha pasada se guarda igual, pero
+                                la portada no lo muestra. Sin este aviso, la
+                                única pista sería que "no se ve". */}
+                            {isPastEvent(event) && (
+                              <p className={`text-xs px-3 py-2 rounded-lg ${
+                                isDark ? 'bg-amber-950/50 text-amber-300' : 'bg-amber-50 text-amber-800'
+                              }`}>
+                                Esta fecha ya pasó, así que el evento no aparecerá en la portada.
+                                Cámbiala o deja el campo vacío si es una convocatoria sin fecha fija.
+                              </p>
+                            )}
+
+                            <div>
+                              <label className={labelClass}>Reseña breve (opcional)</label>
+                              <textarea
+                                rows={2}
+                                maxLength={300}
+                                placeholder="Una o dos frases sobre de qué se trata."
+                                value={event.description}
+                                onChange={(e) => updateEvent(event.id, 'description', e.target.value)}
+                                className={`${inputClass} resize-none`}
+                              />
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {events.length < MAX_EVENTS && (
+                    <button
+                      type="button"
+                      onClick={addEvent}
+                      className={`mt-4 w-full py-2.5 rounded-lg border border-dashed text-sm font-semibold transition-colors ${
+                        isDark
+                          ? 'border-slate-700 text-slate-300 hover:bg-slate-800'
+                          : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      + Añadir evento
+                    </button>
+                  )}
                 </section>
 
                 {/* Obras destacadas */}

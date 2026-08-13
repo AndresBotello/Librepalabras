@@ -19,6 +19,7 @@ export default function Publications() {
   const [showPdfPreview, setShowPdfPreview] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
+    author: '',
     genre: '',
     description: '',
     content: '',
@@ -47,6 +48,7 @@ export default function Publications() {
     setEditingId(pub.id);
     setFormData({
       title: pub.title,
+      author: pub.author || '',
       genre: pub.genre,
       description: pub.description || '',
       content: pub.content,
@@ -60,6 +62,7 @@ export default function Publications() {
     setShowPdfPreview(false);
     setFormData({
       title: '',
+      author: '',
       genre: '',
       description: '',
       content: '',
@@ -133,6 +136,7 @@ export default function Publications() {
 
       await updateLiteraryWork(editingId, {
         title: formData.title,
+        author: formData.author,
         genre: formData.genre,
         description: formData.description,
         content: formData.content,
@@ -334,6 +338,23 @@ export default function Publications() {
                   className={`w-full px-4 py-2 rounded-lg border transition-colors ${isDark ? 'bg-gray-800 border-gray-700 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}`}
                   placeholder="Título de la obra"
                 />
+              </div>
+
+              <div>
+                <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Autor de la obra
+                </label>
+                <input
+                  type="text"
+                  value={formData.author}
+                  onChange={(e) => setFormData(prev => ({ ...prev, author: e.target.value }))}
+                  maxLength={120}
+                  className={`w-full px-4 py-2 rounded-lg border transition-colors ${isDark ? 'bg-gray-800 border-gray-700 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}`}
+                  placeholder="Nombre del autor"
+                />
+                <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                  Con quién se firma la obra. Vacío la firma con tu nombre.
+                </p>
               </div>
 
               <div>

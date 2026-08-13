@@ -12,6 +12,30 @@ const __dirname = dirname(__filename);
 const genresData = JSON.parse(readFileSync(join(__dirname, '../config/genres.json'), 'utf-8'));
 
 const VALID_GENRES = genresData.genres.map(g => g.value);
+const MAX_AUTHOR_LENGTH = 120;
+
+/**
+ * A quién se le atribuye la obra.
+ *
+ * `authorId` sigue siendo SIEMPRE quien la sube: de él dependen "mis obras",
+ * el permiso de edición y el de borrar comentarios. Lo que este campo cambia es
+ * la firma que se muestra, para poder publicar la obra de otra persona sin que
+ * figure a nombre de quien la cargó. Si se deja vacío, se firma como antes: con
+ * el nombre de la cuenta.
+ */
+function resolveAuthorName(input, user) {
+  const typed = String(input ?? '').trim();
+
+  if (!typed) {
+    return { name: user?.name || user?.nombres || 'Anónimo', error: null };
+  }
+
+  if (typed.length < 2 || typed.length > MAX_AUTHOR_LENGTH) {
+    return { name: null, error: `El nombre del autor debe tener entre 2 y ${MAX_AUTHOR_LENGTH} caracteres` };
+  }
+
+  return { name: xss(typed), error: null };
+}
 
 export async function createWork(req, res) {
   try {
@@ -46,6 +70,12 @@ export async function createWork(req, res) {
       });
     }
 
+    const { name: author, error: authorError } = resolveAuthorName(req.body.author, req.user);
+
+    if (authorError) {
+      return res.status(400).json({ ok: false, message: authorError });
+    }
+
     const now = new Date().toISOString();
     const work = {
       title: title.trim(),
@@ -59,8 +89,13 @@ export async function createWork(req, res) {
       price: type === 'pdfSale' ? parseFloat(price) : null,
       status: 'pending_review',
       authorId,
-      author: req.user?.name || req.user?.nombres || 'Anónimo',
+      author,
+      // El correo es el de quien sube la obra, no el del autor firmado: es el
+      // contacto para la revisión editorial.
       authorEmail: req.user?.email || '',
+      // Deja constancia de que la firma no coincide con la cuenta, para que la
+      // moderación pueda distinguir una obra ajena de una suplantación.
+      authoredByOther: author !== (req.user?.name || req.user?.nombres || 'Anónimo'),
       createdAt: now,
       updatedAt: now,
       views: 0,
@@ -482,6 +517,19 @@ export async function updateWork(req, res) {
       updateData.genre = genre.toLowerCase();
     }
     if (content?.trim()) updateData.content = content;
+
+    // Corregir la firma sin tener que borrar y volver a subir la obra.
+    if (req.body.author !== undefined) {
+      const { name, error } = resolveAuthorName(req.body.author, req.user);
+
+      if (error) {
+        return res.status(400).json({ ok: false, message: error });
+      }
+
+      updateData.author = name;
+      updateData.authoredByOther = name !== (req.user?.name || req.user?.nombres || 'Anónimo');
+    }
+
     if (description !== undefined) updateData.description = description?.trim() || '';
     if (Array.isArray(tags)) updateData.tags = tags.filter(t => t.trim());
     if (cover !== undefined) updateData.cover = cover;

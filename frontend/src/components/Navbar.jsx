@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, LayoutDashboard, UserCog, LogOut, ChevronDown } from 'lucide-react';
 import { ThemeContext } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import { ROLE_LABELS, homeRouteForRole } from '../utils/roles';
+import { ROLE_LABELS, homeRouteForRole, profileRouteForRole } from '../utils/roles';
 import NotificationBell from './NotificationBell';
 
 export default function Navbar() {
@@ -53,9 +53,9 @@ export default function Navbar() {
   const dashboardPath = homeRouteForRole(user?.role);
   const dashboardLabel = user?.role === 'judge' ? 'Panel de Calificación' : 'Dashboard';
 
-  // "Mi Perfil" vive en la ruta de colaborador, pero su guardia admite también
-  // a admin y juez, así que sirve para los tres roles.
-  const profilePath = '/collaborator/profile';
+  // El perfil vive en dos rutas: la de autoría (admin, colaborador y juez) y la
+  // del área de usuario. Cada rol tiene que ir a la suya o la guardia lo rebota.
+  const profilePath = profileRouteForRole(user?.role);
 
   const avatarInitial = (user?.name || user?.email || 'U').trim().charAt(0).toUpperCase();
   const showAvatarPhoto = Boolean(user?.photoURL) && failedPhotoUrl !== user.photoURL;
@@ -116,6 +116,9 @@ export default function Navbar() {
             </Link>
             <Link to="/poleversia" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700'}`}>
               Revista Poleversia
+            </Link>
+            <Link to="/grupo-focal" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700'}`}>
+              Grupo Focal
             </Link>
           </div>
 
@@ -277,6 +280,9 @@ export default function Navbar() {
             </Link>
             <Link to="/poleversia" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700 hover:text-gray-900'}`}>
               Revista Poleversia
+            </Link>
+            <Link to="/grupo-focal" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700 hover:text-gray-900'}`}>
+              Grupo Focal
             </Link>
             <div className="pt-4 space-y-3 border-t" style={{borderColor: isDark ? 'var(--color-gray-700)' : 'var(--color-gray-200)'}}>
               {isAuthenticated ? (

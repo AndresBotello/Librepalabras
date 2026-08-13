@@ -410,6 +410,62 @@ export function uploadCoverWithProgress(file, onProgress) {
   return uploadWithProgress('/upload/cover', file, onProgress);
 }
 
+// ============================================================
+// Grupo Focal Alfredo Correa De Andreís
+// ============================================================
+
+/**
+ * Los dos modos de encuentro, tal como se guardan en Firestore. Son datos, no
+ * texto: los nombres que ve el público ("Cátedra" y "Tertulia") viven en
+ * `config/focusGroup.js`, indexados por estos mismos valores.
+ */
+export const FOCUS_GROUP_TYPES = {
+  SYNC: 'sincronico',
+  ASYNC: 'asincronico',
+};
+
+export function getFocusGroupSessions({ includeDrafts = false } = {}) {
+  return request(includeDrafts ? '/focus-group?includeDrafts=true' : '/focus-group');
+}
+
+/** Devuelve el encuentro junto con su conversación. */
+export function getFocusGroupSession(id) {
+  return request(`/focus-group/${id}`);
+}
+
+export function createFocusGroupSession(payload) {
+  return request('/focus-group', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateFocusGroupSession(id, payload) {
+  return request(`/focus-group/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteFocusGroupSession(id) {
+  return request(`/focus-group/${id}`, { method: 'DELETE' });
+}
+
+export function addFocusGroupComment(id, text) {
+  return request(`/focus-group/${id}/comments`, {
+    method: 'POST',
+    body: JSON.stringify({ text }),
+  });
+}
+
+export function deleteFocusGroupComment(id, commentId) {
+  return request(`/focus-group/${id}/comments/${commentId}`, { method: 'DELETE' });
+}
+
+export function toggleFocusGroupCommentLike(id, commentId) {
+  return request(`/focus-group/${id}/comments/${commentId}/like`, { method: 'POST' });
+}
+
 // Concursos
 export const CONTEST_MIN_SCORE = 0;
 export const CONTEST_MAX_SCORE = 5;

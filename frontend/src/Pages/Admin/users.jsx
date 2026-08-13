@@ -6,6 +6,17 @@ import AdminSidebar from '../../components/AdminSidebar';
 import EditUserModal from '../../components/EditUserModal';
 import { useAuth } from '../../context/AuthContext';
 import { getAllUsers, updateUserRole, getUserById, updateUserById, updateUserStatus } from '../../services/api';
+import { ROLE_LABELS } from '../../utils/roles';
+
+/**
+ * El selector se arma desde ROLE_LABELS para que no vuelva a quedarse corto:
+ * faltaba `user` y, como el `value` no casaba con ninguna opción, la fila de un
+ * usuario normal salía en blanco. Peor todavía, bastaba con tocar el desplegable
+ * para ascenderlo sin querer, porque no había forma de volver a "Usuario".
+ *
+ * El orden va de menos a más permisos. Coincide con VALID_ROLES del backend.
+ */
+const ROLE_OPTIONS = ['user', 'collaborator', 'judge', 'admin'];
 
 // Íconos SVG para una estética formal e integrada
 const SearchIcon = () => (
@@ -196,6 +207,13 @@ export default function Users() {
         : 'bg-amber-50 text-amber-700 border-amber-200';
     }
 
+    if (role === 'collaborator') {
+      return isDark
+        ? 'bg-sky-950/80 text-sky-300 border-sky-800/50'
+        : 'bg-sky-50 text-sky-700 border-sky-200';
+    }
+
+    // `user` y cualquier rol que no reconozcamos: el tono más neutro de la tabla.
     return isDark
       ? 'bg-slate-800 text-slate-300 border-slate-700'
       : 'bg-slate-100 text-slate-700 border-slate-200';
@@ -305,9 +323,15 @@ export default function Users() {
                                   updating === user.uid ? 'opacity-50 cursor-not-allowed' : ''
                                 }`}
                               >
-                                <option value="collaborator" className={isDark ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'}>Colaborador</option>
-                                <option value="judge" className={isDark ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'}>Juez</option>
-                                <option value="admin" className={isDark ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'}>Admin</option>
+                                {ROLE_OPTIONS.map((role) => (
+                                  <option
+                                    key={role}
+                                    value={role}
+                                    className={isDark ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'}
+                                  >
+                                    {ROLE_LABELS[role]}
+                                  </option>
+                                ))}
                               </select>
                             </td>
 

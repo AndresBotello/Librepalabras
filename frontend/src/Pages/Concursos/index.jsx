@@ -1,13 +1,15 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, BookOpen, Clock, Loader2, Trophy, Users } from 'lucide-react';
+import { ArrowRight, BookOpen, Clock, Loader2, PenLine, Trophy, Users } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import HomenajeEscallon from '../../components/HomenajeEscallon';
 import { ThemeContext } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import useContestCatalog from '../../hooks/useContestCatalog';
 import { getPublishedContestStories } from '../../services/api';
 import { CONTEST_STATUS_META } from '../../utils/contests';
+import { canEnterContests, contestRouteForRole } from '../../utils/roles';
 
 /** Colores del distintivo según el estado del concurso. */
 function statusClasses(status, isDark) {
@@ -24,6 +26,7 @@ function statusClasses(status, isDark) {
 
 export default function Concursos() {
   const { isDark } = useContext(ThemeContext);
+  const { user } = useAuth();
   const { contests } = useContestCatalog();
   const [stories, setStories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -49,6 +52,12 @@ export default function Concursos() {
     };
   }, []);
 
+  // El acceso a concursar sale del rol de la sesión, no de la URL: quien puede
+  // presentarse ve la puerta desde la propia página pública en vez de tener que
+  // buscarla en el menú de su área.
+  const hasOpenContest = contests.some((contest) => contest.status === 'abierto');
+  const canEnter = canEnterContests(user?.role);
+
   const publishedByContest = useMemo(() => {
     return stories.reduce((counts, story) => {
       counts[story.contestId] = (counts[story.contestId] || 0) + 1;
@@ -73,6 +82,16 @@ export default function Concursos() {
             con su propia convocatoria, su jurado y los textos que se publican al final.
           </p>
         </header>
+
+        {hasOpenContest && canEnter && (
+          <Link
+            to={contestRouteForRole(user?.role)}
+            className="inline-flex items-center gap-2 px-5 py-2.5 mb-10 rounded-xl text-sm font-semibold text-white bg-brand-700 hover:bg-brand-800 transition-colors"
+          >
+            <PenLine className="w-4 h-4" />
+            Presentar mi cuento
+          </Link>
+        )}
 
         {/* Abre la página, antes de las convocatorias. */}
         <HomenajeEscallon />

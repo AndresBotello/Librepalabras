@@ -3,7 +3,10 @@ import { Link } from 'react-router-dom';
 import { ThemeContext } from '../../context/ThemeContext';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
-import { getAllAuthors, getHomeContent } from '../../services/api';
+import EventAgenda from '../../components/EventAgenda';
+import { FOCUS_GROUP_TYPES, getAllAuthors, getFocusGroupSessions, getHomeContent } from '../../services/api';
+import { FOCUS_GROUP_NAME, meetingState } from '../../config/focusGroup';
+import focusGroupLogo from '../../assets/grupo-focal-alfredo-correa.jpeg';
 
 // Imagen original del banner. Se usa mientras el admin no suba otra desde
 // /admin/home, para que la portada nunca quede sin fondo.
@@ -51,11 +54,13 @@ export default function Home() {
   const { isDark } = useContext(ThemeContext);
   const [authors, setAuthors] = useState([]);
   const [home, setHome] = useState(readCachedHome);
+  const [focusSessions, setFocusSessions] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadAuthors();
     loadHomeContent();
+    loadFocusGroup();
   }, []);
 
   const loadAuthors = async () => {
@@ -85,11 +90,31 @@ export default function Home() {
     }
   };
 
+  const loadFocusGroup = async () => {
+    try {
+      const response = await getFocusGroupSessions();
+      setFocusSessions(response.sessions || []);
+    } catch (err) {
+      // La portada se ve igual sin esto: la tarjeta del grupo focal cae en su
+      // texto fijo y sigue llevando a la sección.
+      console.error('Error cargando el grupo focal:', err);
+    }
+  };
+
+  // Lo que se anuncia en portada es la próxima reunión (o la que está en curso).
+  // Si no hay ninguna programada, la tarjeta cuenta cuántos temas hay abiertos.
+  const nextMeeting = focusSessions
+    .filter((item) => item.type === FOCUS_GROUP_TYPES.SYNC && meetingState(item) !== 'finalizado')
+    .sort((a, b) => (a.scheduledAt || '').localeCompare(b.scheduledAt || ''))[0];
+
+  const openTopicsCount = focusSessions.filter((item) => item.type === FOCUS_GROUP_TYPES.ASYNC).length;
+
   const heroImage = home?.heroImage || DEFAULT_HERO_IMAGE;
   const customTitle = home?.heroTitle?.trim();
   const customSubtitle = home?.heroSubtitle?.trim();
   const showAnnouncement = home?.announcementActive && home?.announcementText?.trim();
   const featuredWorks = home?.featuredWorks || [];
+  const events = Array.isArray(home?.events) ? home.events : [];
 
   return (
     <>
@@ -203,17 +228,7 @@ export default function Home() {
               ) : (
                 <>
                   Donde las palabras <br className="hidden sm:block" />
-                  {/* `bg-clip-text` recorta el degradado a la caja del span, pero la
-                      cursiva inclina las letras y la última se sale por la derecha:
-                      esa parte se queda sin pintar y el glifo aparece cortado. El
-                      padding agranda la caja y el margen negativo lo descuenta para
-                      que el texto siga centrado.
-
-                      `box-decoration-clone` es imprescindible: sin él, el padding
-                      solo se aplica al principio y al final del span entero, así que
-                      cuando el título se parte en varias líneas (móvil) las líneas
-                      intermedias se seguían cortando. Con clone, cada línea recibe
-                      su propio padding y su propio degradado. */}
+  
                   <span className="italic font-normal bg-gradient-to-r from-amber-200 via-amber-400 to-brand-300 bg-clip-text text-transparent box-decoration-clone pr-[0.14em] -mr-[0.14em]">
                     encuentran su libertad
                   </span>
@@ -257,6 +272,12 @@ export default function Home() {
             {home.announcementText}
           </div>
         )}
+
+        {/* ================= AGENDA DE EVENTOS =================
+            Va justo debajo del aviso y por encima de todo lo demás: un evento
+            tiene fecha de caducidad, y anunciarlo por debajo del catálogo es no
+            anunciarlo. */}
+        <EventAgenda events={events} isDark={isDark} />
 
         {/* ================= OBRAS DESTACADAS ================= */}
         {featuredWorks.length > 0 && (
@@ -394,13 +415,16 @@ export default function Home() {
                 </a>
               </div>
 
-              {/* Card Tercera (Ancho Completo) */}
-              <div className={`lg:col-span-12 group relative overflow-hidden rounded-3xl border p-8 sm:p-10 transition-all duration-500 hover:shadow-2xl hover:shadow-amber-900/10 shimmer-card ${
+              {/* Card Tercera (Ancho Completo): Grupo Focal. Anuncia el próximo
+                  encuentro real en cuanto el admin programa uno. */}
+              <Link
+                to="/grupo-focal"
+                className={`block lg:col-span-12 group relative overflow-hidden rounded-3xl border p-8 sm:p-10 transition-all duration-500 hover:shadow-2xl hover:shadow-amber-900/10 shimmer-card ${
                 isDark ? 'bg-stone-900/40 border-stone-800 hover:border-amber-500/40' : 'bg-white border-stone-200 hover:border-amber-600/40'
               }`}>
                 <div className="flex flex-col md:flex-row items-center gap-10">
                   <div className="w-full md:w-1/3 h-64 overflow-hidden rounded-2xl shrink-0 relative">
-                    <img src="https://images.unsplash.com/photo-1552664730-d307ca884978?w=600&fit=crop" alt="Grupo Focal" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 ease-out" />
+                    <img src={focusGroupLogo} alt={FOCUS_GROUP_NAME} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 ease-out" />
                     <div className="absolute inset-0 bg-gradient-to-t from-stone-950/50 to-transparent md:hidden" />
                   </div>
                   <div className="w-full md:w-2/3 flex flex-col justify-center">
@@ -408,19 +432,47 @@ export default function Home() {
                       Comunidad & Debate
                     </span>
                     <h3 className={`text-3xl font-serif font-bold mb-4 ${isDark ? 'text-stone-100' : 'text-stone-900'}`}>
-                      Grupo Focal
+                      {FOCUS_GROUP_NAME}
                     </h3>
-                    <p className={`text-base leading-relaxed mb-8 max-w-2xl ${isDark ? 'text-stone-400' : 'text-stone-600'}`}>
-                      Mesas de diálogo, laboratorios de escritura y encuentros presenciales donde la comunidad literaria intercambia ideas sobre la identidad caribe.
+                    <p className={`text-base leading-relaxed mb-6 max-w-2xl ${isDark ? 'text-stone-400' : 'text-stone-600'}`}>
+                      La Cátedra reúne a la comunidad por videollamada; la Tertulia deja el tema abierto
+                      al comentario. Un espacio para pensar en voz alta la memoria, la palabra y el Caribe.
                     </p>
+
+                    {nextMeeting ? (
+                      <div className={`mb-8 rounded-2xl border px-5 py-4 max-w-2xl ${
+                        isDark ? 'bg-stone-950/60 border-stone-800' : 'bg-stone-50 border-stone-200'
+                      }`}>
+                        <p className="text-[10px] font-bold tracking-widest uppercase text-amber-600 dark:text-amber-400 mb-1">
+                          {meetingState(nextMeeting) === 'en_curso' ? 'En curso ahora' : 'Próximo encuentro'}
+                        </p>
+                        <p className={`font-semibold ${isDark ? 'text-stone-100' : 'text-stone-900'}`}>
+                          {nextMeeting.title}
+                        </p>
+                        <p className={`text-sm mt-1 first-letter:uppercase ${isDark ? 'text-stone-400' : 'text-stone-600'}`}>
+                          {new Date(nextMeeting.scheduledAt).toLocaleString('es-CO', {
+                            weekday: 'long',
+                            day: 'numeric',
+                            month: 'long',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </p>
+                      </div>
+                    ) : openTopicsCount > 0 ? (
+                      <p className={`mb-8 text-sm font-semibold ${isDark ? 'text-stone-300' : 'text-stone-700'}`}>
+                        {openTopicsCount} {openTopicsCount === 1 ? 'tema abierto' : 'temas abiertos'} esperando tu comentario.
+                      </p>
+                    ) : null}
+
                     <div>
-                      <a href="#" className="inline-flex items-center gap-2 text-sm font-bold text-amber-600 dark:text-amber-400 group-hover:gap-4 transition-all duration-300">
+                      <span className="inline-flex items-center gap-2 text-sm font-bold text-amber-600 dark:text-amber-400 group-hover:gap-4 transition-all duration-300">
                         Unirse a la conversación <span className="text-lg">→</span>
-                      </a>
+                      </span>
                     </div>
                   </div>
                 </div>
-              </div>
+              </Link>
             </div>
           </div>
         </section>
@@ -463,29 +515,29 @@ export default function Home() {
                       <div className={`absolute inset-0 rounded-full blur-md opacity-40 group-hover:opacity-60 transition-opacity duration-500 ${isDark ? 'bg-amber-500/30' : 'bg-amber-400/40'}`} />
                       <img src={author.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(author.name)}&background=random&size=300`} alt={author.name} className="relative w-full h-full object-cover rounded-full ring-2 ring-amber-500/30 group-hover:ring-amber-500 transition-all duration-500 grayscale group-hover:grayscale-0" />
                     </div>
-                    <span className="block text-center text-[10px] font-bold tracking-[0.2em] uppercase text-amber-600 dark:text-amber-400 mb-3">
-                      {author.role}
-                    </span>
-                    <h3 className={`text-xl font-serif font-bold text-center mb-4 ${isDark ? 'text-stone-100' : 'text-stone-900'}`}>
+                    {/* La tarjeta presenta a la persona, no su catálogo: foto,
+                        nombre y un adelanto de la semblanza. El recuento de
+                        obras se quitó a propósito, porque dejaba a quien acaba
+                        de entrar anunciado con un "0 publicaciones". */}
+                    <h3 className={`text-xl font-serif font-bold text-center ${isDark ? 'text-stone-100' : 'text-stone-900'}`}>
                       {author.name}
                     </h3>
-                    <p className={`text-sm text-center leading-relaxed italic ${isDark ? 'text-stone-400' : 'text-stone-600'}`}>
-                      {author.publications} publicacione{author.publications !== 1 ? 's' : ''}
-                    </p>
                     {author.description && (
-                      /* Aquí la biografía es un adelanto, no la ficha completa:
-                         va recortada a cuatro líneas porque las tarjetas de la
-                         portada comparten fila y una semblanza larga estiraría
-                         la sección entera. Los párrafos se respetan igual. */
-                      <p className={`text-sm text-center leading-relaxed mt-4 pt-4 border-t border-stone-500/20 whitespace-pre-line line-clamp-4 ${isDark ? 'text-stone-300' : 'text-stone-700'}`}>
+                      /* Adelanto, no ficha completa: recortado a cuatro líneas
+                         porque las tarjetas comparten fila y una semblanza
+                         larga estiraría la sección entera. Los párrafos se
+                         respetan igual. */
+                      <p className={`text-sm text-center leading-relaxed mt-4 whitespace-pre-line line-clamp-4 ${isDark ? 'text-stone-300' : 'text-stone-700'}`}>
                         {author.description}
                       </p>
                     )}
                   </div>
                   <div className="text-center pt-6 mt-6 border-t border-stone-500/10">
-                    <a href="/stories" className="text-xs font-bold tracking-wider uppercase text-stone-400 hover:text-amber-500 transition-colors duration-300 flex items-center justify-center gap-1 group-hover:gap-2">
+                    {/* Llevaba a /stories, que es el listado de textos: la
+                        semblanza completa se lee en el directorio de autores. */}
+                    <Link to="/authors" className="text-xs font-bold tracking-wider uppercase text-stone-400 hover:text-amber-500 transition-colors duration-300 flex items-center justify-center gap-1 group-hover:gap-2">
                       Ver Semblanza <span>→</span>
-                    </a>
+                    </Link>
                   </div>
                 </div>
               ))

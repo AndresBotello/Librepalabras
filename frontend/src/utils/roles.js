@@ -33,3 +33,23 @@ export function homeRouteForRole(role) {
 export function canPublishWorks(role) {
   return ['admin', 'collaborator', 'judge'].includes(role);
 }
+
+/**
+ * El perfil es la misma pantalla para todos, pero vive detrás de dos rutas con
+ * guardias distintas. Enlazar siempre a la de colaborador dejaba fuera al
+ * usuario normal: su guardia lo rebotaba al dashboard, y desde el menú de
+ * cuenta parecía que la app no supiera qué rol tiene.
+ */
+export function profileRouteForRole(role) {
+  return canPublishWorks(role) ? '/collaborator/profile' : '/usuario/perfil';
+}
+
+/** Inscribirse al concurso. Coincide con CONTESTANT_ROLES del backend. */
+export function canEnterContests(role) {
+  return ['collaborator', 'user'].includes(role);
+}
+
+/** Formulario de inscripción al concurso, en el área que corresponde al rol. */
+export function contestRouteForRole(role) {
+  return canPublishWorks(role) ? '/collaborator/concurso' : '/usuario/concurso';
+}
