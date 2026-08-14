@@ -226,8 +226,13 @@ export function getMyWorks() {
   return request('/literature/user/my-works');
 }
 
-export function getPendingWorks() {
-  return request('/literature/admin/pending');
+/**
+ * Obras de la bandeja de moderación. Sin argumento devuelve las pendientes,
+ * que es lo que espera el contador del dashboard; con `status` sirve también
+ * las ya aprobadas o rechazadas.
+ */
+export function getPendingWorks(status = 'pending_review') {
+  return request(`/literature/admin/works?status=${encodeURIComponent(status)}`);
 }
 
 export function reviewWork(id, status, reason = '') {

@@ -1,4 +1,5 @@
 import React, { useContext, useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { ThemeContext } from '../../context/ThemeContext';
 import { AuthContext } from '../../context/AuthContext';
 import { useNotify } from '../../context/DialogContext';
@@ -7,6 +8,13 @@ import Footer from '../../components/Footer';
 import AreaSidebar from '../../components/AreaSidebar';
 import PdfViewer from '../../components/PdfViewer';
 import { getMyWorks, updateLiteraryWork, uploadPdf, uploadCover } from '../../services/api';
+import genresData from '../../config/genres.json';
+
+// Los mismos topes que aplica el servidor en backend/src/utils/files.js. Aquí
+// sirven para avisar antes de subir: sin esto, un archivo de más se pasaba
+// entero por la red para que el backend lo rechazara al final.
+const MAX_COVER_BYTES = 5 * 1024 * 1024;
+const MAX_PDF_BYTES = 10 * 1024 * 1024;
 
 export default function Publications() {
   const { isDark } = useContext(ThemeContext);
@@ -17,6 +25,10 @@ export default function Publications() {
   const [error, setError] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [showPdfPreview, setShowPdfPreview] = useState(false);
+  // Una subida en curso por tipo. Mientras dura, el control se bloquea y dice
+  // que está trabajando: antes no había ninguna señal —ni texto ni spinner— y
+  // una portada de varios megas tardaba lo suyo con la pantalla igual que antes.
+  const [uploading, setUploading] = useState({ cover: false, pdf: false });
   const [formData, setFormData] = useState({
     title: '',
     author: '',
@@ -93,24 +105,49 @@ export default function Publications() {
 
   const handleFileUpload = async (e, type) => {
     const file = e.target.files?.[0];
+
+    // El input se vacía siempre, pase lo que pase. Sin esto, volver a elegir el
+    // mismo archivo tras un fallo no dispara `change` —el valor no ha cambiado—
+    // y la pantalla se queda quieta, que es justo la sensación de "no hace nada".
+    e.target.value = '';
+
     if (!file) return;
 
-    try {
-      const uploadFn = type === 'pdf' ? uploadPdf : uploadCover;
-      const url = await uploadFn(file);
-      console.log(`✅ ${type} subido exitosamente. URL:`, url);
+    const isCover = type === 'cover';
+    const limit = isCover ? MAX_COVER_BYTES : MAX_PDF_BYTES;
 
-      setFormData(prev => {
-        const newData = {
-          ...prev,
-          [type === 'pdf' ? 'pdfUrl' : 'cover']: url,
-        };
-        console.log(`✅ formData actualizado:`, newData);
-        return newData;
-      });
+    if (isCover && !file.type.startsWith('image/')) {
+      notify.error('La portada tiene que ser una imagen.');
+      return;
+    }
+
+    if (file.size > limit) {
+      notify.error(`El archivo pesa demasiado: el máximo son ${Math.round(limit / (1024 * 1024))} MB.`);
+      return;
+    }
+
+    setUploading(prev => ({ ...prev, [type]: true }));
+
+    try {
+      const uploadFn = isCover ? uploadCover : uploadPdf;
+      const url = await uploadFn(file);
+
+      setFormData(prev => ({
+        ...prev,
+        [isCover ? 'cover' : 'pdfUrl']: url,
+      }));
+
+      // Se avisa de que falta guardar: la subida deja el archivo en el servidor,
+      // pero la obra no apunta a él hasta que se pulsa "Guardar cambios".
+      notify.success(
+        isCover
+          ? 'Portada subida. Pulsa "Guardar cambios" para aplicarla.'
+          : 'Archivo subido. Pulsa "Guardar cambios" para aplicarlo.'
+      );
     } catch (err) {
-      console.error(`❌ Error al subir ${type}:`, err);
-      notify.error(`No se pudo subir ${type}: ${err.message}`);
+      notify.error(`No se pudo subir ${isCover ? 'la portada' : 'el archivo'}: ${err.message}`);
+    } finally {
+      setUploading(prev => ({ ...prev, [type]: false }));
     }
   };
 
@@ -198,9 +235,13 @@ export default function Publications() {
                   Administra todas tus publicaciones y envíos literarios. Total: {publications.length}
                 </p>
               </div>
-              <button className="px-6 py-2 rounded-lg font-semibold transition-colors text-sm bg-brand-700 text-white hover:bg-brand-800 whitespace-nowrap">
-                📝 Nueva Publicación
-              </button>
+              {/* Era un `button` sin `onClick`: se pulsaba y no pasaba nada. */}
+              <Link
+                to="/collaborator/create"
+                className="px-6 py-2 rounded-lg font-semibold transition-colors text-sm bg-brand-700 text-white hover:bg-brand-800 whitespace-nowrap"
+              >
+                Nueva publicación
+              </Link>
             </div>
           </div>
 
@@ -222,7 +263,10 @@ export default function Publications() {
                     <table className="w-full">
                       <thead>
                         <tr className={isDark ? 'bg-gray-800 border-b border-gray-700' : 'bg-gray-50 border-b border-gray-200'}>
-                          <th className={`px-6 py-4 text-left text-sm font-semibold transition-colors ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                          <th className="w-px px-6 py-4">
+                            <span className="sr-only">Portada</span>
+                          </th>
+                          <th className={`py-4 text-left text-sm font-semibold transition-colors ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                             Título
                           </th>
                           <th className={`px-6 py-4 text-left text-sm font-semibold transition-colors ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -249,11 +293,35 @@ export default function Publications() {
 
                           return (
                             <tr key={pub.id} className={isDark ? 'border-b border-gray-800 hover:bg-gray-800' : 'border-b border-gray-200 hover:bg-gray-50'}>
-                              <td className={`px-6 py-4 text-sm font-semibold transition-colors ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
-                                {pub.title}
+                              <td className="px-6 py-4">
+                                {pub.cover ? (
+                                  <img
+                                    src={pub.cover}
+                                    alt=""
+                                    className={`w-10 aspect-[2/3] object-cover rounded border ${
+                                      isDark ? 'border-gray-700' : 'border-gray-200'
+                                    }`}
+                                  />
+                                ) : (
+                                  <div className={`w-10 aspect-[2/3] rounded border border-dashed ${
+                                    isDark ? 'border-gray-700' : 'border-gray-300'
+                                  }`} />
+                                )}
+                              </td>
+                              <td className={`py-4 pr-6 text-sm transition-colors ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
+                                <span className="font-semibold">{pub.title}</span>
+                                {/* El motivo del rechazo estaba en la obra pero
+                                    no se enseñaba en ningún sitio: el autor veía
+                                    "Rechazado" y se quedaba sin saber qué
+                                    corregir. */}
+                                {pub.status === 'rejected' && (
+                                  <p className={`mt-1 text-xs ${isDark ? 'text-red-300' : 'text-red-700'}`}>
+                                    {pub.rejectionReason || 'Se rechazó sin indicar el motivo.'}
+                                  </p>
+                                )}
                               </td>
                               <td className={`px-6 py-4 text-sm transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                                {pub.genre}
+                                {genresData.genres.find(g => g.value === pub.genre)?.label || pub.genre}
                               </td>
                               <td className={`px-6 py-4 text-sm`}>
                                 <span className={`px-3 py-1 rounded-full text-xs font-semibold ${status.color}`}>
@@ -361,13 +429,21 @@ export default function Publications() {
                 <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                   Género
                 </label>
-                <input
-                  type="text"
+                {/* Desplegable y no texto libre: el servidor solo acepta los
+                    géneros del catálogo y devuelve un 400 con cualquier otra
+                    cosa, así que escribirlo a mano era una forma cómoda de que
+                    el guardado fallara por una tilde o un plural. */}
+                <select
                   value={formData.genre}
                   onChange={(e) => setFormData(prev => ({ ...prev, genre: e.target.value }))}
                   className={`w-full px-4 py-2 rounded-lg border transition-colors ${isDark ? 'bg-gray-800 border-gray-700 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}`}
-                  placeholder="Género literario"
-                />
+                >
+                  {genresData.genres.map((genre) => (
+                    <option key={genre.value} value={genre.value}>
+                      {genre.emoji} {genre.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -400,40 +476,117 @@ export default function Publications() {
                 <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                   Portada
                 </label>
-                {formData.cover && (
-                  <img src={formData.cover} alt="Portada" className="mb-3 h-32 rounded-lg" />
-                )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleFileUpload(e, 'cover')}
-                  className={`w-full px-4 py-2 rounded-lg border transition-colors ${isDark ? 'bg-gray-800 border-gray-700 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}`}
-                />
+
+                <div className="flex items-start gap-4">
+                  {/* En proporción 2:3, la misma con la que se ve en la
+                      biblioteca. Antes era un `h-32` de ancho libre, que enseñaba
+                      la imagen entera y no lo que de verdad se va a publicar. */}
+                  {formData.cover ? (
+                    <img
+                      src={formData.cover}
+                      alt="Portada actual de la obra"
+                      className={`w-24 aspect-[2/3] object-cover rounded-md border shrink-0 ${
+                        isDark ? 'border-gray-700' : 'border-gray-300'
+                      }`}
+                    />
+                  ) : (
+                    <div className={`w-24 aspect-[2/3] rounded-md border border-dashed shrink-0 flex items-center justify-center text-center text-xs px-2 ${
+                      isDark ? 'border-gray-700 text-gray-500' : 'border-gray-300 text-gray-500'
+                    }`}>
+                      Sin portada
+                    </div>
+                  )}
+
+                  <div className="flex-1 min-w-0">
+                    {/* El input va oculto dentro de un `label` con aspecto de
+                        botón. El control de archivo nativo se pinta con los
+                        colores del sistema, que sobre el gris oscuro del modal
+                        quedaban prácticamente ilegibles. */}
+                    <label
+                      className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border font-semibold text-sm transition-colors ${
+                        uploading.cover
+                          ? 'opacity-60 cursor-wait'
+                          : 'cursor-pointer'
+                      } ${
+                        isDark
+                          ? 'bg-gray-800 border-gray-700 text-gray-100 hover:bg-gray-700'
+                          : 'bg-white border-gray-300 text-gray-900 hover:bg-gray-50'
+                      }`}
+                    >
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={uploading.cover}
+                        onChange={(e) => handleFileUpload(e, 'cover')}
+                        className="sr-only"
+                      />
+                      {uploading.cover
+                        ? 'Subiendo portada…'
+                        : formData.cover ? 'Reemplazar portada' : 'Subir portada'}
+                    </label>
+
+                    {formData.cover && !uploading.cover && (
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, cover: '' }))}
+                        className={`ml-3 text-sm font-semibold transition-colors ${
+                          isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        Quitar
+                      </button>
+                    )}
+
+                    <p className={`text-xs mt-2 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                      Imagen de hasta 5 MB. Se recorta a proporción de portada de libro.
+                      El cambio no se aplica hasta que guardes.
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <div>
                 <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                   Archivo PDF
                 </label>
-                {formData.pdfUrl && (
-                  <div className="mb-3 space-y-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  <label
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border font-semibold text-sm transition-colors ${
+                      uploading.pdf ? 'opacity-60 cursor-wait' : 'cursor-pointer'
+                    } ${
+                      isDark
+                        ? 'bg-gray-800 border-gray-700 text-gray-100 hover:bg-gray-700'
+                        : 'bg-white border-gray-300 text-gray-900 hover:bg-gray-50'
+                    }`}
+                  >
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      disabled={uploading.pdf}
+                      onChange={(e) => handleFileUpload(e, 'pdf')}
+                      className="sr-only"
+                    />
+                    {uploading.pdf
+                      ? 'Subiendo archivo…'
+                      : formData.pdfUrl ? 'Reemplazar PDF' : 'Subir PDF'}
+                  </label>
+
+                  {formData.pdfUrl && !uploading.pdf && (
                     <button
                       type="button"
                       onClick={() => setShowPdfPreview(!showPdfPreview)}
-                      className="text-brand-700 hover:underline font-semibold"
+                      className="text-brand-700 hover:text-brand-800 hover:underline font-semibold text-sm"
                     >
-                      {showPdfPreview ? '🙈 Ocultar' : '👁️ Vista previa'} PDF
+                      {showPdfPreview ? 'Ocultar vista previa' : 'Ver vista previa'}
                     </button>
-                  </div>
-                )}
-                <input
-                  type="file"
-                  accept=".pdf,.zip"
-                  onChange={(e) => handleFileUpload(e, 'pdf')}
-                  className={`w-full px-4 py-2 rounded-lg border transition-colors ${isDark ? 'bg-gray-800 border-gray-700 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}`}
-                />
-                <p className={`text-xs mt-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Soporta PDF y archivos ZIP
+                  )}
+                </div>
+
+                <p className={`text-xs mt-2 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                  {/* El `accept` decía ".pdf,.zip", pero el servidor rechaza todo
+                      lo que no sea `application/pdf`: ofrecer ZIP solo servía
+                      para que la subida fallase después de tragarse el archivo. */}
+                  PDF de hasta 10 MB. El cambio no se aplica hasta que guardes.
                 </p>
               </div>
 

@@ -140,6 +140,23 @@ function validateAndSanitizeProfile(profile) {
     sanitized.descripcion = profile.descripcion.trim().slice(0, 500);
   }
 
+  // Constancia de que la cuenta aceptó los términos, y de cuál versión.
+  //
+  // La fecha la pone el servidor y nunca el cliente: es la única de las tres
+  // que serviría de prueba, y un reloj del navegador —o un cuerpo de petición
+  // manipulado— podría fecharla donde quisiera. La versión sí viene del
+  // frontend, porque es la que se le mostró al usuario en ese momento.
+  //
+  // Este campo solo se escribe al crear la sesión de registro. `updateProfile`
+  // usa esta misma función, pero `updateUserProfile` filtra por su lista de
+  // campos permitidos, que no lo incluye: la aceptación no se puede reescribir
+  // más tarde desde la edición del perfil.
+  if (profile.terminosVersion && typeof profile.terminosVersion === 'string') {
+    sanitized.terminosAceptados = true;
+    sanitized.terminosVersion = profile.terminosVersion.trim().slice(0, 20);
+    sanitized.terminosAceptadosEn = new Date().toISOString();
+  }
+
   return sanitized;
 }
 

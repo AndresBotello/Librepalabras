@@ -51,9 +51,12 @@ export default function GenreNavMenu({ label, basePath, allLabel, isDark }) {
   const close = () => setIsOpen(false);
 
   return (
+    // Sin `relative` a propósito: el panel se ancla a la fila de enlaces de la
+    // navbar (que sí lo lleva) para ocupar todo su ancho. El panel sigue siendo
+    // hijo de este div, así que pasar el puntero por encima no dispara el
+    // `onMouseLeave` y el menú no se cierra al ir a elegir categoría.
     <div
       ref={containerRef}
-      className="relative"
       onMouseEnter={() => setIsOpen(true)}
       onMouseLeave={close}
     >
@@ -75,8 +78,8 @@ export default function GenreNavMenu({ label, basePath, allLabel, isDark }) {
       </Link>
 
       {isOpen && (
-        <div className="absolute left-0 top-full pt-3 w-[30rem] animate-modal-panel">
-          <div className={`rounded-xl border shadow-xl p-3 ${
+        <div className="absolute left-0 right-0 top-full pt-3 animate-modal-panel">
+          <div className={`rounded-xl border shadow-xl p-4 ${
             isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
           }`}>
             <Link
@@ -90,7 +93,9 @@ export default function GenreNavMenu({ label, basePath, allLabel, isDark }) {
               {allLabel}
             </Link>
 
-            <div className={`grid grid-cols-2 gap-x-2 pt-2 border-t ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
+            {/* Tres columnas: al ocupar el panel toda la fila, con dos quedaban
+                enlaces cortos perdidos en mucho blanco. */}
+            <div className={`grid grid-cols-3 gap-x-6 pt-2 border-t ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
               {genresData.genres.map((genre) => (
                 <Link
                   key={genre.value}

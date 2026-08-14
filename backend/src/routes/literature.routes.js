@@ -33,6 +33,9 @@ router.get('/user/my-works', authenticateRequest, authorizeRoles(AUTHOR_ROLES), 
 
 // Rutas solo para admins
 router.get('/admin/pending', authenticateRequest, authorizeRoles(['admin']), getPendingWorks);
+// Mismo manejador, nombre honesto: con ?status= sirve también lo aprobado y lo
+// rechazado. La ruta anterior se mantiene porque el dashboard sigue llamándola.
+router.get('/admin/works', authenticateRequest, authorizeRoles(['admin']), getPendingWorks);
 router.patch('/:id/review', authenticateRequest, authorizeRoles(['admin']), reviewWork);
 
 // Rutas con parámetro /:id - AL FINAL

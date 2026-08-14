@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, User, Phone, Calendar, ArrowRight, X, CheckCircle2 } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
@@ -9,6 +9,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { homeRouteForRole } from '../../utils/roles';
 import { getInvitationByToken } from '../../services/api';
 import gendersData from '../../config/genders.json';
+import { TERMS_VERSION } from '../../config/legal';
 
 const ROLE_LABELS_INVITE = {
   admin: 'Administrador',
@@ -27,6 +28,9 @@ export default function Login({ initialMode = 'login' }) {
   const [isLogin, setIsLogin] = useState(initialMode !== 'register');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  // Solo cuenta al registrarse. Arranca siempre en falso: la aceptación tiene
+  // que ser un acto del usuario, así que ni se premarca ni se recuerda.
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
   const [resetOpen, setResetOpen] = useState(false);
@@ -141,6 +145,14 @@ export default function Login({ initialMode = 'login' }) {
         setStatusMessage('Por favor selecciona un género');
         return false;
       }
+
+      // Se comprueba aquí además de deshabilitar el botón: el `disabled` es una
+      // ayuda visual y se puede quitar desde el inspector del navegador, así que
+      // no puede ser lo único que impida crear la cuenta.
+      if (!acceptedTerms) {
+        setStatusMessage('Para crear tu cuenta debes aceptar los Términos y Condiciones');
+        return false;
+      }
     }
 
     return true;
@@ -167,6 +179,9 @@ export default function Login({ initialMode = 'login' }) {
           fechaNacimiento: formData.fechaNacimiento,
           edad: edad,
           genero: formData.genero,
+          // Queda guardado con la cuenta: qué versión del texto se aceptó. La
+          // fecha la pone el servidor, no el navegador.
+          terminosVersion: TERMS_VERSION,
         };
 
         sessionUser = await registerWithEmail(
@@ -192,11 +207,23 @@ export default function Login({ initialMode = 'login' }) {
   };
 
   const handleGoogleLogin = async () => {
+    // El mismo botón sirve para entrar y para darse de alta. En modo registro
+    // crea cuenta, así que exige la aceptación igual que el formulario; en modo
+    // acceso no la pide, porque quien ya tiene cuenta la aceptó al abrirla.
+    if (!isLogin && !acceptedTerms) {
+      setStatusMessage('Para crear tu cuenta debes aceptar los Términos y Condiciones');
+      return;
+    }
+
     setIsSubmitting(true);
     setStatusMessage('');
 
     try {
-      const sessionUser = await loginWithGoogle(rememberMe, invitation ? inviteToken : null);
+      const sessionUser = await loginWithGoogle(
+        rememberMe,
+        invitation ? inviteToken : null,
+        isLogin ? null : { terminosVersion: TERMS_VERSION }
+      );
       const currentUser = sessionUser ? applySession(sessionUser) : await refreshAuth();
 
       setStatusMessage('Google conectado correctamente.');
@@ -560,11 +587,45 @@ export default function Login({ initialMode = 'login' }) {
                 </button>
               </div>
 
+              {/* Aceptación de los términos. Solo al registrarse: a quien ya
+                  tiene cuenta se le pidió al abrirla, y volver a pedírsela en
+                  cada acceso convertiría el trámite en ruido que se marca sin
+                  leer. El enlace abre en otra pestaña para que nadie pierda el
+                  formulario a medio llenar por ir a consultarlos. */}
+              {!isLogin && (
+                <div className={`mt-5 p-3 rounded-xl border transition-colors ${
+                  isDark ? 'border-gray-800 bg-gray-800/40' : 'border-gray-200 bg-gray-50'
+                }`}>
+                  <label className="flex items-start gap-3 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={acceptedTerms}
+                      onChange={(e) => setAcceptedTerms(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 shrink-0 rounded border-gray-300 text-brand-700 focus:ring-brand-700"
+                    />
+                    <span className={`text-xs leading-relaxed ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                      He leído y acepto los{' '}
+                      <Link
+                        to="/terminos"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`font-semibold underline transition-colors ${
+                          isDark ? 'text-amber-400 hover:text-amber-300' : 'text-brand-700 hover:text-brand-800'
+                        }`}
+                      >
+                        Términos y Condiciones
+                      </Link>
+                      , y autorizo el tratamiento de mis datos personales conforme a lo que allí se explica.
+                    </span>
+                  </label>
+                </div>
+              )}
+
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={isSubmitting}
-                className="w-full text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-2 mt-6 text-sm tracking-wider uppercase bg-brand-700 hover:bg-brand-800 active:scale-[0.99] disabled:opacity-50"
+                disabled={isSubmitting || (!isLogin && !acceptedTerms)}
+                className="w-full text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-2 mt-6 text-sm tracking-wider uppercase bg-brand-700 hover:bg-brand-800 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? 'Procesando...' : isLogin ? 'Iniciar Sesión' : 'Crear mi Cuenta'}
                 <ArrowRight className="w-4 h-4" />
@@ -584,13 +645,14 @@ export default function Login({ initialMode = 'login' }) {
                 </div>
               </div>
 
-              {/* Redes Sociales */}
-              <div className="grid grid-cols-2 gap-3">
+              {/* Acceso con proveedor externo. Solo Google: es el único que
+                  está configurado como método de acceso. */}
+              <div>
                 <button
                   type="button"
                   onClick={handleGoogleLogin}
-                  disabled={isSubmitting}
-                  className={`flex items-center justify-center gap-2.5 px-4 py-2.5 border rounded-xl transition-all text-sm font-medium ${
+                  disabled={isSubmitting || (!isLogin && !acceptedTerms)}
+                  className={`w-full flex items-center justify-center gap-2.5 px-4 py-2.5 border rounded-xl transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
                     isDark
                       ? 'border-gray-800 bg-gray-800/50 hover:bg-gray-800 text-gray-200'
                       : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
@@ -603,21 +665,6 @@ export default function Login({ initialMode = 'login' }) {
                     <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
                   </svg>
                   <span>Google</span>
-                </button>
-
-                <button
-                  type="button"
-                  disabled={isSubmitting}
-                  className={`flex items-center justify-center gap-2.5 px-4 py-2.5 border rounded-xl transition-all text-sm font-medium ${
-                    isDark
-                      ? 'border-gray-800 bg-gray-800/50 hover:bg-gray-800 text-gray-200'
-                      : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
-                  }`}
-                >
-                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                    <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
-                  </svg>
-                  <span>GitHub</span>
                 </button>
               </div>
             </form>

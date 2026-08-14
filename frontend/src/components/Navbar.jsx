@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { ROLE_LABELS, homeRouteForRole, profileRouteForRole } from '../utils/roles';
 import NotificationBell from './NotificationBell';
 import GenreNavMenu, { GenreNavAccordion } from './GenreNavMenu';
+import logo from '../assets/Libera-Palabras.ico';
 
 export default function Navbar() {
   const { isDark, toggleTheme } = useContext(ThemeContext);
@@ -87,20 +88,33 @@ export default function Navbar() {
           dentro de esos 64/80px porque Tailwind usa `border-box`. */}
       <nav className={`fixed top-0 left-0 right-0 w-full h-16 sm:h-20 flex items-center px-4 sm:px-8 transition-colors z-50 ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-gray-100 border-gray-300'} border-b`}>
         <div className="max-w-7xl w-full mx-auto flex items-center justify-between">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0">
-            <div className="w-7 sm:w-8 h-7 sm:h-8 rounded flex items-center justify-center" style={{backgroundColor: 'var(--color-brand-700)'}}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M2 6C2 4.89543 2.89543 4 4 4H12V18C12 19.1046 11.1046 20 10 20H4C2.89543 20 2 19.1046 2 18V6Z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-                <path d="M22 6C22 4.89543 21.1046 4 20 4H12V18C12 19.1046 12.8954 20 14 20H20C21.1046 20 22 19.1046 22 18V6Z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-                <line x1="12" y1="4" x2="12" y2="20" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-            </div>
-            <span className={`font-semibold text-xs sm:text-sm tracking-wide transition-colors ${isDark ? 'text-gray-100' : 'text-brand-700'}`}>LiberaPalabras</span>
+          {/* Logo. Sigue siendo el enlace al inicio, igual que antes.
+
+              El logotipo ya trae el nombre dibujado dentro, así que sustituye a
+              la vez al recuadro azul y al texto: dejar el libro genérico al lado
+              de un logo que ya lleva su propio libro abierto se veía repetido. */}
+          <Link
+            to="/"
+            aria-label="LiberaPalabras, ir al inicio"
+            className="flex items-center cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0"
+          >
+            {/* La placa clara del modo oscuro no es un adorno: el color dominante
+                del logo es un verde casi negro (#013015) sobre fondo
+                transparente, y contra el gris de la barra (#2e3945) se queda en
+                1,2:1 de contraste, o sea invisible. */}
+            <img
+              src={logo}
+              alt="LiberaPalabras"
+              className={`h-10 sm:h-12 w-auto ${isDark ? 'bg-gray-50 rounded-lg px-2 py-1' : ''}`}
+            />
           </Link>
 
-          {/* Navigation Links - Hidden on mobile */}
-          <div className="hidden md:flex items-center gap-6 lg:gap-8">
+          {/* Navigation Links - Hidden on mobile.
+              `relative` para que los paneles de GenreNavMenu se anclen a esta
+              fila y no al enlace que los abre: así se despliegan a todo el
+              ancho, de "Inicio" a "Grupo Focal", en vez de como un cuadro
+              colgando del botón. */}
+          <div className="hidden md:flex items-center gap-6 lg:gap-8 relative">
             <Link to="/" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700'}`}>
               Inicio
             </Link>

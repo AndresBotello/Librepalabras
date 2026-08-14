@@ -34,6 +34,7 @@ import CollaboratorProfile from '../Pages/Collaborator/profile.jsx';
 import CollaboratorCreatePost from '../Pages/Collaborator/createpost.jsx';
 import CollaboratorConcurso from '../Pages/Collaborator/concurso.jsx';
 import UsuarioDashboard from '../Pages/Usuario/dashboard.jsx';
+import Terminos from '../Pages/Legal/terminos.jsx';
 import ProtectedRoute from './ProtectedRoute.jsx';
 
 function AdminRoute({ children }) {
@@ -67,6 +68,9 @@ export default function AppRoutes() {
       <Route path="/home" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      {/* Pública y sin sesión: hay que poder leerla antes de tener cuenta,
+          porque aceptarla es requisito para crearla. */}
+      <Route path="/terminos" element={<Terminos />} />
       <Route path="/authors" element={<Authors />} />
       <Route path="/stories" element={<Stories />} />
       <Route path="/literature" element={<Literature />} />

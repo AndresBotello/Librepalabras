@@ -399,29 +399,64 @@ export async function getMyWorks(req, res) {
   }
 }
 
+const REVIEW_STATUSES = ['pending_review', 'approved', 'rejected'];
+
+/**
+ * Bandeja de moderación.
+ *
+ * Nació sirviendo solo lo pendiente —de ahí el nombre— pero el panel necesita
+ * repasar también lo ya resuelto: sin eso, una obra aprobada o rechazada por
+ * error desaparecía de la vista del administrador y no había manera de volver
+ * sobre ella. Sin `status` sigue devolviendo lo pendiente, que es lo que espera
+ * el contador del dashboard.
+ *
+ * El orden se calcula en memoria, como en `getApprovedWorks`, y no con un
+ * `orderBy` en la consulta: combinar `where` y `orderBy` sobre campos distintos
+ * obliga a crear un índice compuesto en Firestore, y sin él la consulta revienta
+ * en producción.
+ */
 export async function getPendingWorks(req, res) {
   try {
+    const { status = 'pending_review', limit = 50, offset = 0 } = req.query;
+
+    if (!REVIEW_STATUSES.includes(status)) {
+      return res.status(400).json({
+        ok: false,
+        message: `Estado inválido. Válidos: ${REVIEW_STATUSES.join(', ')}`,
+      });
+    }
+
+    const limitNum = Math.min(parseInt(limit) || 50, 100);
+    const offsetNum = parseInt(offset) || 0;
+
     const snapshot = await adminDb
       .collection('literature')
-      .where('status', '==', 'pending_review')
+      .where('status', '==', status)
       .get();
 
-    let works = snapshot.docs.map(doc => ({
+    const works = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
     }));
 
-    works.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    // Lo pendiente interesa por fecha de envío; lo ya resuelto, por fecha de
+    // revisión, que es la que pone `reviewWork` en `updatedAt`. Ordenar las
+    // resueltas por `createdAt` dejaba lo que se acaba de moderar enterrado
+    // entre obras viejas.
+    const sortField = status === 'pending_review' ? 'createdAt' : 'updatedAt';
+    works.sort((a, b) => (
+      new Date(b[sortField] || b.createdAt) - new Date(a[sortField] || a.createdAt)
+    ));
 
     return res.json({
       ok: true,
-      works,
+      works: works.slice(offsetNum, offsetNum + limitNum),
       total: works.length,
     });
   } catch (error) {
     return res.status(500).json({
       ok: false,
-      message: 'Error al obtener obras pendientes',
+      message: 'Error al obtener las obras',
       error: error.message,
     });
   }

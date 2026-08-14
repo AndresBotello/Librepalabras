@@ -101,11 +101,17 @@ export async function registerWithEmail(email, password, profileData = {}, remem
   });
 }
 
-export async function loginWithGoogle(rememberMe = false, inviteToken = null) {
+/**
+ * `profileData` va aquí por los registros con Google: el mismo botón sirve para
+ * entrar y para darse de alta, y cuando se usa desde el formulario de registro
+ * hay que hacer llegar la aceptación de los términos igual que en el alta por
+ * correo. Al iniciar sesión se manda `null` y el perfil no se toca.
+ */
+export async function loginWithGoogle(rememberMe = false, inviteToken = null, profileData = null) {
   return withFriendlyErrors(async () => {
     await setAuthPersistence(rememberMe);
     const credentials = await signInWithPopup(auth, googleProvider);
-    return syncSession(credentials.user, null, inviteToken);
+    return syncSession(credentials.user, profileData, inviteToken);
   });
 }
 

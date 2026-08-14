@@ -280,8 +280,12 @@ export default function Stories() {
               </div>
             )}
 
-            {/* Grid de Libros / Portadas */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 sm:gap-8">
+            {/* Grid de Libros / Portadas.
+                Las columnas suben con el ancho para que la portada se quede
+                siempre en torno a 170px: a tres columnas fijas, en escritorio
+                cada una crecía por encima de los 280px y la tapa dejaba de
+                leerse como la de un libro para parecer una foto de portada. */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-x-5 gap-y-8">
               {paginatedWorks.map((work) => {
                 const genre = getGenreInfo(work.genre);
                 return (
@@ -293,13 +297,20 @@ export default function Stories() {
                     }}
                     className="group cursor-pointer flex flex-col transition-transform duration-300 hover:-translate-y-1.5"
                   >
-                    {/* Estructura de Portada estilo Libro Impreso */}
-                    <div className={`relative rounded-md overflow-hidden shadow-md group-hover:shadow-2xl transition-all duration-300 border ${
+                    {/* Estructura de Portada estilo Libro Impreso: 2:3, la
+                        proporción de un libro de bolsillo. El lomo queda a la
+                        izquierda, con la esquina casi recta, y el canto de las
+                        hojas a la derecha, más redondeado: así es como se ve un
+                        libro cerrado de frente. */}
+                    <div className={`relative aspect-[2/3] rounded-l-xs rounded-r-lg overflow-hidden shadow-md group-hover:shadow-2xl transition-all duration-300 border ${
                       isDark ? 'border-slate-800 bg-slate-900' : 'border-stone-200 bg-stone-100'
-                    }`} style={{ aspectRatio: '2/3' }}>
+                    }`}>
 
-                      {/* Simulación del lomo de un libro (Sombra lateral izquierda) */}
-                      <div className="absolute inset-y-0 left-0 w-3 bg-gradient-to-r from-black/30 to-transparent z-10 pointer-events-none" />
+                      {/* Lomo: la sombra pegada al canto izquierdo y, justo al
+                          lado, una línea clara. Es esa línea la que da la
+                          sensación de pliegue de la tapa. */}
+                      <div className="absolute inset-y-0 left-0 w-2.5 bg-gradient-to-r from-black/35 to-transparent z-10 pointer-events-none" />
+                      <div className="absolute inset-y-0 left-2.5 w-px bg-white/15 z-10 pointer-events-none" />
 
                       {work.cover ? (
                         <img
@@ -308,21 +319,24 @@ export default function Stories() {
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                         />
                       ) : (
-                        <div className={`w-full h-full p-6 flex flex-col justify-between ${
+                        /* Portada tipográfica para las obras sin imagen. El
+                           texto va más contenido que antes porque la tapa ahora
+                           mide bastante menos. */
+                        <div className={`w-full h-full p-4 pl-5 flex flex-col justify-between ${
                           isDark ? 'bg-gradient-to-br from-slate-900 to-slate-800' : 'bg-gradient-to-br from-amber-100/50 to-stone-200'
                         }`}>
-                          <BookOpen className={`w-8 h-8 ${isDark ? 'text-amber-400/60' : 'text-stone-700/60'}`} />
-                          <h3 className={`font-serif text-base font-bold line-clamp-3 leading-snug ${isDark ? 'text-slate-200' : 'text-stone-800'}`}>
+                          <BookOpen className={`w-6 h-6 ${isDark ? 'text-amber-400/60' : 'text-stone-700/60'}`} />
+                          <h3 className={`font-serif text-sm font-bold line-clamp-4 leading-snug ${isDark ? 'text-slate-200' : 'text-stone-800'}`}>
                             {work.title}
                           </h3>
                         </div>
                       )}
 
                       {/* Info emergente suave al pasar el mouse */}
-                      <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-4 flex flex-col justify-end text-white z-20">
-                        <span className="text-xs uppercase tracking-wider text-amber-300 font-sans mb-1">{genre?.label}</span>
-                        <h4 className="font-serif font-bold text-sm line-clamp-2">{work.title}</h4>
-                        <p className="text-xs text-slate-300 mt-1">{work.author || 'Anónimo'}</p>
+                      <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-3 pl-4 flex flex-col justify-end text-white z-20">
+                        <span className="text-[10px] uppercase tracking-wider text-amber-300 font-sans mb-1">{genre?.label}</span>
+                        <h4 className="font-serif font-bold text-xs line-clamp-3">{work.title}</h4>
+                        <p className="text-[11px] text-slate-300 mt-1">{work.author || 'Anónimo'}</p>
                       </div>
                     </div>
 
@@ -337,10 +351,12 @@ export default function Stories() {
                         {work.author || 'Anónimo'}
                       </p>
 
-                      <div className={`flex items-center gap-3 text-xs mt-1 ${isDark ? 'text-slate-500' : 'text-stone-400'}`}>
-                        <span className="flex items-center gap-1"><Eye className="w-3.5 h-3.5" />{work.views || 0}</span>
-                        <span className="flex items-center gap-1"><Heart className="w-3.5 h-3.5" />{work.totalRatings || 0}</span>
-                        <span className="flex items-center gap-1"><MessageCircle className="w-3.5 h-3.5" />{work.totalComments || 0}</span>
+                      {/* Contadores en una sola línea: con la tapa más estrecha,
+                          a tamaño `xs` los tres se partían en dos renglones. */}
+                      <div className={`flex items-center gap-2.5 text-[11px] tabular-nums mt-1 ${isDark ? 'text-slate-500' : 'text-stone-400'}`}>
+                        <span className="flex items-center gap-1"><Eye className="w-3 h-3" />{work.views || 0}</span>
+                        <span className="flex items-center gap-1"><Heart className="w-3 h-3" />{work.totalRatings || 0}</span>
+                        <span className="flex items-center gap-1"><MessageCircle className="w-3 h-3" />{work.totalComments || 0}</span>
                       </div>
                     </div>
                   </div>
@@ -458,8 +474,15 @@ export default function Stories() {
 
               {/* Portada Decorativa (opcional dentro de la lectura) */}
               {story?.cover && (
-                <div className="px-6 sm:px-16 pt-8">
-                  <div className="max-w-md mx-auto rounded-lg overflow-hidden shadow-lg border border-stone-200/30 dark:border-slate-800 max-h-[400px]">
+                <div className="px-6 sm:px-16 pt-8 flex justify-center">
+                  {/* La misma tapa del listado, al ancho de un libro en la
+                      mano. Antes era un `max-w-md` con `max-h-[400px]` y sin
+                      proporción fija: la imagen entraba a su tamaño natural y
+                      el contenedor le cortaba lo que sobrara por abajo, así que
+                      cada portada se recortaba por un sitio distinto. */}
+                  <div className="relative aspect-[2/3] w-40 sm:w-48 rounded-l-xs rounded-r-lg overflow-hidden shadow-lg border border-stone-200/30 dark:border-slate-800">
+                    <div className="absolute inset-y-0 left-0 w-2.5 bg-gradient-to-r from-black/35 to-transparent z-10 pointer-events-none" />
+                    <div className="absolute inset-y-0 left-2.5 w-px bg-white/15 z-10 pointer-events-none" />
                     <img
                       src={story.cover}
                       alt={story.title}
