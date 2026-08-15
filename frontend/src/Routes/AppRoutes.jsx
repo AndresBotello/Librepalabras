@@ -85,7 +85,7 @@ export default function AppRoutes() {
       <Route path="/concursos" element={<Concursos />} />
       <Route path="/concursos/ganadores" element={<ContestWinners />} />
       <Route path="/columnas" element={<PublicOpinionColumnsPage />} />
-      <Route path="/columnas/:id" element={<OpinionColumnDetailPage />} />
+      <Route path="/columnas/:slug" element={<OpinionColumnDetailPage />} />
 
       {/* Panel de calificación: compartido por administradores y jueces. */}
       <Route

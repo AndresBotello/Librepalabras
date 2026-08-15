@@ -70,6 +70,33 @@ function stripHtml(value = '') {
     .trim();
 }
 
+function buildSlug(value = '') {
+  return String(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 80) || 'columna';
+}
+
+async function ensureUniqueSlug(title, currentId = null) {
+  const base = buildSlug(title);
+  let slug = base;
+  let counter = 2;
+
+  while (true) {
+    const snapshot = await adminDb.collection('opinionColumns').where('slug', '==', slug).get();
+    const exists = snapshot.docs.some((doc) => doc.id !== currentId);
+    if (!exists) return slug;
+    slug = `${base}-${counter}`;
+    counter += 1;
+  }
+}
+
 function buildAuditEntry(action, user, note = '') {
   return {
     action,
@@ -108,6 +135,7 @@ function baseColumnPayload(user, raw, createdAt) {
     author,
     content,
     coverUrl: sanitizeCoverUrl(raw.coverUrl),
+    slug: raw.slug || buildSlug(title),
     status,
     createdBy: user?.uid || null,
     updatedBy: user?.uid || null,
@@ -149,7 +177,10 @@ export async function getOpinionColumns(req, res) {
 
     const snapshot = await query.get();
     const columns = snapshot.docs
-      .map((doc) => ({ id: doc.id, ...doc.data() }))
+      .map((doc) => {
+        const data = doc.data();
+        return { id: doc.id, ...data, slug: data.slug || buildSlug(data.title || '') };
+      })
       .sort((a, b) => new Date(b.publishedAt || b.updatedAt || b.createdAt || 0) - new Date(a.publishedAt || a.updatedAt || a.createdAt || 0));
 
     return res.json({ ok: true, columns, total: columns.length });
@@ -183,13 +214,28 @@ export async function getMyOpinionColumns(req, res) {
 export async function getOpinionColumnById(req, res) {
   try {
     const { id } = req.params;
-    const doc = await adminDb.collection('opinionColumns').doc(id).get();
+    let doc = await adminDb.collection('opinionColumns').doc(id).get();
 
     if (!doc.exists) {
-      return res.status(404).json({ ok: false, message: 'Columna no encontrada' });
+      const directMatch = await adminDb.collection('opinionColumns').where('slug', '==', id).limit(1).get();
+      if (!directMatch.empty) {
+        doc = directMatch.docs[0];
+      } else {
+        const fallbackSnapshot = await adminDb.collection('opinionColumns').get();
+        const fallbackDoc = fallbackSnapshot.docs.find((item) => {
+          const data = item.data();
+          return item.id === id || buildSlug(data.title || '') === id;
+        });
+
+        if (!fallbackDoc) {
+          return res.status(404).json({ ok: false, message: 'Columna no encontrada' });
+        }
+
+        doc = fallbackDoc;
+      }
     }
 
-    const column = { id: doc.id, ...doc.data() };
+    const column = { id: doc.id, ...doc.data(), slug: doc.data().slug || buildSlug(doc.data().title || '') };
     const isOwner = column.createdBy === req.auth?.uid;
     const isAdmin = req.user?.role === 'admin';
 
@@ -236,6 +282,7 @@ export async function createOpinionColumn(req, res) {
     };
 
     const payload = baseColumnPayload(req.user, input, new Date().toISOString());
+    payload.slug = await ensureUniqueSlug(payload.title, null);
     payload.status = normalizedStatus(status, req.user?.role === 'admin');
 
     if (req.user?.role !== 'admin' && ['published', 'rejected', 'changes_requested'].includes(payload.status)) {
@@ -307,6 +354,10 @@ export async function updateOpinionColumn(req, res) {
     if (coverUrl !== undefined) {
       const sanitizedCover = sanitizeCoverUrl(coverUrl);
       updates.coverUrl = sanitizedCover;
+    }
+
+    if (title !== undefined) {
+      updates.slug = await ensureUniqueSlug(cleanTitle, id);
     }
 
     if (status !== undefined) {

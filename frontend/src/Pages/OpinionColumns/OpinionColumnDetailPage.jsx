@@ -13,7 +13,7 @@ function formatDate(value) {
 }
 
 export default function OpinionColumnDetailPage() {
-  const { id } = useParams();
+  const { slug } = useParams();
   const { isDark } = useContext(ThemeContext);
   const [column, setColumn] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -21,7 +21,7 @@ export default function OpinionColumnDetailPage() {
   useEffect(() => {
     async function loadColumn() {
       try {
-        const response = await getOpinionColumnById(id);
+        const response = await getOpinionColumnById(slug);
         setColumn(response.column || null);
       } catch (error) {
         console.error('Error cargando la columna:', error);
@@ -30,8 +30,8 @@ export default function OpinionColumnDetailPage() {
       }
     }
 
-    if (id) loadColumn();
-  }, [id]);
+    if (slug) loadColumn();
+  }, [slug]);
 
   if (loading) {
     return (
@@ -50,12 +50,26 @@ export default function OpinionColumnDetailPage() {
       <>
         <Navbar />
         <main className={`min-h-screen px-4 py-10 ${isDark ? 'bg-slate-950' : 'bg-[#f3efe7]'}`}>
-          <div className={`mx-auto max-w-3xl rounded-[30px] border p-8 text-center shadow-[0_10px_30px_rgba(15,23,42,0.04)] ${isDark ? 'border-slate-700 bg-slate-900' : 'border-[#d9cbb1] bg-white'}`}>
-            <p className={`text-[10px] font-bold uppercase tracking-[0.34em] ${isDark ? 'text-amber-300' : 'text-[#7a3c1d]'}`}>Editorial</p>
-            <h1 className={`mt-4 text-3xl font-black uppercase tracking-[-0.04em] ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>Columna no encontrada</h1>
-            <Link to="/columnas" className="mt-6 inline-flex rounded-full bg-[#1f2937] px-5 py-2.5 text-sm font-semibold uppercase tracking-[0.12em] text-white hover:bg-[#111827]">
-              Volver a columnas
-            </Link>
+          <div className={`mx-auto max-w-3xl overflow-hidden rounded-[32px] border shadow-sm ${isDark ? 'border-slate-700 bg-slate-900' : 'border-[#d9cbb1] bg-white'}`}>
+            <div className={`border-b px-6 py-5 text-center sm:px-10 ${isDark ? 'border-slate-700' : 'border-[#e8dcc7]'}`}>
+              <p className={`text-[10px] font-bold uppercase tracking-[0.38em] ${isDark ? 'text-amber-300' : 'text-brand-700'}`}>Editorial</p>
+            </div>
+
+            <div className="px-6 py-10 text-center sm:px-10">
+              <h1 className={`text-3xl font-black uppercase leading-tight tracking-[-0.05em] sm:text-5xl ${isDark ? 'text-slate-50' : 'text-slate-900'}`} style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>
+                Columna no encontrada
+              </h1>
+              <p className={`mx-auto mt-4 max-w-xl text-sm leading-7 sm:text-base ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                La columna que buscas no está disponible o ya no está publicada.
+              </p>
+
+              <Link
+                to="/columnas"
+                className="mt-8 inline-flex items-center rounded-full bg-brand-700 px-6 py-3 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-white transition hover:bg-brand-800"
+              >
+                Volver a columnas
+              </Link>
+            </div>
           </div>
         </main>
         <Footer />
