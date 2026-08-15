@@ -33,6 +33,9 @@ import CollaboratorAnalytics from '../Pages/Collaborator/analytics.jsx';
 import CollaboratorProfile from '../Pages/Collaborator/profile.jsx';
 import CollaboratorCreatePost from '../Pages/Collaborator/createpost.jsx';
 import CollaboratorConcurso from '../Pages/Collaborator/concurso.jsx';
+import OpinionColumnsPage from '../Pages/Collaborator/columnas.jsx';
+import PublicOpinionColumnsPage from '../Pages/OpinionColumns/PublicOpinionColumnsPage.jsx';
+import OpinionColumnDetailPage from '../Pages/OpinionColumns/OpinionColumnDetailPage.jsx';
 import UsuarioDashboard from '../Pages/Usuario/dashboard.jsx';
 import Terminos from '../Pages/Legal/terminos.jsx';
 import ProtectedRoute from './ProtectedRoute.jsx';
@@ -81,6 +84,8 @@ export default function AppRoutes() {
       <Route path="/grupo-focal/:id" element={<GrupoFocalEncuentro />} />
       <Route path="/concursos" element={<Concursos />} />
       <Route path="/concursos/ganadores" element={<ContestWinners />} />
+      <Route path="/columnas" element={<PublicOpinionColumnsPage />} />
+      <Route path="/columnas/:id" element={<OpinionColumnDetailPage />} />
 
       {/* Panel de calificación: compartido por administradores y jueces. */}
       <Route
@@ -111,6 +116,7 @@ export default function AppRoutes() {
       <Route path="/admin/invitaciones" element={<AdminRoute><AdminInvitaciones /></AdminRoute>} />
       <Route path="/admin/salud" element={<AdminRoute><AdminSalud /></AdminRoute>} />
       <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
+      <Route path="/admin/columnas" element={<AdminRoute><OpinionColumnsPage /></AdminRoute>} />
 
       {/* Autoría: abierta también al juez. */}
       <Route path="/collaborator/dashboard" element={<AuthorRoute><CollaboratorDashboard /></AuthorRoute>} />
@@ -118,6 +124,7 @@ export default function AppRoutes() {
       <Route path="/collaborator/analytics" element={<AuthorRoute><CollaboratorAnalytics /></AuthorRoute>} />
       <Route path="/collaborator/profile" element={<AuthorRoute><CollaboratorProfile /></AuthorRoute>} />
       <Route path="/collaborator/create" element={<AuthorRoute><CollaboratorCreatePost /></AuthorRoute>} />
+      <Route path="/collaborator/columnas" element={<AuthorRoute><OpinionColumnsPage /></AuthorRoute>} />
 
       {/* Inscripción al concurso: sin jueces. */}
       <Route path="/collaborator/concurso" element={<ContestantRoute><CollaboratorConcurso /></ContestantRoute>} />

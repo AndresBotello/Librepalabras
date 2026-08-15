@@ -109,7 +109,7 @@ export async function uploadCover(file) {
       throw new Error(data?.message || `Error HTTP ${response.status}`);
     }
 
-    return data.url;
+    return data || {};
   } catch (error) {
     throw new Error(`Error al subir portada: ${error.message}`);
   }
@@ -224,6 +224,53 @@ export function getWorkById(id) {
 
 export function getMyWorks() {
   return request('/literature/user/my-works');
+}
+
+export function getPublishedOpinionColumns() {
+  return request('/opinion-columns?view=public');
+}
+
+export function getOpinionColumns(status = '') {
+  const resolvedStatus = typeof status === 'object' && status ? status.status : status;
+  const query = resolvedStatus && resolvedStatus !== 'all' ? `?status=${encodeURIComponent(resolvedStatus)}` : '';
+  return request(`/opinion-columns${query}`);
+}
+
+export function getMyOpinionColumns(status = '') {
+  const resolvedStatus = typeof status === 'object' && status ? status.status : status;
+  const query = resolvedStatus && resolvedStatus !== 'all' ? `?status=${encodeURIComponent(resolvedStatus)}` : '';
+  return request(`/opinion-columns/mine${query}`);
+}
+
+export function getOpinionColumnById(id) {
+  return request(`/opinion-columns/${id}`);
+}
+
+export function createOpinionColumn(payload) {
+  return request('/opinion-columns', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateOpinionColumn(id, payload) {
+  return request(`/opinion-columns/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function reviewOpinionColumn(id, status, notes = '') {
+  return request(`/opinion-columns/${id}/review`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status, notes }),
+  });
+}
+
+export function deleteOpinionColumn(id) {
+  return request(`/opinion-columns/${id}`, {
+    method: 'DELETE',
+  });
 }
 
 /**

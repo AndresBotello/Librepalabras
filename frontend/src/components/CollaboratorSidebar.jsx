@@ -84,6 +84,7 @@ export default function CollaboratorSidebar() {
       ? [
         { icon: IconPublish, label: 'Nueva Publicación', path: '/collaborator/create' },
         { icon: IconPublish, label: 'Mis Publicaciones', path: '/collaborator/publications' },
+        { icon: IconPublish, label: 'Columnas de Opinión', path: '/collaborator/columnas' },
       ]
       : []),
     isJudge

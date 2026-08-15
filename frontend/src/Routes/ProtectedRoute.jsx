@@ -5,7 +5,9 @@ import { homeRouteForRole } from '../utils/roles';
 
 export default function ProtectedRoute({ children, allowedRoles = [] }) {
   const location = useLocation();
-  const { user, loading } = useAuth();
+  const auth = useAuth();
+  const user = auth?.user ?? null;
+  const loading = auth?.loading ?? false;
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center text-sm text-gray-500">Cargando...</div>;

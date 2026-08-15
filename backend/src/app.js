@@ -16,6 +16,7 @@ import contestRoutes from './routes/contest.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
 import siteRoutes from './routes/site.routes.js';
 import invitationRoutes from './routes/invitation.routes.js';
+import opinionColumnRoutes from './routes/opinionColumn.routes.js';
 import { maintenanceGuard } from './middlewares/maintenance.middleware.js';
 import { logError } from './services/errorLog.service.js';
 
@@ -114,6 +115,7 @@ app.use('/api/contest', contestRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/site', siteRoutes);
 app.use('/api/invitations', invitationRoutes);
+app.use('/api/opinion-columns', opinionColumnRoutes);
 
 // Una ruta /api inexistente devolvía el HTML de error de Express, que el
 // frontend intenta parsear como JSON y acaba en "Unexpected token <".

@@ -3,7 +3,7 @@ import { signOut } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import { getCurrentSession, logoutSession } from '../services/api';
 
-export const AuthContext = createContext();
+export const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -51,5 +51,18 @@ export function AuthProvider({ children }) {
 }
 
 export function useAuth() {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+
+  if (!context) {
+    return {
+      user: null,
+      loading: false,
+      refreshAuth: async () => null,
+      applySession: (sessionUser) => sessionUser || null,
+      logout: async () => undefined,
+      isAuthenticated: false,
+    };
+  }
+
+  return context;
 }

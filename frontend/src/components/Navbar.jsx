@@ -126,6 +126,9 @@ export default function Navbar() {
             <Link to="/concursos" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700'}`}>
               Concursos
             </Link>
+            <Link to="/columnas" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700'}`}>
+              Columnas
+            </Link>
             <Link to="/poleversia" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700'}`}>
               Revista Poleversia
             </Link>
@@ -285,6 +288,9 @@ export default function Navbar() {
             </Link>
             <Link to="/concursos" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700 hover:text-gray-900'}`}>
               Concursos
+            </Link>
+            <Link to="/columnas" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700 hover:text-gray-900'}`}>
+              Columnas
             </Link>
             <Link to="/poleversia" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700 hover:text-gray-900'}`}>
               Revista Poleversia
