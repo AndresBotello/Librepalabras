@@ -264,7 +264,7 @@ function ReportCard({ report, isDark, cardClass, busy, onResolve }) {
             Descartar reporte
           </button>
           <a
-            href={`/literature?work=${report.workId}`}
+            href={`/stories?obra=${report.workId}`}
             target="_blank"
             rel="noreferrer"
             className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${

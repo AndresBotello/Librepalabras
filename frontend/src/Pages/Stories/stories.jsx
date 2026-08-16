@@ -23,7 +23,7 @@ const WORKS_PER_PAGE = 12;
 export default function Stories() {
   const { isDark } = useContext(ThemeContext);
   const [works, setWorks] = useState([]);
-  const [selectedWork, setSelectedWork] = useState(null);
+  const [loadedWork, setLoadedWork] = useState(null);
   const [currentPdfPage, setCurrentPdfPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -46,6 +46,57 @@ export default function Stories() {
     setSearchParams(value && value !== 'all' ? { genero: value } : {}, { replace: true });
   }, [setSearchParams]);
 
+  /**
+   * La obra abierta también vive en la URL (?obra=id), por las mismas razones
+   * que la categoría y por una más: así el buscador de la portada puede llevar
+   * directamente a una obra, y no solo al listado.
+   */
+  const workParam = searchParams.get('obra');
+
+  const openWork = useCallback((id) => {
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous);
+      next.set('obra', id);
+      return next;
+    });
+  }, [setSearchParams]);
+
+  const closeWork = useCallback(() => {
+    setCurrentPdfPage(1);
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous);
+      next.delete('obra');
+      return next;
+    });
+  }, [setSearchParams]);
+
+  /**
+   * La obra que se está leyendo es siempre la del parámetro, y solo cuando ya
+   * se ha descargado. Derivarla en lugar de guardarla evita el estado que
+   * contradice a la URL: al cerrar, o al usar el botón "atrás", no hay nada que
+   * limpiar porque el parámetro ya no está.
+   */
+  const selectedWork = loadedWork?.id === workParam ? loadedWork : null;
+
+  useEffect(() => {
+    if (!workParam) return undefined;
+
+    let cancelled = false;
+
+    getWorkById(workParam)
+      .then((response) => {
+        // Si al volver ya no estamos mirando esa obra, la respuesta no sirve.
+        if (!cancelled && response.ok) {
+          setLoadedWork(response.work);
+        }
+      })
+      .catch((err) => console.error('Error cargando obra:', err));
+
+    return () => {
+      cancelled = true;
+    };
+  }, [workParam]);
+
   useEffect(() => {
     loadWorks();
   }, []);
@@ -59,8 +110,9 @@ export default function Stories() {
       setError('');
       const response = await getApprovedWorks();
       if (response.ok && response.works && response.works.length > 0) {
+        // Ojo: aquí NO se cierra la obra abierta. Cargar el listado y abrir una
+        // obra por su enlace ocurren a la vez, y ganaba el que terminara último.
         setWorks(response.works);
-        setSelectedWork(null);
       } else {
         setError('No hay obras publicadas aún');
       }
@@ -95,7 +147,7 @@ export default function Stories() {
     try {
       const response = await toggleWorkLike(selectedWork.id);
       if (response.ok) {
-        setSelectedWork(prev => ({
+        setLoadedWork(prev => ({
           ...prev,
           likesCount: response.likesCount || 0,
         }));
@@ -109,18 +161,18 @@ export default function Stories() {
 
   const handleCommentAdded = (comment, action, commentId) => {
     if (action === 'delete') {
-      setSelectedWork(prev => ({
+      setLoadedWork(prev => ({
         ...prev,
         comments: (prev.comments || []).filter(c => c.id !== commentId),
         totalComments: (prev.totalComments || 0) - 1,
       }));
     } else if (action === 'like' && comment) {
-      setSelectedWork(prev => ({
+      setLoadedWork(prev => ({
         ...prev,
         comments: (prev.comments || []).map(c => c.id === commentId ? comment : c),
       }));
     } else {
-      setSelectedWork(prev => ({
+      setLoadedWork(prev => ({
         ...prev,
         comments: [...(prev.comments || []), comment],
         totalComments: (prev.totalComments || 0) + 1,
@@ -129,22 +181,10 @@ export default function Stories() {
   };
 
   const handleRatingAdded = (newAverage) => {
-    setSelectedWork(prev => ({
+    setLoadedWork(prev => ({
       ...prev,
       averageRating: newAverage,
     }));
-  };
-
-  const handleSelectWork = async (work) => {
-    try {
-      const response = await getWorkById(work.id);
-      if (response.ok) {
-        setSelectedWork(response.work);
-      }
-    } catch (err) {
-      console.error('Error cargando obra:', err);
-      setSelectedWork(work);
-    }
   };
 
   const handleDownload = () => {
@@ -292,7 +332,7 @@ export default function Stories() {
                   <div
                     key={work.id}
                     onClick={() => {
-                      handleSelectWork(work);
+                      openWork(work.id);
                       setCurrentPdfPage(1);
                     }}
                     className="group cursor-pointer flex flex-col transition-transform duration-300 hover:-translate-y-1.5"
@@ -414,10 +454,7 @@ export default function Stories() {
             {/* Barra de navegación superior */}
             <div className="mb-6 flex items-center justify-between">
               <button
-                onClick={() => {
-                  setSelectedWork(null);
-                  setCurrentPdfPage(1);
-                }}
+                onClick={closeWork}
                 className={`inline-flex items-center gap-2 text-sm font-serif transition-colors px-3 py-1.5 rounded-md ${
                   isDark
                     ? 'text-slate-400 hover:text-amber-300 hover:bg-slate-900'

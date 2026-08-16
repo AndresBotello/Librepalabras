@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   Search,
   ChevronRight,
@@ -34,8 +34,32 @@ export default function Authors() {
   const [loading, setLoading] = useState(true);
   const itemsPerPage = 8;
 
-  // Autor con modal abierto (null = cerrado)
-  const [selectedAuthor, setSelectedAuthor] = useState(null);
+  /**
+   * El autor con la ficha abierta vive en la URL (?autor=id), no en el estado:
+   * así el buscador de la portada puede enlazar a una ficha concreta, el enlace
+   * se puede compartir y el botón "atrás" cierra la ficha en vez de sacarte de
+   * la página. La lista ya viene entera, así que abrirla no pide nada al
+   * servidor: basta con encontrar al autor.
+   */
+  const [searchParams, setSearchParams] = useSearchParams();
+  const authorParam = searchParams.get('autor');
+  const selectedAuthor = authors.find((author) => author.id === authorParam) || null;
+
+  const openAuthor = (id) => {
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous);
+      next.set('autor', id);
+      return next;
+    });
+  };
+
+  const closeAuthor = () => {
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous);
+      next.delete('autor');
+      return next;
+    });
+  };
 
   useEffect(() => {
     loadAuthors();
@@ -286,7 +310,7 @@ export default function Authors() {
 
                         <button
                           type="button"
-                          onClick={() => setSelectedAuthor(author)}
+                          onClick={() => openAuthor(author.id)}
                           aria-label={`Ver la ficha completa de ${author.name}`}
                           className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-semibold text-white bg-brand-700 hover:bg-brand-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
                         >
@@ -405,7 +429,7 @@ export default function Authors() {
       {selectedAuthor && (
         <AuthorDetailModal
           author={selectedAuthor}
-          onClose={() => setSelectedAuthor(null)}
+          onClose={closeAuthor}
         />
       )}
     </div>

@@ -15,9 +15,14 @@ async function request(path, options = {}) {
       cache: 'no-store',
       ...options,
     });
-  } catch {
+  } catch (error) {
+    // Cancelar una petición no es un fallo: quien la canceló (el buscador, al
+    // escribir la siguiente letra) necesita distinguirlo para no pintar un
+    // error que no ha ocurrido.
+    if (error?.name === 'AbortError') throw error;
+
     // fetch solo lanza por fallos de red, no por códigos de error HTTP.
-    throw new Error('No se pudo conectar con el servidor. Revisa tu conexión a internet.');
+    throw new Error('No se pudo conectar con el servidor. Revisa tu conexión a internet.', { cause: error });
   }
 
   const data = await response.json().catch(() => null);
@@ -423,6 +428,15 @@ export function toggleBookFavorite(bookId) {
   return request(`/promotional-books/${bookId}/favorite`, {
     method: 'POST',
   });
+}
+
+/**
+ * Buscador del sitio. La `signal` permite cancelar la petición anterior cuando
+ * el visitante sigue escribiendo: sin ella, respuestas lentas podrían llegar
+ * desordenadas y pintar resultados de una búsqueda ya abandonada.
+ */
+export function searchContent(query, { signal } = {}) {
+  return request(`/search?q=${encodeURIComponent(query)}`, { signal });
 }
 
 // Revista Poliversia

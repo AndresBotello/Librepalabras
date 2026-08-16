@@ -19,6 +19,7 @@ import {
   listPublishedStories,
   listRatingsForStory,
   listStoriesByAuthor,
+  pickPodium,
   readContestStates,
   updateStory,
   upsertRating,
@@ -37,9 +38,6 @@ const MAX_TITLE_LENGTH = 140;
 const MIN_CONTENT_LENGTH = 200;
 const MAX_CONTENT_LENGTH = 25000;
 const MAX_COMMENT_LENGTH = 2000;
-
-/** Cuántos puestos tiene el podio de cada edición cerrada. */
-const PODIUM_SIZE = 3;
 
 function isOwnCloudinaryUrl(url) {
   if (typeof url !== 'string') return false;
@@ -179,11 +177,7 @@ export async function getWinners(_req, res) {
         contestId: contest.id,
         name: contest.name,
         edition: contest.edition || '',
-        winners: stories
-          .filter((story) => normalizeContestId(story.contestId) === contest.id)
-          .filter((story) => (story.totalRatings || 0) > 0)
-          .sort((a, b) => (b.averageScore || 0) - (a.averageScore || 0))
-          .slice(0, PODIUM_SIZE)
+        winners: pickPodium(stories.filter((story) => normalizeContestId(story.contestId) === contest.id))
           .map((story, index) => ({ position: index + 1, ...toPublicStory(story) })),
       }))
       .filter((edition) => edition.winners.length > 0);

@@ -43,6 +43,19 @@ export const reportRateLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Buscar no escribe nada y se responde desde memoria, así que el límite no
+// existe para proteger la base de datos sino para que nadie use el buscador
+// como forma de descargar el catálogo entero probando letra por letra. Una
+// persona escribiendo (con el rebote de 350 ms del buscador) manda tres o
+// cuatro peticiones por búsqueda: 60 por minuto no se le acercan.
+export const searchRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  message: 'Demasiadas búsquedas seguidas. Espera un momento e intenta de nuevo.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 export const likeRateLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minuto
   max: 30, // máximo 30 likes por IP en 1 minuto

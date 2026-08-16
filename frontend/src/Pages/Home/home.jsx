@@ -4,6 +4,7 @@ import { ThemeContext } from '../../context/ThemeContext';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import EventAgenda from '../../components/EventAgenda';
+import SiteSearch from '../../components/SiteSearch';
 import { FOCUS_GROUP_TYPES, getAllAuthors, getFocusGroupSessions, getHomeContent } from '../../services/api';
 import { FOCUS_GROUP_NAME, meetingState } from '../../config/focusGroup';
 import focusGroupLogo from '../../assets/grupo-focal-alfredo-correa.jpeg';
@@ -241,6 +242,8 @@ export default function Home() {
                 || 'Un portal para explorar la memoria, el ensayo y la narrativa viva de Valledupar y el Caribe colombiano.'}
             </p>
 
+            <SiteSearch />
+
             {home?.heroCtaLabel?.trim() && (
               <Link
                 to={home.heroCtaLink || '/stories'}
@@ -296,7 +299,7 @@ export default function Home() {
                 {featuredWorks.map((work) => (
                   <Link
                     key={work.id}
-                    to={`/literature?work=${work.id}`}
+                    to={`/stories?obra=${work.id}`}
                     className={`group rounded-2xl border overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-amber-900/10 ${
                       isDark
                         ? 'bg-stone-900/40 border-stone-800 hover:border-amber-500/40'

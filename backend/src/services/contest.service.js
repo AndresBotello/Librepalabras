@@ -130,6 +130,27 @@ export async function listPublishedStories() {
     .sort((a, b) => new Date(b.publishedAt || b.createdAt || 0) - new Date(a.publishedAt || a.createdAt || 0));
 }
 
+/** Cuántos puestos tiene el podio de cada edición cerrada. */
+export const PODIUM_SIZE = 3;
+
+/**
+ * El podio de un concurso: entre sus cuentos publicados, los de mejor promedio
+ * del jurado, de mayor a menor.
+ *
+ * La regla vive aquí, y no en el controlador, porque hay dos sitios que
+ * preguntan quién ganó —la página de Ganadores y el buscador del sitio— y no
+ * pueden contestar cosas distintas según quién pregunte.
+ *
+ * Un cuento sin ninguna nota queda fuera: publicar y calificar son decisiones
+ * independientes, y sin nota no hay con qué compararlo.
+ */
+export function pickPodium(stories = []) {
+  return stories
+    .filter((story) => (story.totalRatings || 0) > 0)
+    .sort((a, b) => (b.averageScore || 0) - (a.averageScore || 0))
+    .slice(0, PODIUM_SIZE);
+}
+
 export async function listAllStories() {
   const snapshot = await storiesCollection().get();
 

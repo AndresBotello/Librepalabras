@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, BookOpen, Calendar, Clock, Loader2, PenLine, Users } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
@@ -55,9 +55,34 @@ function Concurso({ slug }) {
   const canEnter = canEnterContests(user?.role);
 
   const [stories, setStories] = useState([]);
-  const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(Boolean(contestId));
   const [error, setError] = useState('');
+
+  /**
+   * El cuento abierto vive en la URL (?cuento=id): así el buscador del sitio
+   * puede llevar a un cuento concreto, el enlace se puede compartir y el botón
+   * "atrás" devuelve a la lista del certamen. Los cuentos ya vienen todos, así
+   * que abrir uno no pide nada al servidor.
+   */
+  const [searchParams, setSearchParams] = useSearchParams();
+  const storyParam = searchParams.get('cuento');
+  const selected = stories.find((story) => story.id === storyParam) || null;
+
+  const openStory = (id) => {
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous);
+      next.set('cuento', id);
+      return next;
+    });
+  };
+
+  const closeStory = () => {
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous);
+      next.delete('cuento');
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!contestId) return undefined;
@@ -123,7 +148,7 @@ function Concurso({ slug }) {
           <article className="max-w-3xl mx-auto">
             <button
               type="button"
-              onClick={() => setSelected(null)}
+              onClick={closeStory}
               className={`inline-flex items-center gap-2 text-sm font-semibold mb-8 transition-colors ${
                 isDark ? 'text-amber-400 hover:text-amber-300' : 'text-brand-700 hover:underline'
               }`}
@@ -258,7 +283,7 @@ function Concurso({ slug }) {
                   <button
                     key={story.id}
                     type="button"
-                    onClick={() => setSelected(story)}
+                    onClick={() => openStory(story.id)}
                     className={`group text-left rounded-2xl overflow-hidden border transition-all duration-300 hover:shadow-2xl hover:shadow-amber-900/10 ${
                       isDark
                         ? 'bg-stone-900 border-stone-800 hover:border-amber-500/40'

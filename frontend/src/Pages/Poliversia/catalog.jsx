@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { ArrowLeft, BookOpen, Calendar, Loader2 } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
@@ -18,7 +19,6 @@ function formatDate(value) {
 export default function PoliversiaCatalog() {
   const { isDark } = useContext(ThemeContext);
   const [editions, setEditions] = useState([]);
-  const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -41,6 +41,32 @@ export default function PoliversiaCatalog() {
     };
   }, []);
 
+  /**
+   * La edición abierta vive en la URL (?edicion=id): así el buscador de la
+   * portada puede enlazar a un número concreto de la revista, el enlace se
+   * puede compartir y el botón "atrás" devuelve al catálogo. El catálogo ya
+   * viene entero, así que abrir una edición no pide nada al servidor.
+   */
+  const [searchParams, setSearchParams] = useSearchParams();
+  const editionParam = searchParams.get('edicion');
+  const selected = editions.find((edition) => edition.id === editionParam) || null;
+
+  const openEdition = (edition) => {
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous);
+      next.set('edicion', edition.id);
+      return next;
+    });
+  };
+
+  const closeEdition = () => {
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous);
+      next.delete('edicion');
+      return next;
+    });
+  };
+
   useEffect(() => {
     if (selected) window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [selected]);
@@ -50,10 +76,11 @@ export default function PoliversiaCatalog() {
    * responder este GET. El registro va por detrás porque es estadística, no
    * contenido: si la petición falla, el lector igual ve la revista.
    */
-  const openEdition = (edition) => {
-    setSelected(edition);
-    getPoliversiaEdition(edition.id).catch(() => {});
-  };
+  useEffect(() => {
+    if (editionParam) {
+      getPoliversiaEdition(editionParam).catch(() => {});
+    }
+  }, [editionParam]);
 
   return (
     <div className={`min-h-screen flex flex-col ${isDark ? 'bg-stone-950' : 'bg-stone-50'}`}>
@@ -64,7 +91,7 @@ export default function PoliversiaCatalog() {
           <>
             <button
               type="button"
-              onClick={() => setSelected(null)}
+              onClick={closeEdition}
               className={`inline-flex items-center gap-2 text-sm font-semibold mb-6 transition-colors ${
                 isDark ? 'text-amber-400 hover:text-amber-300' : 'text-brand-700 hover:underline'
               }`}
