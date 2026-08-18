@@ -10,9 +10,11 @@ import { searchSite } from '../services/search.service.js';
  */
 export async function searchContent(req, res) {
   try {
-    const results = await searchSite(req.query.q);
+    const { results, counts, total, approximate } = await searchSite(req.query.q);
 
-    return res.json({ ok: true, results, total: results.length });
+    // `total` y `counts` cuentan todas las coincidencias, no solo las que caben
+    // en `results`: son lo que el desplegable enseña junto a cada grupo.
+    return res.json({ ok: true, results, counts, total, approximate });
   } catch (error) {
     // El detalle se queda en los logs. Un mensaje de error de Firestore en la
     // respuesta describiría la estructura interna a quien esté probando cosas.

@@ -2,9 +2,11 @@ import { default as xss } from 'xss';
 import {
   CONTEST_STATUSES,
   DEFAULT_CONTEST_ID,
+  editionLabel,
   getContest,
   mergeContestStates,
   normalizeContestId,
+  storyEdition,
 } from '../config/contests.js';
 import {
   MAX_SCORE,
@@ -55,6 +57,7 @@ function toPublicStory(story) {
   return {
     id: story.id,
     contestId: normalizeContestId(story.contestId),
+    edition: storyEdition(story),
     title: story.title,
     content: story.content,
     imageUrl: story.imageUrl || null,
@@ -161,6 +164,30 @@ export async function getCatalog(_req, res) {
  * jurado. La nota no sale en la respuesta —sirve para ordenar, pero sigue
  * siendo información interna—; hacia afuera solo va el puesto.
  */
+/** Ediciones de la más reciente a la más antigua; la vacía siempre al final. */
+function compareEditions(a, b) {
+  if (!a && !b) return 0;
+  if (!a) return 1;
+  if (!b) return -1;
+
+  return String(b).localeCompare(String(a), 'es', { numeric: true });
+}
+
+/** Agrupa cuentos por la edición sellada en cada uno. */
+function groupByEdition(stories) {
+  const groups = new Map();
+
+  stories.forEach((story) => {
+    const edition = storyEdition(story);
+    if (!groups.has(edition)) groups.set(edition, []);
+    groups.get(edition).push(story);
+  });
+
+  return [...groups.entries()]
+    .sort(([a], [b]) => compareEditions(a, b))
+    .map(([edition, items]) => ({ edition, stories: items }));
+}
+
 export async function getWinners(_req, res) {
   try {
     const catalog = await loadCatalog();
@@ -172,14 +199,21 @@ export async function getWinners(_req, res) {
 
     const stories = await listPublishedStories();
 
+    // Un podio por edición, no por concurso: al cerrar 2026 el palmarés de 2025
+    // sigue siendo el de 2025, con sus propios cuentos y sus propias notas.
     const editions = closed
-      .map((contest) => ({
-        contestId: contest.id,
-        name: contest.name,
-        edition: contest.edition || '',
-        winners: pickPodium(stories.filter((story) => normalizeContestId(story.contestId) === contest.id))
-          .map((story, index) => ({ position: index + 1, ...toPublicStory(story) })),
-      }))
+      .flatMap((contest) => {
+        const own = stories.filter((story) => normalizeContestId(story.contestId) === contest.id);
+
+        return groupByEdition(own).map((group) => ({
+          id: `${contest.id}__${group.edition}`,
+          contestId: contest.id,
+          name: contest.name,
+          edition: group.edition,
+          winners: pickPodium(group.stories)
+            .map((story, index) => ({ position: index + 1, ...toPublicStory(story) })),
+        }));
+      })
       .filter((edition) => edition.winners.length > 0);
 
     return res.json({ ok: true, editions, total: editions.length });
@@ -240,11 +274,15 @@ export async function submitStory(req, res) {
       return res.status(400).json({ ok: false, message: validationError });
     }
 
-    const existing = await findStoryByAuthor(req.auth.uid, contestId);
+    // La edición vigente en el momento de inscribir: se copia al documento y
+    // ya no cambia aunque el administrador abra la siguiente.
+    const edition = contest.edition || '';
+
+    const existing = await findStoryByAuthor(req.auth.uid, contestId, edition);
     if (existing) {
       return res.status(409).json({
         ok: false,
-        message: `Ya tienes un cuento inscrito en "${contest.name}". Puedes editarlo mientras no esté calificado.`,
+        message: `Ya tienes un cuento inscrito en "${contest.name}" ${editionLabel(edition)}. Puedes editarlo mientras no esté calificado.`,
       });
     }
 
@@ -253,6 +291,7 @@ export async function submitStory(req, res) {
 
     const story = await createStory({
       contestId,
+      edition,
       title: title.trim(),
       // El cuento se muestra como texto plano en el front, pero se sanea igual
       // por si algún día se renderiza como HTML.
@@ -374,6 +413,7 @@ export async function getEvaluationPanel(req, res) {
         return {
           ...story,
           contestId: normalizeContestId(story.contestId),
+          edition: storyEdition(story),
           ratings: storyRatings,
           myRating: storyRatings.find((rating) => rating.judgeId === judgeId) || null,
         };
@@ -547,6 +587,39 @@ export async function setStoryEvaluation(req, res) {
  * Solo admin: abre, anuncia o cierra un concurso, y fija su edición. Cerrar es
  * lo que hace aparecer el podio en la página de ganadores.
  */
+/**
+ * Cuántos cuentos lleva cada convocatoria, desglosado por edición.
+ *
+ * Solo admin porque cuenta también lo que no está publicado: saber cuántos
+ * inscritos hay en una convocatoria abierta es información de gestión, no de
+ * la página pública.
+ */
+export async function getContestStats(_req, res) {
+  try {
+    const [catalog, stories] = await Promise.all([loadCatalog(), listAllStories()]);
+
+    const stats = catalog.map((contest) => {
+      const own = stories.filter((story) => normalizeContestId(story.contestId) === contest.id);
+
+      return {
+        contestId: contest.id,
+        total: own.length,
+        editions: groupByEdition(own).map((group) => ({
+          edition: group.edition,
+          total: group.stories.length,
+          published: group.stories.filter((story) => story.isPublished).length,
+          rated: group.stories.filter((story) => (story.totalRatings || 0) > 0).length,
+        })),
+      };
+    });
+
+    return res.json({ ok: true, stats });
+  } catch (error) {
+    console.error('Error al obtener las inscripciones por convocatoria:', error);
+    return res.status(500).json({ ok: false, message: 'Error al obtener las inscripciones' });
+  }
+}
+
 export async function setContestState(req, res) {
   try {
     const { id } = req.params;

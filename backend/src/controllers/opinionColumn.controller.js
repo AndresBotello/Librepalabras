@@ -339,6 +339,11 @@ export async function updateOpinionColumn(req, res) {
         return res.status(400).json({ ok: false, message: 'El título no puede quedar vacío' });
       }
       updates.title = cleanTitle;
+
+      // El slug se recalcula aquí dentro, donde `cleanTitle` existe: estaba en
+      // un segundo bloque con la misma condición, y al ser `const` de bloque
+      // lanzaba un ReferenceError que salía como error 500 en cada guardado.
+      updates.slug = await ensureUniqueSlug(cleanTitle, id);
     }
 
     if (subtitle !== undefined) updates.subtitle = sanitizeText(subtitle, MAX_SUBTITLE_LENGTH);
@@ -354,10 +359,6 @@ export async function updateOpinionColumn(req, res) {
     if (coverUrl !== undefined) {
       const sanitizedCover = sanitizeCoverUrl(coverUrl);
       updates.coverUrl = sanitizedCover;
-    }
-
-    if (title !== undefined) {
-      updates.slug = await ensureUniqueSlug(cleanTitle, id);
     }
 
     if (status !== undefined) {
@@ -381,7 +382,11 @@ export async function updateOpinionColumn(req, res) {
       updates.reviewNotes = sanitizeText(reviewNotes, 700);
     }
 
-    if (publishedAt !== undefined && (status === 'published' || existing.status === 'published')) {
+    // Se comprueba que tenga valor, no solo que venga: el formulario manda
+    // cadena vacía cuando no se eligió fecha, y `new Date('')` es inválida. Sin
+    // esto, publicar un borrador sin tocar la fecha respondía "La fecha de
+    // publicación no es válida" en vez de poner la de hoy.
+    if (publishedAt && (status === 'published' || existing.status === 'published')) {
       const parsedPublishedAt = new Date(publishedAt);
       if (Number.isNaN(parsedPublishedAt.getTime())) {
         return res.status(400).json({ ok: false, message: 'La fecha de publicación no es válida' });

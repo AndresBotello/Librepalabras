@@ -43,26 +43,15 @@ const IconSettings = ({ active, isDark }) => (
   </svg>
 );
 
-const IconMessages = ({ active, isDark }) => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-  </svg>
-);
-
-const IconDownload = ({ active, isDark }) => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-    <polyline points="7 10 12 15 17 10" />
-    <line x1="12" y1="15" x2="12" y2="3" />
-  </svg>
-);
-
 export default function CollaboratorSidebar() {
   const { isDark } = useContext(ThemeContext);
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [isOpen, setIsOpen] = useState(true);
+  // Arranca cerrado: en escritorio da igual (el panel es `md:static
+  // md:translate-x-0`, siempre visible), pero en móvil este estado es el cajón
+  // superpuesto, y abrirlo de entrada tapaba el dashboard nada más entrar.
+  const [isOpen, setIsOpen] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -94,11 +83,6 @@ export default function CollaboratorSidebar() {
       ? [{ icon: IconAnalytics, label: 'Estadísticas', path: '/collaborator/analytics' }]
       : []),
     { icon: IconProfile, label: 'Perfil', path: profileRouteForRole(user?.role) },
-  ];
-
-  const additionalItems = [
-    { icon: IconMessages, label: 'Mensajes', path: '#' },
-    { icon: IconDownload, label: 'Descargas', path: '#' },
   ];
 
   const isActive = (path) => location.pathname === path;
@@ -188,35 +172,6 @@ export default function CollaboratorSidebar() {
               );
             })}
           </nav>
-
-          {/* Divider */}
-          <div className={isDark ? 'border-t border-gray-800' : 'border-t border-gray-200'}></div>
-
-          {/* Additional Options */}
-          <div className="mt-8">
-            <p className={`text-xs font-semibold tracking-widest uppercase mb-4 transition-colors ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-              Más
-            </p>
-            <div className="space-y-1">
-              {additionalItems.map((item, index) => {
-                const Icon = item.icon;
-                return (
-                  <a
-                    key={index}
-                    href={item.path}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
-                      isDark
-                        ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                    }`}
-                  >
-                    <Icon isDark={isDark} />
-                    <span className="font-medium text-sm">{item.label}</span>
-                  </a>
-                );
-              })}
-            </div>
-          </div>
         </div>
 
         {/* User Info Section */}

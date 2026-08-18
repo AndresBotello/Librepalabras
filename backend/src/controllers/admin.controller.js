@@ -56,7 +56,10 @@ export async function getAllUsers(_req, res) {
         fechaNacimiento: user.fechaNacimiento || '',
         edad: user.edad || null,
         photoURL: user.photoURL || null,
-        createdAt: user.createdAt || new Date().toISOString(),
+        // Sin fecha real se devuelve `null`, no la de hoy: fingir que la
+        // cuenta se creó ahora la colaba como "recién llegada" en cualquier
+        // listado por fecha.
+        createdAt: user.createdAt || null,
         lastLoginAt: user.lastLoginAt || null,
         disabled: Boolean(user.disabled),
         disabledAt: user.disabledAt || null,

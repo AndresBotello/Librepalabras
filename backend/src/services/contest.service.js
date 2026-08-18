@@ -1,5 +1,5 @@
 import { adminDb } from '../config/firebaseAdmin.js';
-import { normalizeContestId } from '../config/contests.js';
+import { normalizeContestId, storyEdition } from '../config/contests.js';
 
 const STORIES = 'contestStories';
 const RATINGS = 'contestRatings';
@@ -104,10 +104,18 @@ export async function listStoriesByAuthor(authorId) {
     .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 }
 
-/** Un colaborador solo puede concursar con un cuento en cada concurso. */
-export async function findStoryByAuthor(authorId, contestId) {
+/**
+ * Un colaborador solo puede concursar con un cuento en cada edición.
+ *
+ * El límite es por edición y no por concurso: quien participó en 2025 vuelve a
+ * presentarse en 2026, que es justo lo que hace que un certamen sea anual.
+ */
+export async function findStoryByAuthor(authorId, contestId, edition) {
   const stories = await listStoriesByAuthor(authorId);
-  return stories.find((story) => normalizeContestId(story.contestId) === contestId) || null;
+
+  return stories.find((story) => (
+    normalizeContestId(story.contestId) === contestId && storyEdition(story) === edition
+  )) || null;
 }
 
 export async function updateStory(id, updates) {

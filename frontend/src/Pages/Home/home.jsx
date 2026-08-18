@@ -188,25 +188,31 @@ export default function Home() {
         <Navbar />
 
         {/* ================= HERO SECTION ================= */}
-        <section className="relative w-full min-h-[90vh] flex items-center justify-center overflow-hidden py-16 px-4 sm:px-8">
-          {/* Imagen de fondo. Es decorativa (el texto va encima), así que el alt
-              va vacío para que un lector de pantalla no la anuncie. */}
-          <img
-            src={heroImage}
-            alt=""
-            fetchPriority="high"
-            className="absolute inset-0 w-full h-full object-cover z-0 scale-105 pointer-events-none"
-          />
+        {/* El recorte NO va en la sección: el panel de resultados del buscador
+            cuelga por debajo del hero y `overflow-hidden` aquí lo cortaba por la
+            mitad. Se recortan solo las decoraciones, que es lo que de verdad se
+            sale (la imagen va a escala 1.05 y los desenfoques miden 500px). */}
+        <section className="relative w-full min-h-[90vh] flex items-center justify-center py-16 px-4 sm:px-8">
+          <div className="absolute inset-0 z-0 overflow-hidden">
+            {/* Imagen de fondo. Es decorativa (el texto va encima), así que el alt
+                va vacío para que un lector de pantalla no la anuncie. */}
+            <img
+              src={heroImage}
+              alt=""
+              fetchPriority="high"
+              className="absolute inset-0 w-full h-full object-cover z-0 scale-105 pointer-events-none"
+            />
 
-          {/* Oscurecimiento de contraste sobre el video */}
-          <div className="absolute inset-0 z-0 bg-gradient-to-b from-stone-950/75 via-stone-950/80 to-stone-950/95 pointer-events-none" />
+            {/* Oscurecimiento de contraste sobre el video */}
+            <div className="absolute inset-0 z-0 bg-gradient-to-b from-stone-950/75 via-stone-950/80 to-stone-950/95 pointer-events-none" />
 
-          {/* Elementos de fondo con blur y animación de flotación */}
-          <div className="absolute top-1/4 left-10 w-96 h-96 bg-amber-600/10 rounded-full blur-[100px] pointer-events-none animate-float" />
-          <div className="absolute bottom-10 right-10 w-[500px] h-[500px] bg-yellow-700/10 rounded-full blur-[120px] pointer-events-none animate-float" style={{ animationDelay: '2s' }} />
+            {/* Elementos de fondo con blur y animación de flotación */}
+            <div className="absolute top-1/4 left-10 w-96 h-96 bg-amber-600/10 rounded-full blur-[100px] pointer-events-none animate-float" />
+            <div className="absolute bottom-10 right-10 w-[500px] h-[500px] bg-yellow-700/10 rounded-full blur-[120px] pointer-events-none animate-float" style={{ animationDelay: '2s' }} />
 
-          {/* Capa de textura de ruido para sensación táctil */}
-          <div className="absolute inset-0 bg-noise pointer-events-none opacity-40 z-10" />
+            {/* Capa de textura de ruido para sensación táctil */}
+            <div className="absolute inset-0 bg-noise pointer-events-none opacity-40 z-10" />
+          </div>
 
           {/* Contenido del Hero */}
           <div className="relative z-20 max-w-5xl mx-auto text-center px-4">

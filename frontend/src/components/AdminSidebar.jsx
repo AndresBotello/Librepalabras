@@ -117,7 +117,10 @@ export default function AdminSidebar() {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [isOpen, setIsOpen] = useState(true);
+  // Arranca cerrado: en escritorio da igual (el panel es `md:static
+  // md:translate-x-0`, siempre visible), pero en móvil este estado es el cajón
+  // superpuesto, y abrirlo de entrada tapaba el dashboard nada más entrar.
+  const [isOpen, setIsOpen] = useState(false);
   const [pendingReports, setPendingReports] = useState(0);
 
   const handleLogout = async () => {

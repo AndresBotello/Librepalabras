@@ -4,6 +4,7 @@ import { authorizeRoles, CONTESTANT_ROLES, JURY_ROLES } from '../middlewares/rol
 import { contestSubmissionRateLimiter } from '../middlewares/rateLimiter.middleware.js';
 import {
   getCatalog,
+  getContestStats,
   getPublishedStories,
   getPublishedStory,
   getWinners,
@@ -26,6 +27,10 @@ router.get('/catalog', getCatalog);
 router.get('/published', getPublishedStories);
 router.get('/winners', getWinners);
 router.get('/published/:id', getPublishedStory);
+
+// Cuántos inscritos lleva cada convocatoria: cuenta borradores sin publicar,
+// así que no sale del panel de administración.
+router.get('/stats', authenticateRequest, authorizeRoles(['admin']), getContestStats);
 
 // Abrir, anunciar o cerrar una convocatoria es decisión del administrador.
 router.patch('/catalog/:id', authenticateRequest, authorizeRoles(['admin']), setContestState);

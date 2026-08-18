@@ -182,7 +182,7 @@ export default function Ganadores() {
         {!loading && !error && editions.length > 0 && (
           <div className="space-y-14">
             {editions.map((edition) => (
-              <section key={edition.contestId}>
+              <section key={edition.id || `${edition.contestId}__${edition.edition}`}>
                 <header className={`flex flex-wrap items-baseline gap-3 mb-6 pb-3 border-b ${
                   isDark ? 'border-stone-800' : 'border-stone-200'
                 }`}>

@@ -29,6 +29,41 @@ const emptyForm = {
   publishedAt: '',
 };
 
+/**
+ * Del instante guardado al "yyyy-MM-dd" que es lo ÚNICO que acepta
+ * `<input type="date">`. Pasarle el ISO completo hace que el navegador lo
+ * rechace y deje el campo en blanco, así que al editar una columna publicada no
+ * se veía su fecha.
+ *
+ * Se parte en trozos de hora local, no UTC, para que coincida con la fecha que
+ * el resto de la pantalla muestra con `toLocaleDateString`.
+ */
+function toDateInputValue(value) {
+  if (!value) return '';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const pad = (number) => String(number).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+/**
+ * El camino de vuelta. `new Date('2026-08-15')` se interpreta como medianoche
+ * UTC, que en Colombia es el día 14 por la tarde: guardar sin tocar nada movería
+ * la fecha un día hacia atrás en cada edición. Con la hora pegada al texto se
+ * interpreta como medianoche local y el viaje de ida y vuelta es estable.
+ */
+function fromDateInputValue(value) {
+  if (!value) return '';
+
+  // Si no tiene la forma del campo, ya es un instante completo: se deja pasar.
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? '' : date.toISOString();
+}
+
 function getStatusClasses(status) {
   switch (status) {
     case 'draft':
@@ -180,6 +215,7 @@ export default function OpinionColumnsManager() {
         author: form.author || user?.name || user?.email || 'Anónimo',
         status: isAdmin ? form.status : form.status === 'published' ? 'draft' : form.status,
         coverUrl: form.coverUrl || '',
+        publishedAt: fromDateInputValue(form.publishedAt),
       };
 
       if (editingId) {
@@ -210,7 +246,7 @@ export default function OpinionColumnsManager() {
       coverUrl: column.coverUrl || '',
       content: column.content || '',
       status: column.status || 'draft',
-      publishedAt: column.publishedAt || '',
+      publishedAt: toDateInputValue(column.publishedAt),
     });
     setCoverPreview(column.coverUrl || '');
     window.scrollTo({ top: 0, behavior: 'smooth' });

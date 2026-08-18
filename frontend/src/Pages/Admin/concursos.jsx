@@ -1,11 +1,11 @@
-import React, { useContext, useState } from 'react';
-import { CheckCircle2, Clock, Loader2, Lock, Trophy } from 'lucide-react';
+import React, { useContext, useEffect, useState } from 'react';
+import { CheckCircle2, Clock, Loader2, Lock, Trophy, Users } from 'lucide-react';
 import AdminSidebar from '../../components/AdminSidebar';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { ThemeContext } from '../../context/ThemeContext';
 import useContestCatalog from '../../hooks/useContestCatalog';
-import { setContestState } from '../../services/api';
+import { getContestStats, setContestState } from '../../services/api';
 
 const STATES = [
   {
@@ -34,8 +34,30 @@ export default function AdminConcursos() {
   const [busyId, setBusyId] = useState(null);
   const [status, setStatus] = useState(null);
   const [editions, setEditions] = useState({});
+  const [stats, setStats] = useState({});
 
   const editionValue = (contest) => editions[contest.id] ?? contest.edition ?? '';
+
+  // Las inscripciones se cuentan aparte del catálogo: el catálogo dice qué
+  // convocatorias hay, esto dice cuánta gente se presentó a cada una.
+  useEffect(() => {
+    let active = true;
+
+    getContestStats()
+      .then((response) => {
+        if (!active) return;
+        setStats(Object.fromEntries((response.stats || []).map((item) => [item.contestId, item])));
+      })
+      .catch((error) => {
+        // Sin conteos la pantalla sigue sirviendo para abrir y cerrar: no se
+        // interrumpe por no poder contar.
+        console.error('No se pudieron cargar las inscripciones:', error);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const save = async (contest, nextStatus) => {
     setBusyId(contest.id);
@@ -100,6 +122,8 @@ export default function AdminConcursos() {
               <div className="space-y-4">
                 {contests.map((contest) => {
                   const busy = busyId === contest.id;
+                  const contestStats = stats[contest.id];
+                  const totalEntries = contestStats?.total ?? 0;
 
                   return (
                     <div
@@ -116,14 +140,23 @@ export default function AdminConcursos() {
                           </p>
                         </div>
 
-                        {contest.status === 'cerrado' && (
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                            isDark ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'
+                          }`}>
+                            <Users className="w-3 h-3" />
+                            <span>{totalEntries} {totalEntries === 1 ? 'inscrito' : 'inscritos'}</span>
+                          </span>
+
+                          {contest.status === 'cerrado' && (
                           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                             isDark ? 'bg-amber-950/50 text-amber-300' : 'bg-amber-50 text-amber-700'
                           }`}>
                             <Trophy className="w-3 h-3" />
                             <span>En ganadores</span>
                           </span>
-                        )}
+                          )}
+                        </div>
                       </div>
 
                       <div className="flex flex-wrap items-end gap-4">
@@ -182,6 +215,45 @@ export default function AdminConcursos() {
                       <p className={`mt-3 text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
                         {STATES.find((state) => state.value === contest.status)?.help}
                       </p>
+
+                      {/* Historial por edición. Cada cuento guarda la edición en
+                          la que se inscribió, así que las de años anteriores
+                          siguen contando aparte aunque la convocatoria se
+                          reabra. */}
+                      <div className={`mt-4 pt-3 border-t ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
+                        <p className={`text-[10px] font-bold uppercase tracking-wider mb-2 ${
+                          isDark ? 'text-gray-500' : 'text-gray-500'
+                        }`}>
+                          Inscripciones por edición
+                        </p>
+
+                        {!contestStats?.editions?.length ? (
+                          <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                            Todavía no hay cuentos inscritos.
+                          </p>
+                        ) : (
+                          <ul className="space-y-1.5">
+                            {contestStats.editions.map((item) => (
+                              <li
+                                key={item.edition || 'sin-edicion'}
+                                className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-xs"
+                              >
+                                <span className={`font-semibold tabular-nums ${
+                                  isDark ? 'text-gray-200' : 'text-gray-900'
+                                }`}>
+                                  {item.edition || 'Sin edición'}
+                                </span>
+                                <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+                                  {item.total} {item.total === 1 ? 'inscrito' : 'inscritos'}
+                                </span>
+                                <span className={isDark ? 'text-gray-500' : 'text-gray-500'}>
+                                  {item.rated} calificados · {item.published} publicados
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
                     </div>
                   );
                 })}

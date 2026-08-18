@@ -1,14 +1,20 @@
-import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Search, X } from 'lucide-react';
+import { Clock, Loader2, Search, X } from 'lucide-react';
 import { searchContent } from '../services/api';
-
-
 
 const DEBOUNCE_MS = 350;
 
 // El mismo mínimo que aplica el servidor. Comprobarlo aquí solo evita el viaje.
 const MIN_QUERY_LENGTH = 2;
+
+// Cuántos resultados se ven de cada grupo antes de pedir el resto. Tres dejan
+// claro qué hay en el grupo sin que un tipo con muchas coincidencias empuje a
+// los demás fuera de la pantalla.
+const PREVIEW_PER_GROUP = 3;
+
+const RECENT_KEY = 'librepalabras:busquedas-recientes';
+const MAX_RECENT = 5;
 
 const TYPE_BADGE = {
   obra: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
@@ -18,9 +24,53 @@ const TYPE_BADGE = {
   concurso: 'bg-rose-500/15 text-rose-300 border-rose-500/30',
 };
 
+/**
+ * Nombre del grupo por tipo.
+ *
+ * No se toma del `label` del resultado porque ese varía dentro de un mismo
+ * tipo: un cuento premiado se anuncia como «Ganadores» y uno normal como
+ * «Concursos», y el encabezado del grupo tiene que ser uno solo.
+ */
+const TYPE_LABEL = {
+  obra: 'Obras',
+  columna: 'Columnas de opinión',
+  autor: 'Autores',
+  poliversia: 'Poliversia',
+  concurso: 'Concursos',
+};
+
+/** Sitios a los que ir cuando no hay nada escrito o la búsqueda no encuentra nada. */
+const SHORTCUTS = [
+  { label: 'Biblioteca', url: '/stories' },
+  { label: 'Autores', url: '/authors' },
+  { label: 'Columnas', url: '/columnas' },
+  { label: 'Ganadores', url: '/concursos/ganadores' },
+  { label: 'Poliversia', url: '/poleversia' },
+];
+
+/**
+ * Copia de las palabras vacías del servidor (`search.service.js`). Solo se usa
+ * para no subrayar palabras que la búsqueda descartó: resaltar el «de» de un
+ * título cuando nadie buscó «de» es ruido que confunde.
+ */
+const STOPWORDS = new Set([
+  'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'de', 'del', 'al',
+  'y', 'o', 'en', 'con', 'por', 'para', 'que', 'se', 'su', 'sus', 'lo', 'es',
+]);
+
 // Constante y no un `[]` nuevo en cada render: así el arreglo vacío no cuenta
 // como un cambio de resultados para React.
 const NO_RESULTS = [];
+const NO_COUNTS = {};
+
+const EMPTY_OUTCOME = {
+  term: '',
+  status: 'idle',
+  results: NO_RESULTS,
+  counts: NO_COUNTS,
+  total: 0,
+  approximate: false,
+};
 
 // El destino lo arma el backend con una plantilla fija, pero se vuelve a
 // comprobar antes de navegar: una ruta interna empieza por "/" y no por "//",
@@ -28,6 +78,117 @@ const NO_RESULTS = [];
 // que un cambio futuro en el servidor convierta un resultado en un redirector.
 function isInternalPath(url) {
   return typeof url === 'string' && url.startsWith('/') && !url.startsWith('//');
+}
+
+/**
+ * Texto sin tildes ni mayúsculas **conservando la longitud**, para poder buscar
+ * posiciones aquí y recortar sobre el original.
+ *
+ * `String.normalize('NFD')` no sirve tal cual: parte «í» en dos caracteres y
+ * cualquier posición calculada sobre el resultado se desplaza respecto al texto
+ * de partida. Aquí se normaliza carácter a carácter y se descarta el cambio
+ * cuando no deja exactamente una unidad.
+ */
+function foldKeepingLength(text) {
+  let folded = '';
+
+  for (const character of text) {
+    if (character.length > 1) {
+      folded += character;
+      continue;
+    }
+
+    const base = character.normalize('NFD')[0].toLowerCase();
+    folded += base.length === 1 ? base : character;
+  }
+
+  return folded;
+}
+
+function isWordCharacter(character) {
+  return character !== undefined && /[\p{L}\p{N}]/u.test(character);
+}
+
+/**
+ * Parte el texto en trozos marcando los que coinciden con algún término.
+ *
+ * Se exige que la coincidencia empiece una palabra, la misma regla con la que
+ * el servidor puntúa: si no, buscar «nada» subrayaría el final de «dominada» y
+ * el resaltado contaría una historia distinta de la del buscador.
+ */
+function splitByTerms(text, terms) {
+  if (!text || terms.length === 0) return [{ text, match: false }];
+
+  const folded = foldKeepingLength(text);
+  const ranges = [];
+
+  for (const term of terms) {
+    let from = 0;
+
+    while (from <= folded.length - term.length) {
+      const at = folded.indexOf(term, from);
+      if (at === -1) break;
+
+      if (!isWordCharacter(folded[at - 1])) {
+        ranges.push([at, at + term.length]);
+      }
+
+      from = at + 1;
+    }
+  }
+
+  if (ranges.length === 0) return [{ text, match: false }];
+
+  ranges.sort((a, b) => a[0] - b[0]);
+
+  const pieces = [];
+  let cursor = 0;
+
+  for (const [start, end] of ranges) {
+    // Los términos pueden solaparse ("poe" y "poesia" sobre el mismo título):
+    // lo que ya quedó dentro de un trozo resaltado no se vuelve a abrir.
+    if (end <= cursor) continue;
+
+    const from = Math.max(start, cursor);
+    if (from > cursor) pieces.push({ text: text.slice(cursor, from), match: false });
+
+    pieces.push({ text: text.slice(from, end), match: true });
+    cursor = end;
+  }
+
+  if (cursor < text.length) pieces.push({ text: text.slice(cursor), match: false });
+
+  return pieces;
+}
+
+function Highlighted({ text, terms }) {
+  const pieces = useMemo(() => splitByTerms(text || '', terms), [text, terms]);
+
+  return pieces.map((piece, index) => (
+    piece.match
+      ? <mark key={index} className="bg-transparent text-amber-300 font-semibold">{piece.text}</mark>
+      : <React.Fragment key={index}>{piece.text}</React.Fragment>
+  ));
+}
+
+function readRecent() {
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(RECENT_KEY) || '[]');
+    if (!Array.isArray(stored)) return [];
+
+    return stored.filter((item) => typeof item === 'string' && item.trim()).slice(0, MAX_RECENT);
+  } catch {
+    // Modo privado o almacenamiento lleno: el buscador funciona igual sin historial.
+    return [];
+  }
+}
+
+function writeRecent(list) {
+  try {
+    window.localStorage.setItem(RECENT_KEY, JSON.stringify(list));
+  } catch {
+    // Ídem: no poder guardar el historial no debe romper la búsqueda.
+  }
 }
 
 export default function SiteSearch() {
@@ -39,6 +200,9 @@ export default function SiteSearch() {
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [highlighted, setHighlighted] = useState(-1);
+  const [typeFilter, setTypeFilter] = useState('todos');
+  const [expandedTypes, setExpandedTypes] = useState(() => new Set());
+  const [recent, setRecent] = useState(readRecent);
 
   /**
    * La respuesta se guarda junto al texto que la pidió. Ese `term` es lo que
@@ -46,7 +210,7 @@ export default function SiteSearch() {
    * escribir una letra más se vería un "nada coincide" que en realidad es la
    * respuesta de la búsqueda anterior.
    */
-  const [outcome, setOutcome] = useState({ term: '', status: 'idle', results: NO_RESULTS });
+  const [outcome, setOutcome] = useState(EMPTY_OUTCOME);
 
   const term = query.trim();
   const isTooShort = term.length < MIN_QUERY_LENGTH;
@@ -64,12 +228,15 @@ export default function SiteSearch() {
           term,
           status: 'done',
           results: Array.isArray(response.results) ? response.results : NO_RESULTS,
+          counts: response.counts && typeof response.counts === 'object' ? response.counts : NO_COUNTS,
+          total: Number.isFinite(response.total) ? response.total : 0,
+          approximate: Boolean(response.approximate),
         });
       } catch (error) {
         // Cancelar es lo normal aquí: significa que ya se escribió otra letra.
         if (error?.name === 'AbortError') return;
 
-        setOutcome({ term, status: 'error', results: NO_RESULTS });
+        setOutcome({ ...EMPTY_OUTCOME, term, status: 'error' });
       }
     }, DEBOUNCE_MS);
 
@@ -82,7 +249,87 @@ export default function SiteSearch() {
 
   // Mientras la respuesta no corresponda a lo que hay escrito, se está buscando.
   const isSearching = !isTooShort && outcome.term !== term;
-  const results = isTooShort || isSearching ? NO_RESULTS : outcome.results;
+  const settled = !isTooShort && !isSearching;
+  const results = settled ? outcome.results : NO_RESULTS;
+  const counts = settled ? outcome.counts : NO_COUNTS;
+  const total = settled ? outcome.total : 0;
+
+  /** Los términos tal como los entiende el servidor, para resaltarlos igual. */
+  const highlightTerms = useMemo(() => {
+    const tokens = foldKeepingLength(term)
+      .split(/[^\p{L}\p{N}]+/u)
+      .filter((token) => token.length >= MIN_QUERY_LENGTH);
+
+    const meaningful = tokens.filter((token) => !STOPWORDS.has(token));
+    return [...new Set(meaningful.length ? meaningful : tokens)];
+  }, [term]);
+
+  /**
+   * Los resultados repartidos en grupos, en el orden en que aparece el primero
+   * de cada tipo: así el grupo más relevante encabeza la lista en vez de un
+   * orden fijo que ignoraría la búsqueda.
+   */
+  const groups = useMemo(() => {
+    const order = [];
+    const byType = new Map();
+
+    for (const result of results) {
+      if (!byType.has(result.type)) {
+        byType.set(result.type, []);
+        order.push(result.type);
+      }
+
+      byType.get(result.type).push(result);
+    }
+
+    return order.map((type) => {
+      const items = byType.get(type);
+
+      return {
+        type,
+        label: TYPE_LABEL[type] || type,
+        items,
+        // La cuenta del servidor incluye las que no cupieron en la respuesta.
+        total: counts[type] ?? items.length,
+      };
+    });
+  }, [results, counts]);
+
+  const visibleGroups = useMemo(() => {
+    const shown = typeFilter === 'todos'
+      ? groups
+      : groups.filter((group) => group.type === typeFilter);
+
+    return shown.map((group) => {
+      // Filtrar por un tipo es pedir ese grupo entero: no tiene sentido volver
+      // a recortarlo a tres cuando el visitante acaba de decir que quiere ese.
+      const openAll = typeFilter !== 'todos' || expandedTypes.has(group.type);
+
+      return {
+        ...group,
+        visible: openAll ? group.items : group.items.slice(0, PREVIEW_PER_GROUP),
+        canExpand: !openAll && group.items.length > PREVIEW_PER_GROUP,
+        // El servidor recorta por tipo; si aún hay más, se dice en vez de
+        // dejar creer que la lista está completa.
+        truncated: openAll && group.total > group.items.length,
+      };
+    });
+  }, [groups, typeFilter, expandedTypes]);
+
+  /**
+   * La lista plana de lo que se puede recorrer con las flechas. Incluye los
+   * botones «ver más»: al llegar al final de un grupo, Enter lo despliega.
+   */
+  const navigable = useMemo(() => {
+    const items = [];
+
+    for (const group of visibleGroups) {
+      group.visible.forEach((result) => items.push({ kind: 'result', result }));
+      if (group.canExpand) items.push({ kind: 'more', type: group.type, group });
+    }
+
+    return items;
+  }, [visibleGroups]);
 
   // Cerrar al pulsar fuera. Sin esto el panel se queda abierto tapando la
   // portada mientras se navega con el ratón.
@@ -99,28 +346,60 @@ export default function SiteSearch() {
     return () => document.removeEventListener('mousedown', handlePointerDown);
   }, [isOpen]);
 
+  const rememberSearch = useCallback((value) => {
+    const clean = value.trim();
+    if (clean.length < MIN_QUERY_LENGTH) return;
+
+    setRecent((previous) => {
+      const next = [clean, ...previous.filter((item) => item.toLowerCase() !== clean.toLowerCase())]
+        .slice(0, MAX_RECENT);
+
+      writeRecent(next);
+      return next;
+    });
+  }, []);
+
   const goTo = useCallback((result) => {
     if (!isInternalPath(result?.url)) return;
 
+    rememberSearch(term);
     setIsOpen(false);
     setQuery('');
     navigate(result.url);
-  }, [navigate]);
+  }, [navigate, rememberSearch, term]);
+
+  const expandType = useCallback((type) => {
+    setExpandedTypes((previous) => new Set(previous).add(type));
+  }, []);
 
   /**
    * Escribir siempre deshace la selección: el resultado que estaba resaltado
    * pertenece a la búsqueda anterior, y dejar el índice puesto haría que Enter
-   * abriera algo distinto de lo que se está mirando.
+   * abriera algo distinto de lo que se está mirando. Por lo mismo se sueltan el
+   * filtro y los grupos abiertos, que eran de la búsqueda anterior.
    */
   const changeQuery = (value) => {
     setQuery(value);
     setHighlighted(-1);
+    setTypeFilter('todos');
+    setExpandedTypes(new Set());
     setIsOpen(true);
   };
 
   const clear = () => {
     changeQuery('');
     inputRef.current?.focus();
+  };
+
+  const activate = (item) => {
+    if (!item) return;
+
+    if (item.kind === 'more') {
+      expandType(item.type);
+      return;
+    }
+
+    goTo(item.result);
   };
 
   const handleKeyDown = (event) => {
@@ -130,13 +409,13 @@ export default function SiteSearch() {
     }
 
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-      if (results.length === 0) return;
+      if (navigable.length === 0) return;
 
       event.preventDefault();
       setIsOpen(true);
       setHighlighted((current) => {
         const step = event.key === 'ArrowDown' ? 1 : -1;
-        return (current + step + results.length) % results.length;
+        return (current + step + navigable.length) % navigable.length;
       });
       return;
     }
@@ -145,12 +424,17 @@ export default function SiteSearch() {
       event.preventDefault();
       // Sin nada resaltado se abre el primer resultado: es lo que espera quien
       // escribe y pulsa Enter sin tocar las flechas.
-      goTo(results[highlighted] ?? results[0]);
+      activate(navigable[highlighted] ?? navigable[0]);
     }
   };
 
-  const showPanel = isOpen && !isTooShort;
+  const showPanel = isOpen;
+  const showSuggestions = isTooShort;
   const activeId = highlighted >= 0 ? `${listId}-${highlighted}` : undefined;
+
+  // Índice global dentro de `navigable`, que avanza mientras se pintan los
+  // grupos: es el que enlaza el resaltado del teclado con cada fila.
+  let cursor = -1;
 
   return (
     <div ref={containerRef} className="relative max-w-xl mx-auto mb-10">
@@ -195,78 +479,263 @@ export default function SiteSearch() {
         </div>
       </div>
 
+      {/* Quien usa lector de pantalla no ve el panel: se le anuncia el recuento. */}
+      <p className="sr-only" role="status" aria-live="polite">
+        {settled
+          ? total > 0
+            ? `${total} resultados para ${term}`
+            : `Sin resultados para ${term}`
+          : ''}
+      </p>
+
       {showPanel && (
         <div className="absolute left-0 right-0 top-full mt-3 z-30 rounded-2xl border border-stone-700/70 bg-stone-950/95 backdrop-blur-xl shadow-2xl shadow-black/50 overflow-hidden text-left">
-          {!isSearching && outcome.status === 'error' && (
-            <p className="px-5 py-4 text-sm text-stone-400">
-              No se pudo buscar ahora mismo. Intenta de nuevo en un momento.
-            </p>
-          )}
+          {showSuggestions ? (
+            <div className="p-5 space-y-5">
+              {recent.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-stone-500">
+                      Búsquedas recientes
+                    </p>
+                    <button
+                      type="button"
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        setRecent([]);
+                        writeRecent([]);
+                      }}
+                      className="text-[10px] text-stone-500 hover:text-stone-300 transition-colors"
+                    >
+                      Borrar
+                    </button>
+                  </div>
 
-          {!isSearching && outcome.status === 'done' && results.length === 0 && (
-            <p className="px-5 py-4 text-sm text-stone-400">
-              Nada coincide con «{term}».
-            </p>
-          )}
+                  <div className="flex flex-wrap gap-2">
+                    {recent.map((item) => (
+                      <button
+                        key={item}
+                        type="button"
+                        onMouseDown={(event) => {
+                          event.preventDefault();
+                          changeQuery(item);
+                          inputRef.current?.focus();
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs bg-stone-900 border border-stone-700/70 text-stone-300 hover:text-stone-100 hover:border-stone-500 transition-colors"
+                      >
+                        <Clock className="w-3 h-3" aria-hidden="true" />
+                        {item}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-          {results.length > 0 && (
-            <ul id={listId} role="listbox" aria-label="Resultados" className="max-h-96 overflow-y-auto py-2">
-              {results.map((result, index) => (
-                <li
-                  key={result.id}
-                  id={`${listId}-${index}`}
-                  role="option"
-                  aria-selected={index === highlighted}
-                >
-                  <button
-                    type="button"
-                    // `onMouseDown` en lugar de `onClick`: el clic normal llega
-                    // después de que el input pierda el foco, y para entonces el
-                    // panel ya se habría cerrado.
-                    onMouseDown={(event) => {
-                      event.preventDefault();
-                      goTo(result);
-                    }}
-                    onMouseEnter={() => setHighlighted(index)}
-                    className={`w-full flex items-center gap-4 px-5 py-3 text-left transition-colors ${
-                      index === highlighted ? 'bg-stone-800/80' : 'hover:bg-stone-900'
-                    }`}
-                  >
-                    {result.image ? (
-                      <img
-                        src={result.image}
-                        alt=""
-                        loading="lazy"
-                        className="w-10 h-12 object-cover rounded-md flex-shrink-0"
-                      />
-                    ) : (
-                      <span className="w-10 h-12 rounded-md bg-stone-800 flex-shrink-0" aria-hidden="true" />
-                    )}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-stone-500 mb-2">
+                  Ir directamente a
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {SHORTCUTS.map((shortcut) => (
+                    <button
+                      key={shortcut.url}
+                      type="button"
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        setIsOpen(false);
+                        navigate(shortcut.url);
+                      }}
+                      className="px-3 py-1.5 rounded-full text-xs bg-amber-500/10 border border-amber-500/30 text-amber-200 hover:bg-amber-500/20 transition-colors"
+                    >
+                      {shortcut.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              {!isSearching && outcome.status === 'error' && (
+                <p className="px-5 py-4 text-sm text-stone-400">
+                  No se pudo buscar ahora mismo. Intenta de nuevo en un momento.
+                </p>
+              )}
 
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-center gap-2">
-                        <span className="truncate font-medium text-stone-100">{result.title}</span>
-                        <span
-                          className={`flex-shrink-0 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full border ${
-                            TYPE_BADGE[result.type] || 'bg-stone-500/15 text-stone-300 border-stone-500/30'
+              {!isSearching && outcome.status === 'done' && results.length === 0 && (
+                <div className="px-5 py-4">
+                  <p className="text-sm text-stone-400">
+                    Nada coincide con «{term}», ni siquiera de forma aproximada.
+                  </p>
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {SHORTCUTS.map((shortcut) => (
+                      <button
+                        key={shortcut.url}
+                        type="button"
+                        onMouseDown={(event) => {
+                          event.preventDefault();
+                          setIsOpen(false);
+                          navigate(shortcut.url);
+                        }}
+                        className="px-3 py-1.5 rounded-full text-xs bg-stone-900 border border-stone-700/70 text-stone-300 hover:text-stone-100 hover:border-stone-500 transition-colors"
+                      >
+                        {shortcut.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {results.length > 0 && (
+                <>
+                  {outcome.approximate && (
+                    <p className="px-5 pt-4 text-xs text-amber-200/80">
+                      {`Nada coincide exactamente con «${term}». Esto es lo más parecido:`}
+                    </p>
+                  )}
+
+                  {/* Filtro por tipo: la vía rápida a "solo autores" sin salir
+                      del panel. Solo aparece si hay más de un tipo que filtrar. */}
+                  {groups.length > 1 && (
+                    <div className="flex flex-wrap gap-2 px-5 pt-4 pb-1">
+                      {[{ type: 'todos', label: 'Todo', total }, ...groups].map((chip) => (
+                        <button
+                          key={chip.type}
+                          type="button"
+                          onMouseDown={(event) => {
+                            event.preventDefault();
+                            setTypeFilter(chip.type);
+                            setHighlighted(-1);
+                          }}
+                          className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                            typeFilter === chip.type
+                              ? 'bg-amber-500/20 border-amber-500/50 text-amber-200'
+                              : 'bg-stone-900 border-stone-700/70 text-stone-400 hover:text-stone-200'
                           }`}
                         >
-                          {result.label}
-                        </span>
-                      </span>
+                          {chip.label}
+                          <span className="ml-1.5 opacity-60 tabular-nums">{chip.total}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
 
-                      {(result.author || result.subtitle) && (
-                        <span className="block truncate text-xs text-stone-400 mt-0.5">
-                          {result.author && <span className="text-stone-300">{result.author}</span>}
-                          {result.author && result.subtitle && ' · '}
-                          {result.subtitle}
-                        </span>
-                      )}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+                  <ul id={listId} role="listbox" aria-label="Resultados" className="max-h-96 overflow-y-auto py-2">
+                    {visibleGroups.map((group) => (
+                      <li key={group.type} role="group" aria-label={group.label}>
+                        <p className="px-5 pt-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-stone-500">
+                          {group.label}
+                          <span className="ml-1.5 text-stone-600 tabular-nums">{group.total}</span>
+                        </p>
+
+                        <ul role="presentation">
+                          {group.visible.map((result) => {
+                            cursor += 1;
+                            const index = cursor;
+
+                            return (
+                              <li
+                                key={result.id}
+                                id={`${listId}-${index}`}
+                                role="option"
+                                aria-selected={index === highlighted}
+                              >
+                                <button
+                                  type="button"
+                                  // `onMouseDown` en lugar de `onClick`: el clic normal llega
+                                  // después de que el input pierda el foco, y para entonces el
+                                  // panel ya se habría cerrado.
+                                  onMouseDown={(event) => {
+                                    event.preventDefault();
+                                    goTo(result);
+                                  }}
+                                  onMouseEnter={() => setHighlighted(index)}
+                                  className={`w-full flex items-center gap-4 px-5 py-3 text-left transition-colors ${
+                                    index === highlighted ? 'bg-stone-800/80' : 'hover:bg-stone-900'
+                                  }`}
+                                >
+                                  {result.image ? (
+                                    <img
+                                      src={result.image}
+                                      alt=""
+                                      loading="lazy"
+                                      className="w-10 h-12 object-cover rounded-md flex-shrink-0"
+                                    />
+                                  ) : (
+                                    <span className="w-10 h-12 rounded-md bg-stone-800 flex-shrink-0" aria-hidden="true" />
+                                  )}
+
+                                  <span className="min-w-0 flex-1">
+                                    <span className="flex items-center gap-2">
+                                      <span className="truncate font-medium text-stone-100">
+                                        <Highlighted text={result.title} terms={highlightTerms} />
+                                      </span>
+                                      <span
+                                        className={`flex-shrink-0 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full border ${
+                                          TYPE_BADGE[result.type] || 'bg-stone-500/15 text-stone-300 border-stone-500/30'
+                                        }`}
+                                      >
+                                        {result.label}
+                                      </span>
+                                    </span>
+
+                                    {(result.author || result.subtitle) && (
+                                      <span className="block truncate text-xs text-stone-400 mt-0.5">
+                                        {result.author && (
+                                          <span className="text-stone-300">
+                                            <Highlighted text={result.author} terms={highlightTerms} />
+                                          </span>
+                                        )}
+                                        {result.author && result.subtitle && ' · '}
+                                        {result.subtitle && (
+                                          <Highlighted text={result.subtitle} terms={highlightTerms} />
+                                        )}
+                                      </span>
+                                    )}
+                                  </span>
+                                </button>
+                              </li>
+                            );
+                          })}
+
+                          {group.canExpand && (() => {
+                            cursor += 1;
+                            const index = cursor;
+
+                            return (
+                              <li
+                                id={`${listId}-${index}`}
+                                role="option"
+                                aria-selected={index === highlighted}
+                              >
+                                <button
+                                  type="button"
+                                  onMouseDown={(event) => {
+                                    event.preventDefault();
+                                    expandType(group.type);
+                                  }}
+                                  onMouseEnter={() => setHighlighted(index)}
+                                  className={`w-full px-5 py-2 text-left text-xs font-semibold text-amber-300/90 transition-colors ${
+                                    index === highlighted ? 'bg-stone-800/80' : 'hover:bg-stone-900'
+                                  }`}
+                                >
+                                  {`Ver ${group.items.length - PREVIEW_PER_GROUP} más en ${group.label}`}
+                                </button>
+                              </li>
+                            );
+                          })()}
+                        </ul>
+
+                        {group.truncated && (
+                          <p className="px-5 py-1.5 text-[11px] text-stone-500">
+                            {`Se muestran los ${group.items.length} más relevantes de ${group.total}. Afina la búsqueda para ver el resto.`}
+                          </p>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </>
           )}
         </div>
       )}

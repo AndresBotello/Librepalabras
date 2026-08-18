@@ -218,9 +218,17 @@ export function updateLiteraryWork(id, payload) {
   });
 }
 
-export function getApprovedWorks(genre = '') {
-  const url = genre ? `/literature/approved?genre=${genre}` : '/literature/approved';
-  return request(url);
+/**
+ * `limit` sube hasta 100 (tope del backend). La respuesta trae además `total`
+ * con el número real de obras, que puede ser mayor que las devueltas.
+ */
+export function getApprovedWorks(genre = '', { limit } = {}) {
+  const params = new URLSearchParams();
+  if (genre) params.set('genre', genre);
+  if (limit) params.set('limit', String(limit));
+
+  const query = params.toString();
+  return request(query ? `/literature/approved?${query}` : '/literature/approved');
 }
 
 export function getWorkById(id) {
@@ -283,8 +291,11 @@ export function deleteOpinionColumn(id) {
  * que es lo que espera el contador del dashboard; con `status` sirve también
  * las ya aprobadas o rechazadas.
  */
-export function getPendingWorks(status = 'pending_review') {
-  return request(`/literature/admin/works?status=${encodeURIComponent(status)}`);
+export function getPendingWorks(status = 'pending_review', { limit } = {}) {
+  const params = new URLSearchParams({ status });
+  if (limit) params.set('limit', String(limit));
+
+  return request(`/literature/admin/works?${params.toString()}`);
 }
 
 export function reviewWork(id, status, reason = '') {
@@ -546,6 +557,11 @@ export const CONTEST_STATUS_LABELS = {
 /** Catálogo con el estado (abierto / próximamente / cerrado) que fijó el admin. */
 export function getContestCatalog() {
   return request('/contest/catalog');
+}
+
+/** Solo admin: cuántos cuentos lleva cada convocatoria, por edición. */
+export function getContestStats() {
+  return request('/contest/stats');
 }
 
 /** Solo admin: abre, anuncia o cierra una convocatoria. */

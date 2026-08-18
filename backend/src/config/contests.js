@@ -52,3 +52,28 @@ export function normalizeContestId(id) {
   return getContest(id) ? id : DEFAULT_CONTEST_ID;
 }
 
+/**
+ * La edición a la que pertenece un cuento.
+ *
+ * La edición se sella en el documento al inscribirlo, y no se vuelve a tocar:
+ * si mañana el administrador pone la convocatoria en 2027, los cuentos de 2026
+ * siguen siendo de 2026. Por eso hay que leerla del cuento y nunca del
+ * catálogo, que solo dice cuál es la edición *vigente*.
+ *
+ * Los cuentos anteriores a este sellado no la tienen. A esos se les asigna la
+ * edición inicial del archivo, que es la que estaba corriendo cuando se
+ * enviaron: el archivo conserva el valor de partida porque los cambios del
+ * administrador viven en Firestore, no aquí.
+ */
+export function storyEdition(story) {
+  if (story?.edition) return String(story.edition);
+
+  const contest = getContest(normalizeContestId(story?.contestId));
+  return contest?.edition || '';
+}
+
+/** Etiqueta de una edición para leer: "2026", o "Sin edición" si nunca se puso. */
+export function editionLabel(edition) {
+  return edition || 'Sin edición';
+}
+

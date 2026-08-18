@@ -44,9 +44,33 @@ const RETRY_AFTER_ERROR = 30 * 1000;
 const MIN_TERM_LENGTH = 2;
 const MAX_QUERY_LENGTH = 80;
 const MAX_TERMS = 6;
-const MAX_RESULTS = 8;
 const MAX_TITLE = 140;
 const MAX_EXCERPT = 160;
+
+/**
+ * El desplegable agrupa por tipo y enseña unos pocos de cada grupo, con la
+ * cuenta real al lado. Por eso se devuelven más de los que caben a primera
+ * vista: el tope por tipo garantiza que un catálogo lleno de obras no deje sin
+ * sitio al único autor que coincide, y el tope global evita que una búsqueda
+ * muy genérica mande media base de datos por la red.
+ */
+const MAX_PER_TYPE = 12;
+const MAX_RESULTS = 40;
+
+/**
+ * Longitud a partir de la cual se admite una errata. Por debajo no compensa:
+ * entre palabras de tres letras casi todo está a un cambio de distancia, y
+ * "casa" acabaría encontrando "cosa".
+ */
+const MIN_FUZZY_LENGTH = 4;
+
+/**
+ * Por debajo de estas coincidencias exactas se lanza también la pasada
+ * tolerante. No basta con hacerlo cuando no hay ninguna: buscar "cuentos"
+ * encuentra al autor «Ana Cuentos» y con eso ya no estaría vacía, mientras las
+ * quince obras tituladas «Cuento…» seguirían escondidas por una letra.
+ */
+const ENOUGH_STRICT_MATCHES = 5;
 
 /**
  * Palabras que no distinguen nada. Se descartan de la consulta porque los
@@ -382,12 +406,94 @@ function scoreTerm(haystack, term) {
   return 0;
 }
 
-export async function searchSite(rawQuery) {
-  const terms = parseQuery(rawQuery);
+/**
+ * ¿Son la misma palabra con una errata?
+ *
+ * Admite un cambio, una letra de más, una de menos o dos letras intercambiadas
+ * —que es el dedazo más común al teclear—. Se resuelve comparando posiciones en
+ * lugar de con la matriz de Levenshtein: con un solo error de margen no hace
+ * falta programación dinámica, y esto se ejecuta contra cada palabra del índice.
+ *
+ * De aquí sale también el plural: "cuentos" y "cuento" están a una letra.
+ */
+function isNearMatch(word, term) {
+  if (word === term) return true;
 
-  if (terms.length === 0) return [];
+  const gap = word.length - term.length;
+  if (Math.abs(gap) > 1) return false;
 
-  const entries = await getIndex();
+  if (gap === 0) {
+    let first = -1;
+
+    for (let i = 0; i < word.length; i += 1) {
+      if (word[i] === term[i]) continue;
+
+      if (first === -1) {
+        first = i;
+        continue;
+      }
+
+      // Un segundo desajuste solo se perdona si es el intercambio de estas dos
+      // letras contiguas, y nada más difiere después.
+      const swapped = first === i - 1 && word[first] === term[i] && word[i] === term[first];
+      if (!swapped) return false;
+
+      return word.slice(i + 1) === term.slice(i + 1);
+    }
+
+    return true;
+  }
+
+  // Longitudes distintas: quitar la letra sobrante de la más larga tiene que
+  // dejar las dos palabras iguales.
+  const longer = gap === 1 ? word : term;
+  const shorter = gap === 1 ? term : word;
+
+  let offset = 0;
+
+  for (let i = 0; i < shorter.length; i += 1) {
+    if (longer[i + offset] === shorter[i]) continue;
+
+    if (offset === 1) return false;
+    offset = 1;
+
+    if (longer[i + offset] !== shorter[i]) return false;
+  }
+
+  return true;
+}
+
+/** ¿Alguna palabra de este campo se parece al término? */
+function fieldHasNearMatch(field, term) {
+  if (!field) return false;
+
+  const words = field.split(' ');
+
+  for (const word of words) {
+    if (word && isNearMatch(word, term)) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Puntuación de rescate, con los mismos pesos por campo divididos entre dos:
+ * una coincidencia aproximada nunca debe adelantar a una exacta si alguna vez
+ * conviven.
+ */
+function scoreTermApproximate(haystack, term) {
+  if (term.length < MIN_FUZZY_LENGTH) return 0;
+
+  if (fieldHasNearMatch(haystack.title, term)) return 40;
+  if (fieldHasNearMatch(haystack.author, term)) return 10;
+  if (fieldHasNearMatch(haystack.keywords, term)) return 6;
+  if (fieldHasNearMatch(haystack.text, term)) return 3;
+
+  return 0;
+}
+
+/** Recorre el índice exigiendo que TODOS los términos sumen con `scorer`. */
+function collectMatches(entries, terms, scorer) {
   const matches = [];
 
   for (const entry of entries) {
@@ -396,7 +502,7 @@ export async function searchSite(rawQuery) {
     // Se exigen todos los términos: "cuento breve" debe encontrar lo que es a
     // la vez cuento y breve, no todo lo que sea una cosa o la otra.
     for (const term of terms) {
-      const termScore = scoreTerm(entry.haystack, term);
+      const termScore = scorer(entry.haystack, term);
 
       if (termScore === 0) {
         score = 0;
@@ -411,8 +517,72 @@ export async function searchSite(rawQuery) {
     }
   }
 
-  return matches
-    .sort((a, b) => b.score - a.score || a.result.title.localeCompare(b.result.title, 'es'))
+  return matches;
+}
+
+/**
+ * De todas las coincidencias a las que caben en la respuesta.
+ *
+ * El recorte es por tipo antes que global para que el desplegable pueda enseñar
+ * algo de cada grupo. `counts` cuenta TODAS las coincidencias, no las
+ * devueltas: es el número que se enseña junto al nombre del grupo, y tiene que
+ * decir cuántas hay de verdad.
+ */
+function toResponse(matches, approximate) {
+  const byScore = (a, b) => (
+    b.score - a.score || a.result.title.localeCompare(b.result.title, 'es')
+  );
+
+  const counts = {};
+  const perType = new Map();
+
+  for (const match of matches.sort(byScore)) {
+    const { type } = match.result;
+
+    counts[type] = (counts[type] || 0) + 1;
+
+    const bucket = perType.get(type) || [];
+    if (bucket.length < MAX_PER_TYPE) {
+      bucket.push(match);
+      perType.set(type, bucket);
+    }
+  }
+
+  const results = [...perType.values()]
+    .flat()
+    .sort(byScore)
     .slice(0, MAX_RESULTS)
     .map((match) => match.result);
+
+  return { results, counts, total: matches.length, approximate };
+}
+
+export async function searchSite(rawQuery) {
+  const terms = parseQuery(rawQuery);
+
+  if (terms.length === 0) {
+    return { results: [], counts: {}, total: 0, approximate: false };
+  }
+
+  const entries = await getIndex();
+  const strict = collectMatches(entries, terms, scoreTerm);
+
+  // La búsqueda exacta ya trae de sobra: no se paga el recorrido tolerante.
+  if (strict.length >= ENOUGH_STRICT_MATCHES) return toResponse(strict, false);
+
+  const approximate = collectMatches(entries, terms, scoreTermApproximate);
+
+  // Una misma entrada puede salir en las dos pasadas; se queda con la mejor
+  // puntuación, que siempre es la exacta porque la aproximada vale la mitad.
+  const best = new Map();
+
+  for (const match of [...strict, ...approximate]) {
+    const previous = best.get(match.result.id);
+    if (!previous || match.score > previous.score) best.set(match.result.id, match);
+  }
+
+  // El aviso de "esto es lo más parecido" solo cuando nada coincidió de verdad:
+  // si hubo aciertos exactos, los aproximados van detrás y no hay nada que
+  // disculpar.
+  return toResponse([...best.values()], strict.length === 0 && best.size > 0);
 }

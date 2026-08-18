@@ -39,6 +39,19 @@ function formatScore(value) {
   return Number(value || 0).toFixed(1);
 }
 
+/** Ediciones de la más reciente a la más antigua; la vacía siempre al final. */
+function compareEditions(a, b) {
+  if (!a && !b) return 0;
+  if (!a) return 1;
+  if (!b) return -1;
+
+  return String(b).localeCompare(String(a), 'es', { numeric: true });
+}
+
+function editionLabel(edition) {
+  return edition ? `Edición ${edition}` : 'Sin edición';
+}
+
 export default function ContestPanel() {
   const { isDark } = useContext(ThemeContext);
   const { user } = useAuth();
@@ -47,6 +60,7 @@ export default function ContestPanel() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('todos');
   const [contestFilter, setContestFilter] = useState('todos');
+  const [editionFilter, setEditionFilter] = useState('todos');
   const [expandedId, setExpandedId] = useState(null);
   const [status, setStatus] = useState(null);
   const [busyId, setBusyId] = useState(null);
@@ -91,18 +105,55 @@ export default function ContestPanel() {
     [contests, stories]
   );
 
-  const contestLabel = (id) => {
-    const contest = contests.find((item) => item.id === id);
-    if (!contest) return 'Concurso';
+  const contestName = (id) => contests.find((item) => item.id === id)?.shortName || 'Concurso';
 
-    return contest.edition ? `${contest.shortName} ${contest.edition}` : contest.shortName;
-  };
+  /**
+   * La edición sale del cuento, no del catálogo: el catálogo dice cuál es la
+   * edición vigente, y un cuento de 2025 sigue siendo de 2025 aunque la
+   * convocatoria ya vaya por 2026.
+   */
+  const storyLabel = (story) => `${contestName(story.contestId)} · ${editionLabel(story.edition)}`;
+
+  // Ediciones presentes en lo que se está mirando: si ya se filtró por
+  // concurso, no se ofrecen los años de los otros.
+  const availableEditions = useMemo(() => {
+    const present = stories
+      .filter((story) => contestFilter === 'todos' || story.contestId === contestFilter)
+      .map((story) => story.edition || '');
+
+    return [...new Set(present)].sort(compareEditions);
+  }, [stories, contestFilter]);
 
   const visibleStories = useMemo(() => {
     return stories
       .filter((story) => filter === 'todos' || story.status === filter)
-      .filter((story) => contestFilter === 'todos' || story.contestId === contestFilter);
-  }, [stories, filter, contestFilter]);
+      .filter((story) => contestFilter === 'todos' || story.contestId === contestFilter)
+      .filter((story) => editionFilter === 'todos' || (story.edition || '') === editionFilter);
+  }, [stories, filter, contestFilter, editionFilter]);
+
+  // Se califica por convocatoria y año, así que la lista se presenta ya
+  // separada en bloques en vez de dejar todos los cuentos revueltos.
+  const groups = useMemo(() => {
+    const byKey = new Map();
+
+    visibleStories.forEach((story) => {
+      const edition = story.edition || '';
+      const key = `${story.contestId}__${edition}`;
+
+      if (!byKey.has(key)) {
+        byKey.set(key, { key, contestId: story.contestId, edition, stories: [] });
+      }
+
+      byKey.get(key).stories.push(story);
+    });
+
+    const nameOf = (id) => contests.find((item) => item.id === id)?.shortName || '';
+
+    return [...byKey.values()].sort((a, b) => (
+      compareEditions(a.edition, b.edition)
+      || nameOf(a.contestId).localeCompare(nameOf(b.contestId), 'es')
+    ));
+  }, [visibleStories, contests]);
 
   const runAction = async (storyId, action, successMessage) => {
     setBusyId(storyId);
@@ -208,7 +259,10 @@ export default function ContestPanel() {
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => setContestFilter(item.id)}
+                    onClick={() => {
+                      setContestFilter(item.id);
+                      setEditionFilter('todos');
+                    }}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors border ${
                       contestFilter === item.id
                         ? isDark
@@ -221,6 +275,29 @@ export default function ContestPanel() {
                   >
                     {item.shortName}
                     {item.edition && <span className="ml-1 opacity-70">{item.edition}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {availableEditions.length > 1 && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {['todos', ...availableEditions].map((edition) => (
+                  <button
+                    key={edition || 'sin-edicion'}
+                    type="button"
+                    onClick={() => setEditionFilter(edition)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors border ${
+                      editionFilter === edition
+                        ? isDark
+                          ? 'bg-amber-950/50 text-amber-300 border-amber-800'
+                          : 'bg-amber-50 text-amber-800 border-amber-300'
+                        : isDark
+                          ? 'bg-gray-900 text-gray-400 border-gray-800 hover:text-gray-200'
+                          : 'bg-white text-gray-600 border-gray-200 hover:text-gray-900'
+                    }`}
+                  >
+                    {edition === 'todos' ? 'Todas las ediciones' : editionLabel(edition)}
                   </button>
                 ))}
               </div>
@@ -257,23 +334,45 @@ export default function ContestPanel() {
                 No hay cuentos en esta categoría.
               </div>
             ) : (
-              <div className="space-y-4">
-                {visibleStories.map((story) => (
-                  <StoryCard
-                    key={story.id}
-                    story={story}
-                    contestName={contestLabel(story.contestId)}
-                    isDark={isDark}
-                    isAdmin={isAdmin}
-                    busy={busyId === story.id}
-                    expanded={expandedId === story.id}
-                    onToggle={() => setExpandedId(expandedId === story.id ? null : story.id)}
-                    onTogglePublication={() => togglePublication(story)}
-                    onToggleEvaluation={() => toggleEvaluation(story)}
-                    onDelete={() => requestDelete(story)}
-                    onRated={refresh}
-                    onError={(message) => setStatus({ type: 'error', message })}
-                  />
+              <div className="space-y-10">
+                {groups.map((group) => (
+                  <section key={group.key}>
+                    <header className={`flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-4 pb-2 border-b ${
+                      isDark ? 'border-gray-800' : 'border-gray-200'
+                    }`}>
+                      <h2 className={`text-sm font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                        {contestName(group.contestId)}
+                      </h2>
+                      <span className={`text-xs font-semibold tabular-nums ${
+                        isDark ? 'text-amber-400' : 'text-brand-700'
+                      }`}>
+                        {editionLabel(group.edition)}
+                      </span>
+                      <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                        {group.stories.length} {group.stories.length === 1 ? 'cuento' : 'cuentos'}
+                      </span>
+                    </header>
+
+                    <div className="space-y-4">
+                      {group.stories.map((story) => (
+                        <StoryCard
+                          key={story.id}
+                          story={story}
+                          contestName={storyLabel(story)}
+                          isDark={isDark}
+                          isAdmin={isAdmin}
+                          busy={busyId === story.id}
+                          expanded={expandedId === story.id}
+                          onToggle={() => setExpandedId(expandedId === story.id ? null : story.id)}
+                          onTogglePublication={() => togglePublication(story)}
+                          onToggleEvaluation={() => toggleEvaluation(story)}
+                          onDelete={() => requestDelete(story)}
+                          onRated={refresh}
+                          onError={(message) => setStatus({ type: 'error', message })}
+                        />
+                      ))}
+                    </div>
+                  </section>
                 ))}
               </div>
             )}

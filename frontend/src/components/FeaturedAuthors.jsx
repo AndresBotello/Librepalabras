@@ -34,8 +34,20 @@ const FEATURED = [
  *   - "row":     una sola tarjeta ancha con los tres en fila, para la vista de
  *                lectura, donde el texto ocupa toda la columna y una barra
  *                vertical no tendría dónde ir.
+ *
+ * `title`, `noteTitle` y `note` permiten que la misma tarjeta sirva en
+ * secciones que no hablan de la biblioteca (por ejemplo, columnas de opinión).
+ * Con `note={null}` se queda solo con los retratos: en "row" desaparece el
+ * párrafo del pie y en "sidebar" desaparece la segunda tarjeta entera.
+ * `noteTitle` solo lo usa "sidebar", que muestra la nota como tarjeta aparte.
  */
-export default function FeaturedAuthors({ isDark, variant = 'sidebar' }) {
+export default function FeaturedAuthors({
+  isDark,
+  variant = 'sidebar',
+  title = 'Voces de la casa',
+  noteTitle = 'Un espacio para compartir la lectura',
+  note,
+}) {
   const surface = isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-stone-200';
 
   if (variant === 'row') {
@@ -45,7 +57,7 @@ export default function FeaturedAuthors({ isDark, variant = 'sidebar' }) {
           <h2 className={`text-[11px] font-bold uppercase tracking-widest ${
             isDark ? 'text-slate-500' : 'text-stone-400'
           }`}>
-            Voces de la casa
+            {title}
           </h2>
           <Link
             to="/authors"
@@ -88,15 +100,21 @@ export default function FeaturedAuthors({ isDark, variant = 'sidebar' }) {
           ))}
         </ul>
 
-        <p className={`mt-6 pt-5 border-t text-sm leading-relaxed ${
-          isDark ? 'border-slate-800 text-slate-400' : 'border-stone-100 text-stone-600'
-        }`}>
-          <span className={`font-serif font-bold ${isDark ? 'text-stone-200' : 'text-stone-800'}`}>
-            Un espacio para compartir la lectura.
-          </span>{' '}
-          Aquí no solo se lee: se comenta, se recomienda y se conversa. Detrás de cada obra hay
-          alguien de la región que la escribió.
-        </p>
+        {note !== null && (
+          <p className={`mt-6 pt-5 border-t text-sm leading-relaxed ${
+            isDark ? 'border-slate-800 text-slate-400' : 'border-stone-100 text-stone-600'
+          }`}>
+            {note ?? (
+              <>
+                <span className={`font-serif font-bold ${isDark ? 'text-stone-200' : 'text-stone-800'}`}>
+                  Un espacio para compartir la lectura.
+                </span>{' '}
+                Aquí no solo se lee: se comenta, se recomienda y se conversa. Detrás de cada obra hay
+                alguien de la región que la escribió.
+              </>
+            )}
+          </p>
+        )}
       </section>
     );
   }
@@ -107,7 +125,7 @@ export default function FeaturedAuthors({ isDark, variant = 'sidebar' }) {
         <h2 className={`text-[11px] font-bold uppercase tracking-widest mb-5 ${
           isDark ? 'text-slate-500' : 'text-stone-400'
         }`}>
-          Voces de la casa
+          {title}
         </h2>
 
         <ul className="space-y-1">
@@ -160,23 +178,24 @@ export default function FeaturedAuthors({ isDark, variant = 'sidebar' }) {
         </Link>
       </section>
 
-      <section className={`rounded-2xl border p-5 ${surface}`}>
-        <BookHeart
-          className="w-6 h-6 mb-3"
-          strokeWidth={1.5}
-          style={{ color: 'var(--color-brand-700)' }}
-          aria-hidden="true"
-        />
-        <h2 className={`font-serif font-bold text-lg leading-snug mb-2 ${
-          isDark ? 'text-stone-100' : 'text-stone-900'
-        }`}>
-          Un espacio para compartir la lectura
-        </h2>
-        <p className={`text-sm leading-relaxed ${isDark ? 'text-slate-400' : 'text-stone-600'}`}>
-          Aquí no solo se lee: se comenta, se recomienda y se conversa. Cada obra tiene su espacio
-          de comentarios, y detrás de cada una hay alguien de la región que la escribió.
-        </p>
-      </section>
+      {note !== null && (
+        <section className={`rounded-2xl border p-5 ${surface}`}>
+          <BookHeart
+            className="w-6 h-6 mb-3"
+            strokeWidth={1.5}
+            style={{ color: 'var(--color-brand-700)' }}
+            aria-hidden="true"
+          />
+          <h2 className={`font-serif font-bold text-lg leading-snug mb-2 ${
+            isDark ? 'text-stone-100' : 'text-stone-900'
+          }`}>
+            {noteTitle}
+          </h2>
+          <p className={`text-sm leading-relaxed ${isDark ? 'text-slate-400' : 'text-stone-600'}`}>
+            {note ?? 'Aquí no solo se lee: se comenta, se recomienda y se conversa. Cada obra tiene su espacio de comentarios, y detrás de cada una hay alguien de la región que la escribió.'}
+          </p>
+        </section>
+      )}
     </aside>
   );
 }
