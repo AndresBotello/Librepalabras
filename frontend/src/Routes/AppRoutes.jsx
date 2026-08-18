@@ -38,7 +38,7 @@ import PublicOpinionColumnsPage from '../Pages/OpinionColumns/PublicOpinionColum
 import OpinionColumnDetailPage from '../Pages/OpinionColumns/OpinionColumnDetailPage.jsx';
 import UsuarioDashboard from '../Pages/Usuario/dashboard.jsx';
 import Terminos from '../Pages/Legal/terminos.jsx';
-import ProtectedRoute from './ProtectedRoute.jsx';
+import ProtectedRoute, { GuestRoute } from './ProtectedRoute.jsx';
 
 function AdminRoute({ children }) {
   return <ProtectedRoute allowedRoles={[ 'admin' ]}>{children}</ProtectedRoute>;
@@ -69,8 +69,8 @@ export default function AppRoutes() {
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/home" element={<Home />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
+      <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
       {/* Pública y sin sesión: hay que poder leerla antes de tener cuenta,
           porque aceptarla es requisito para crearla. */}
       <Route path="/terminos" element={<Terminos />} />

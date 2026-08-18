@@ -198,7 +198,9 @@ export default function Login({ initialMode = 'login' }) {
       // Si por lo que sea el backend no devolvió perfil, caemos al camino largo.
       const currentUser = sessionUser ? applySession(sessionUser) : await refreshAuth();
 
-      navigate(homeRouteForRole(currentUser?.role));
+      // `replace`: el formulario de acceso no debe quedar en el historial, o
+      // el botón de atrás del navegador devuelve a él nada más entrar.
+      navigate(homeRouteForRole(currentUser?.role), { replace: true });
     } catch (error) {
       setStatusMessage(error.message || 'No se pudo conectar con el servidor.');
     } finally {
@@ -227,7 +229,9 @@ export default function Login({ initialMode = 'login' }) {
       const currentUser = sessionUser ? applySession(sessionUser) : await refreshAuth();
 
       setStatusMessage('Google conectado correctamente.');
-      navigate(homeRouteForRole(currentUser?.role));
+      // `replace`: el formulario de acceso no debe quedar en el historial, o
+      // el botón de atrás del navegador devuelve a él nada más entrar.
+      navigate(homeRouteForRole(currentUser?.role), { replace: true });
     } catch (error) {
       setStatusMessage(error.message || 'No se pudo iniciar sesión con Google.');
     } finally {

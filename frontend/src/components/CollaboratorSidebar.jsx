@@ -55,7 +55,8 @@ export default function CollaboratorSidebar() {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/');
+    // `replace`: tras cerrar sesión, atrás no debe devolver al área privada.
+    navigate('/', { replace: true });
   };
 
   const isJudge = user?.role === 'judge';

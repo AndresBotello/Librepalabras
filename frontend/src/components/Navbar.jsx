@@ -22,7 +22,8 @@ export default function Navbar() {
   const handleLogout = async () => {
     setIsUserMenuOpen(false);
     await logout();
-    navigate('/');
+    // `replace`: tras cerrar sesión, atrás no debe devolver al área privada.
+    navigate('/', { replace: true });
     setIsMenuOpen(false);
   };
 
