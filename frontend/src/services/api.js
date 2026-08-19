@@ -218,6 +218,12 @@ export function updateLiteraryWork(id, payload) {
   });
 }
 
+export function deleteLiteraryWork(id) {
+  return request(`/literature/${id}`, {
+    method: 'DELETE',
+  });
+}
+
 /**
  * `limit` sube hasta 100 (tope del backend). La respuesta trae además `total`
  * con el número real de obras, que puede ser mayor que las devueltas.

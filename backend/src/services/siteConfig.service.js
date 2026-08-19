@@ -39,6 +39,20 @@ export const DEFAULT_HOME = {
   heroCtaLink: '/stories',
   announcementText: '',
   announcementActive: false,
+  editorialActive: false,
+  editorialKicker: '',
+  editorialTitle: '',
+  editorialEpigraph: '',
+  editorialBody: '',
+  editorialAuthor: '',
+  editorialAuthorRole: '',
+  editorialFont: 'serif',
+  // Vacío significa "la que diga la general". Así se cambia el bloque entero
+  // tocando un solo desplegable, y solo se afina lo que haga falta afinar.
+  editorialTitleFont: '',
+  editorialEpigraphFont: '',
+  editorialBodyFont: '',
+  editorialSignatureFont: '',
   featuredWorkIds: [],
   events: [],
 };
@@ -173,6 +187,14 @@ export async function updateSettings(input = {}, updatedBy = null) {
 
 const MAX_FEATURED = 6;
 const MAX_EVENTS = 6;
+// Da para un escrito largo de verdad —el que motivó esto ronda los 6.000
+// caracteres— sin que un pegado accidental de un libro entero acabe en un
+// documento de Firestore, que tiene un techo duro de 1 MB.
+const MAX_EDITORIAL_BODY = 20000;
+// Las tres tipografías que ya carga el sitio (index.css). Es una lista cerrada
+// y no un campo libre a propósito: cualquier otro valor sería una fuente que el
+// navegador no tiene, y el escrito acabaría en la letra por defecto del sistema.
+const EDITORIAL_FONTS = ['serif', 'display', 'sans'];
 
 /**
  * El enlace de un evento SÍ puede salir del sitio, al revés que el botón del
@@ -265,6 +287,13 @@ export async function updateHomeContent(input = {}, updatedBy = null) {
     heroSubtitle: 300,
     heroCtaLabel: 40,
     announcementText: 300,
+    // El epígrafe lleva la cita y su atribución en líneas distintas: `trim`
+    // solo recorta los extremos, así que el salto de en medio sobrevive.
+    editorialKicker: 40,
+    editorialTitle: 160,
+    editorialEpigraph: 400,
+    editorialAuthor: 120,
+    editorialAuthorRole: 120,
   };
 
   for (const [field, maxLength] of Object.entries(textFields)) {
@@ -293,6 +322,54 @@ export async function updateHomeContent(input = {}, updatedBy = null) {
     }
 
     updates.heroImage = value;
+  }
+
+  if (input.editorialBody !== undefined) {
+    // La forma del escrito ES el escrito: la sangría de cada párrafo y los
+    // versos citados vienen de un procesador de textos y se publican tal cual.
+    // Por eso no se recorta la línea a línea, solo se normaliza el fin de línea
+    // de Windows y se colapsan las tandas de más de una línea en blanco, que al
+    // pintarse dejarían huecos enormes.
+    //
+    // El recorte de los extremos se hace a mano y no con `trim`: `trim` se
+    // llevaría por delante la sangría del primer párrafo, que es justo lo que
+    // hay que conservar.
+    updates.editorialBody = String(input.editorialBody)
+      .replace(/\r\n?/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .replace(/^\n+/, '')
+      .replace(/\s+$/, '')
+      .slice(0, MAX_EDITORIAL_BODY);
+  }
+
+  // La general cae en la serif si se deja vacía; las de cada sección se quedan
+  // vacías, que es como dicen "la que haya elegido la general".
+  const fontFields = {
+    editorialFont: DEFAULT_HOME.editorialFont,
+    editorialTitleFont: '',
+    editorialEpigraphFont: '',
+    editorialBodyFont: '',
+    editorialSignatureFont: '',
+  };
+
+  for (const [field, fallback] of Object.entries(fontFields)) {
+    if (input[field] === undefined) continue;
+
+    const value = String(input[field] || '').trim();
+
+    if (value && !EDITORIAL_FONTS.includes(value)) {
+      throw Object.assign(new Error(`La tipografía debe ser una de: ${EDITORIAL_FONTS.join(', ')}`), { status: 400 });
+    }
+
+    updates[field] = value || fallback;
+  }
+
+  if (input.editorialActive !== undefined) {
+    if (typeof input.editorialActive !== 'boolean') {
+      throw Object.assign(new Error('editorialActive debe ser true o false'), { status: 400 });
+    }
+
+    updates.editorialActive = input.editorialActive;
   }
 
   if (input.announcementActive !== undefined) {

@@ -14,6 +14,7 @@ import {
   addComment,
   deleteComment,
   updateWork,
+  deleteWork,
   toggleCommentLike,
   toggleWorkLike,
   reportComment,
@@ -40,6 +41,10 @@ router.patch('/:id/review', authenticateRequest, authorizeRoles(['admin']), revi
 
 // Rutas con parámetro /:id - AL FINAL
 router.patch('/:id', authenticateRequest, authorizeRoles(AUTHOR_ROLES), updateWork);
+// Borrar la obra propia. Misma puerta que editarla —el control de que es tuya
+// lo hace el manejador con `authorId`—, porque quien puede reescribirla entera
+// tiene ya, de hecho, la potestad de retirarla.
+router.delete('/:id', authenticateRequest, authorizeRoles(AUTHOR_ROLES), deleteWork);
 router.post('/:id/rate', authenticateRequest, addRating);
 router.post('/:id/comment', authenticateRequest, commentRateLimiter, addComment);
 router.delete('/:id/comment/:commentId', authenticateRequest, deleteComment);

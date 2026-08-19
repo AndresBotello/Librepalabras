@@ -10,6 +10,19 @@
 
 
 @theme {
+  /* Playfair Display como utilidad reutilizable (`font-display`).
+     Hasta ahora solo llegaba a los titulares por el selector `h1..h6` de más
+     abajo, y cualquier clase lo pisaba: `font-serif` es la pila por defecto de
+     Tailwind (Georgia y compañía), no esta fuente. Con el token, elegir la
+     tipografía deja de depender de qué etiqueta se use. */
+  --font-display: 'Playfair Display', serif;
+
+  /* Lato como utilidad (`font-body`). `font-sans` NO sirve para esto: es la
+     pila del sistema que trae Tailwind, y como clase le gana al `* { Lato }`
+     de más abajo. Es decir, escribir `font-sans` saca el texto de Lato en vez
+     de meterlo. */
+  --font-body: 'Lato', sans-serif;
+
   /* --- PRIMARIO: azul vivo y llamativo --- */
   --color-brand-50:  #eef6fb;
   --color-brand-100: #d5eaf5;

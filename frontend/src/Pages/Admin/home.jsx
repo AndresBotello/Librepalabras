@@ -13,6 +13,26 @@ import { isoToLocalInput, localInputToIso } from '../../utils/datetime';
 
 const MAX_FEATURED = 6;
 const MAX_EVENTS = 6;
+// El mismo tope que aplica el servidor en siteConfig.service.js: así el
+// contador dice la verdad y el recorte no sorprende al guardar.
+const MAX_EDITORIAL_BODY = 20000;
+
+// Las mismas claves que valida el servidor en siteConfig.service.js.
+const EDITORIAL_FONTS = [
+  { value: 'serif', label: 'Serif clásica' },
+  { value: 'display', label: 'Playfair Display' },
+  { value: 'sans', label: 'Lato' },
+];
+
+// Cada parte del escrito puede llevar su propia letra. Vacío = la general, que
+// es lo que permite cambiar el bloque entero desde un solo desplegable en vez
+// de tener que repetir la elección cuatro veces.
+const EDITORIAL_FONT_SECTIONS = [
+  { field: 'editorialTitleFont', label: 'Título' },
+  { field: 'editorialEpigraphFont', label: 'Epígrafe' },
+  { field: 'editorialBodyFont', label: 'Cuerpo' },
+  { field: 'editorialSignatureFont', label: 'Firma' },
+];
 
 const EMPTY_EVENT = { title: '', link: '', date: '', place: '', description: '' };
 
@@ -462,6 +482,189 @@ export default function AdminHome() {
                     onChange={(e) => handleChange('announcementText', e.target.value)}
                     className={`${inputClass} resize-none`}
                   />
+                </section>
+
+                {/* Escrito de entrada */}
+                <section className={cardClass}>
+                  <div className="flex items-start justify-between gap-6 mb-4">
+                    <div>
+                      <h2 className="text-lg font-bold mb-1">Escrito de entrada</h2>
+                      <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                        La editorial que abre la portada, debajo de la agenda. Se respetan los saltos
+                        de línea y la sangría tal cual los pegues, así que puedes traer el texto
+                        desde Word sin retocarlo.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={Boolean(content.editorialActive)}
+                      aria-label="Publicar el escrito de entrada"
+                      onClick={() => handleChange('editorialActive', !content.editorialActive)}
+                      className={`relative w-14 h-8 shrink-0 rounded-full transition-colors ${
+                        content.editorialActive ? 'bg-brand-700' : isDark ? 'bg-slate-700' : 'bg-slate-300'
+                      }`}
+                    >
+                      <span className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full transition-transform ${
+                        content.editorialActive ? 'translate-x-6' : 'translate-x-0'
+                      }`} />
+                    </button>
+                  </div>
+
+                  <div className="space-y-5">
+                    <div className="grid sm:grid-cols-3 gap-5">
+                      <div>
+                        <label htmlFor="editorialKicker" className={labelClass}>Etiqueta</label>
+                        <input
+                          id="editorialKicker"
+                          type="text"
+                          maxLength={40}
+                          placeholder="Escrito de entrada"
+                          value={content.editorialKicker || ''}
+                          onChange={(e) => handleChange('editorialKicker', e.target.value)}
+                          className={inputClass}
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <label htmlFor="editorialTitle" className={labelClass}>Título</label>
+                        <input
+                          id="editorialTitle"
+                          type="text"
+                          maxLength={160}
+                          placeholder="La soledad pordiosera del escritor"
+                          value={content.editorialTitle || ''}
+                          onChange={(e) => handleChange('editorialTitle', e.target.value)}
+                          className={inputClass}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label htmlFor="editorialFont" className={labelClass}>Tipografía</label>
+                      <select
+                        id="editorialFont"
+                        value={content.editorialFont || 'serif'}
+                        onChange={(e) => handleChange('editorialFont', e.target.value)}
+                        className={inputClass}
+                      >
+                        {EDITORIAL_FONTS.map((font) => (
+                          <option key={font.value} value={font.value}>{font.label}</option>
+                        ))}
+                      </select>
+                      <p className={`text-xs mt-1.5 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+                        La letra base del bloque. Cámbiala aquí y cambia todo el escrito de una vez.
+                      </p>
+
+                      <div className={`mt-4 rounded-lg border p-4 ${
+                        isDark ? 'border-slate-700 bg-slate-800/40' : 'border-slate-200 bg-slate-50'
+                      }`}>
+                        <p className={`text-xs font-semibold mb-3 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                          Ajuste por sección
+                        </p>
+
+                        <div className="grid sm:grid-cols-2 gap-4">
+                          {EDITORIAL_FONT_SECTIONS.map((section) => (
+                            <div key={section.field}>
+                              <label htmlFor={section.field} className={`block text-xs mb-1.5 ${
+                                isDark ? 'text-slate-400' : 'text-slate-600'
+                              }`}>
+                                {section.label}
+                              </label>
+                              <select
+                                id={section.field}
+                                value={content[section.field] || ''}
+                                onChange={(e) => handleChange(section.field, e.target.value)}
+                                className={`${inputClass} py-1.5 text-sm`}
+                              >
+                                <option value="">Igual que la general</option>
+                                {EDITORIAL_FONTS.map((font) => (
+                                  <option key={font.value} value={font.value}>{font.label}</option>
+                                ))}
+                              </select>
+                            </div>
+                          ))}
+                        </div>
+
+                        <p className={`text-xs mt-3 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+                          Deja «Igual que la general» en lo que no quieras tocar. Una combinación que
+                          funciona: Playfair en el título y serif clásica en el cuerpo, que es letra
+                          de titular arriba y letra de leer abajo.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label htmlFor="editorialEpigraph" className={labelClass}>
+                        Epígrafe <span className={isDark ? 'text-slate-500' : 'text-slate-500'}>(opcional)</span>
+                      </label>
+                      <textarea
+                        id="editorialEpigraph"
+                        rows={3}
+                        maxLength={400}
+                        placeholder={'La cita que abre el texto\nY debajo, a quién pertenece'}
+                        value={content.editorialEpigraph || ''}
+                        onChange={(e) => handleChange('editorialEpigraph', e.target.value)}
+                        className={`${inputClass} resize-y`}
+                      />
+                      <p className={`text-xs mt-1.5 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+                        Se pinta en cursiva, con un filete al lado. La atribución va en su propia línea.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label htmlFor="editorialBody" className={labelClass}>Cuerpo del escrito</label>
+                      <textarea
+                        id="editorialBody"
+                        rows={18}
+                        maxLength={MAX_EDITORIAL_BODY}
+                        placeholder="Pega aquí el texto completo, con su sangría y sus versos."
+                        value={content.editorialBody || ''}
+                        onChange={(e) => handleChange('editorialBody', e.target.value)}
+                        className={`${inputClass} resize-y leading-relaxed`}
+                      />
+                      <p className={`text-xs mt-1.5 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+                        {(content.editorialBody || '').length.toLocaleString('es-CO')} / {MAX_EDITORIAL_BODY.toLocaleString('es-CO')} caracteres.
+                        Si el escrito es largo, en la portada se recorta con un botón de «Seguir leyendo».
+                      </p>
+                      <p className={`text-xs mt-2 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                        <strong className="font-semibold">Para destacar dentro del texto:</strong>{' '}
+                        rodea un fragmento con un asterisco a cada lado para que salga en{' '}
+                        <em>cursiva</em>, y con dos para que salga en{' '}
+                        <strong className="font-semibold">negrita</strong>. Un asterisco suelto se
+                        queda tal cual, y las marcas no cruzan de una línea a otra.
+                      </p>
+                    </div>
+
+                    <div className="grid sm:grid-cols-2 gap-5">
+                      <div>
+                        <label htmlFor="editorialAuthor" className={labelClass}>Firma</label>
+                        <input
+                          id="editorialAuthor"
+                          type="text"
+                          maxLength={120}
+                          placeholder="Nombre de quien lo escribe"
+                          value={content.editorialAuthor || ''}
+                          onChange={(e) => handleChange('editorialAuthor', e.target.value)}
+                          className={inputClass}
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="editorialAuthorRole" className={labelClass}>Cargo o descripción</label>
+                        <input
+                          id="editorialAuthorRole"
+                          type="text"
+                          maxLength={120}
+                          placeholder="Docente y escritor"
+                          value={content.editorialAuthorRole || ''}
+                          onChange={(e) => handleChange('editorialAuthorRole', e.target.value)}
+                          className={inputClass}
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </section>
 
                 {/* Agenda de eventos */}

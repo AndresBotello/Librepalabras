@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect } from 'react';
+﻿import React, { useContext, useState, useEffect } from 'react';
 import { ThemeContext } from '../../context/ThemeContext';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
@@ -425,13 +425,7 @@ const PLOT = {
   padLeft: 38,
 };
 
-/**
- * Obras recibidas por mes, apiladas por el estado en que están hoy.
- *
- * Va en SVG a mano y no con una librería de gráficas: son doce columnas y dos
- * series, y meter una dependencia de varios cientos de KB en el bundle para
- * esto no sale a cuenta.
- */
+
 function MonthlyWorksChart({ loading, data, palette, isDark, coverage }) {
   const [hovered, setHovered] = useState(null);
   const [showTable, setShowTable] = useState(false);

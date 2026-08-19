@@ -6,6 +6,9 @@ import { createHash, randomUUID } from 'crypto';
 import { default as xss } from 'xss';
 import { NOTIFICATION_TYPES, createNotification } from '../services/notification.service.js';
 import { REPORT_REASONS, createReport } from '../services/commentReport.service.js';
+import { deleteFile } from '../services/upload.service.js';
+import { cloudinaryPublicId } from '../utils/files.js';
+import { getAuthor } from '../services/author.service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -35,6 +38,32 @@ function resolveAuthorName(input, user) {
   }
 
   return { name: xss(typed), error: null };
+}
+
+/**
+ * Ficha del catálogo de autores (/authors) a la que se asocia la obra.
+ *
+ * Es opcional y no cambia de dueño nada: `authorId` sigue siendo quien la sube,
+ * y con él el permiso de editarla y borrarla. Lo que aporta es que la obra
+ * cuente en la página de ese autor aunque no la haya subido su cuenta —o aunque
+ * no tenga cuenta ninguna, que es medio catálogo.
+ *
+ * Elegir ficha manda sobre el texto libre de la firma: una obra que dice ser de
+ * uno y apunta a la ficha de otro solo produce una página de autor que se
+ * contradice a sí misma.
+ */
+async function resolveAuthorProfile(authorProfileId) {
+  if (authorProfileId === undefined || authorProfileId === null || authorProfileId === '') {
+    return { profile: null, error: null };
+  }
+
+  const profile = await getAuthor(String(authorProfileId).trim());
+
+  if (!profile) {
+    return { profile: null, error: 'El autor elegido no está en el catálogo' };
+  }
+
+  return { profile, error: null };
 }
 
 export async function createWork(req, res) {
@@ -70,7 +99,18 @@ export async function createWork(req, res) {
       });
     }
 
-    const { name: author, error: authorError } = resolveAuthorName(req.body.author, req.user);
+    const { profile, error: profileError } = await resolveAuthorProfile(req.body.authorProfileId);
+
+    if (profileError) {
+      return res.status(400).json({ ok: false, message: profileError });
+    }
+
+    // Con ficha elegida ni se mira el texto libre: no llegaría a guardarse, así
+    // que rechazar la obra por cómo está escrito sería rechazarla por un dato
+    // que se va a tirar.
+    const { name: author, error: authorError } = profile
+      ? { name: profile.name, error: null }
+      : resolveAuthorName(req.body.author, req.user);
 
     if (authorError) {
       return res.status(400).json({ ok: false, message: authorError });
@@ -90,6 +130,8 @@ export async function createWork(req, res) {
       status: 'pending_review',
       authorId,
       author,
+      // Ficha del catálogo, si se asoció a una. Vacío es lo normal.
+      authorProfileId: profile?.id || null,
       // El correo es el de quien sube la obra, no el del autor firmado: es el
       // contacto para la revisión editorial.
       authorEmail: req.user?.email || '',
@@ -565,6 +607,24 @@ export async function updateWork(req, res) {
       updateData.authoredByOther = name !== (req.user?.name || req.user?.nombres || 'Anónimo');
     }
 
+    // Va después de la firma libre a propósito: si llegan las dos, la ficha
+    // pisa el texto, igual que al crear. Un `null` explícito desasocia y deja
+    // la obra con la firma que traiga.
+    if (req.body.authorProfileId !== undefined) {
+      const { profile, error } = await resolveAuthorProfile(req.body.authorProfileId);
+
+      if (error) {
+        return res.status(400).json({ ok: false, message: error });
+      }
+
+      updateData.authorProfileId = profile?.id || null;
+
+      if (profile) {
+        updateData.author = profile.name;
+        updateData.authoredByOther = profile.name !== (req.user?.name || req.user?.nombres || 'Anónimo');
+      }
+    }
+
     if (description !== undefined) updateData.description = description?.trim() || '';
     if (Array.isArray(tags)) updateData.tags = tags.filter(t => t.trim());
     if (cover !== undefined) updateData.cover = cover;
@@ -583,6 +643,71 @@ export async function updateWork(req, res) {
     return res.status(500).json({
       ok: false,
       message: 'Error al actualizar obra',
+      error: error.message,
+    });
+  }
+}
+
+/**
+ * Borrar una obra propia.
+ *
+ * Mismo criterio que `updateWork`: manda `authorId`, es decir quien la subió.
+ * Un administrador borra las suyas como cualquier otro autor, y retirar la obra
+ * de otra persona sigue siendo cosa de la moderación (`reviewWork`), que la
+ * saca del catálogo sin destruir nada.
+ */
+export async function deleteWork(req, res) {
+  try {
+    const { id } = req.params;
+    const authorId = req.auth.uid;
+
+    const docRef = adminDb.collection('literature').doc(id);
+    const doc = await docRef.get();
+
+    if (!doc.exists) {
+      return res.status(404).json({
+        ok: false,
+        message: 'Obra no encontrada',
+      });
+    }
+
+    const work = doc.data();
+
+    if (work.authorId !== authorId) {
+      return res.status(403).json({
+        ok: false,
+        message: 'Solo puedes eliminar tus propias obras',
+      });
+    }
+
+    await docRef.delete();
+
+    // La portada y el PDF se limpian después, y sin que su suerte afecte a la
+    // respuesta: la obra ya no existe, así que devolver un error aquí solo
+    // invitaría a reintentar un borrado que no queda nada por hacer. Lo peor
+    // que puede quedar es un archivo huérfano en Cloudinary.
+    await Promise.all(
+      [work.cover, work.pdfUrl].map(async (url) => {
+        const publicId = cloudinaryPublicId(url);
+
+        if (!publicId) return;
+
+        try {
+          await deleteFile(publicId);
+        } catch (error) {
+          console.error(`No se pudo borrar ${publicId} de Cloudinary:`, error.message);
+        }
+      })
+    );
+
+    return res.json({
+      ok: true,
+      message: 'Obra eliminada correctamente',
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      message: 'Error al eliminar obra',
       error: error.message,
     });
   }

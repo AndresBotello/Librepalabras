@@ -2,12 +2,12 @@ import React, { useContext, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ThemeContext } from '../../context/ThemeContext';
 import { AuthContext } from '../../context/AuthContext';
-import { useNotify } from '../../context/DialogContext';
+import { useConfirm, useNotify } from '../../context/DialogContext';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import AreaSidebar from '../../components/AreaSidebar';
 import PdfViewer from '../../components/PdfViewer';
-import { getMyWorks, updateLiteraryWork, uploadPdf, uploadCover } from '../../services/api';
+import { getMyWorks, updateLiteraryWork, deleteLiteraryWork, getAllAuthors, uploadPdf, uploadCover } from '../../services/api';
 import genresData from '../../config/genres.json';
 
 // Los mismos topes que aplica el servidor en backend/src/utils/files.js. Aquí
@@ -20,15 +20,21 @@ export default function Publications() {
   const { isDark } = useContext(ThemeContext);
   const { user } = useContext(AuthContext);
   const notify = useNotify();
+  const confirm = useConfirm();
   const [publications, setPublications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editingId, setEditingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
   const [showPdfPreview, setShowPdfPreview] = useState(false);
   // Una subida en curso por tipo. Mientras dura, el control se bloquea y dice
   // que está trabajando: antes no había ninguna señal —ni texto ni spinner— y
   // una portada de varios megas tardaba lo suyo con la pantalla igual que antes.
   const [uploading, setUploading] = useState({ cover: false, pdf: false });
+  // El catálogo de /authors, para poder asociar la obra a una ficha existente.
+  // Si falla la petición el desplegable se queda vacío y la edición sigue
+  // funcionando: asociar es opcional.
+  const [catalogAuthors, setCatalogAuthors] = useState([]);
   const [formData, setFormData] = useState({
     title: '',
     author: '',
@@ -37,10 +43,17 @@ export default function Publications() {
     content: '',
     pdfUrl: '',
     cover: '',
+    authorProfileId: '',
   });
 
   useEffect(() => {
     fetchPublications();
+
+    getAllAuthors()
+      .then((response) => {
+        if (response?.ok) setCatalogAuthors(response.authors || []);
+      })
+      .catch(() => {});
   }, []);
 
   const fetchPublications = async () => {
@@ -66,6 +79,7 @@ export default function Publications() {
       content: pub.content,
       pdfUrl: pub.pdfUrl || '',
       cover: pub.cover || '',
+      authorProfileId: pub.authorProfileId || '',
     });
   };
 
@@ -80,6 +94,7 @@ export default function Publications() {
       content: '',
       pdfUrl: '',
       cover: '',
+      authorProfileId: '',
     });
   };
 
@@ -179,6 +194,8 @@ export default function Publications() {
         content: formData.content,
         pdfUrl: formData.pdfUrl,
         cover: formData.cover,
+        // `null` desasocia la obra de la ficha que tuviera.
+        authorProfileId: formData.authorProfileId || null,
       });
 
       console.log('✅ Publicación guardada exitosamente');
@@ -188,6 +205,41 @@ export default function Publications() {
     } catch (err) {
       console.error('❌ Error al guardar:', err);
       notify.error(`No se pudo actualizar: ${err.message}`);
+    }
+  };
+
+  /**
+   * Borrar la obra. Es irreversible —se lleva por delante el PDF y la portada,
+   * y con ellos las valoraciones y los comentarios que colgaban de la obra—,
+   * así que el diálogo va en rojo y con el nombre delante: pulsar "Eliminar" en
+   * la fila equivocada de una tabla es demasiado fácil.
+   */
+  const handleDeleteClick = async (pub) => {
+    const confirmed = await confirm({
+      title: `¿Eliminar "${pub.title}"?`,
+      message: 'La obra desaparecerá del catálogo y de tus publicaciones.',
+      detail: 'También se borran su PDF, su portada, sus comentarios y sus valoraciones. No se puede deshacer.',
+      confirmLabel: 'Eliminar obra',
+      variant: 'danger',
+    });
+
+    if (!confirmed) return;
+
+    setDeletingId(pub.id);
+
+    try {
+      await deleteLiteraryWork(pub.id);
+
+      // Si estaba abierta en el modal, se cierra: quedarse editando una obra
+      // que ya no existe solo lleva a un 404 al guardar.
+      if (editingId === pub.id) handleCancelEdit();
+
+      await fetchPublications();
+      notify.success('Publicación eliminada correctamente.');
+    } catch (err) {
+      notify.error(`No se pudo eliminar: ${err.message}`);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -201,6 +253,8 @@ export default function Publications() {
     const info = statusMap[status] || { label: 'Borrador', color: isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700' };
     return info;
   };
+
+  const selectedProfile = catalogAuthors.find((author) => author.id === formData.authorProfileId) || null;
 
   if (loading) {
     return (
@@ -335,12 +389,21 @@ export default function Publications() {
                                 {pub.views || 0}
                               </td>
                               <td className={`px-6 py-4 text-sm`}>
-                                <button
-                                  onClick={() => handleEditClick(pub)}
-                                  className={`font-semibold transition-colors ${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}
-                                >
-                                  Editar
-                                </button>
+                                <div className="flex items-center gap-4">
+                                  <button
+                                    onClick={() => handleEditClick(pub)}
+                                    className={`font-semibold transition-colors ${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}
+                                  >
+                                    Editar
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteClick(pub)}
+                                    disabled={deletingId === pub.id}
+                                    className={`font-semibold transition-colors disabled:opacity-60 disabled:cursor-wait ${isDark ? 'text-red-400 hover:text-red-300' : 'text-red-600 hover:text-red-700'}`}
+                                  >
+                                    {deletingId === pub.id ? 'Eliminando…' : 'Eliminar'}
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           );
@@ -410,18 +473,45 @@ export default function Publications() {
 
               <div>
                 <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Autor registrado <span className={isDark ? 'text-gray-500' : 'text-gray-500'}>(opcional)</span>
+                </label>
+                <select
+                  value={formData.authorProfileId}
+                  onChange={(e) => setFormData(prev => ({ ...prev, authorProfileId: e.target.value }))}
+                  disabled={catalogAuthors.length === 0}
+                  className={`w-full px-4 py-2 rounded-lg border transition-colors disabled:opacity-60 ${isDark ? 'bg-gray-800 border-gray-700 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}`}
+                >
+                  <option value="">Sin asociar — firmar a mano</option>
+                  {catalogAuthors.map((author) => (
+                    <option key={author.id} value={author.id}>
+                      {author.name}
+                    </option>
+                  ))}
+                </select>
+                <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                  {catalogAuthors.length === 0
+                    ? 'Todavía no hay autores en el catálogo, así que firma la obra a mano abajo.'
+                    : 'Asóciala a una ficha del catálogo de autores y la obra contará en su página.'}
+                </p>
+              </div>
+
+              <div>
+                <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                   Autor de la obra
                 </label>
                 <input
                   type="text"
-                  value={formData.author}
+                  value={selectedProfile ? selectedProfile.name : formData.author}
                   onChange={(e) => setFormData(prev => ({ ...prev, author: e.target.value }))}
+                  disabled={Boolean(selectedProfile)}
                   maxLength={120}
-                  className={`w-full px-4 py-2 rounded-lg border transition-colors ${isDark ? 'bg-gray-800 border-gray-700 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}`}
+                  className={`w-full px-4 py-2 rounded-lg border transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${isDark ? 'bg-gray-800 border-gray-700 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}`}
                   placeholder="Nombre del autor"
                 />
                 <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                  Con quién se firma la obra. Vacío la firma con tu nombre.
+                  {selectedProfile
+                    ? `La firma la pone la ficha elegida: ${selectedProfile.name}. Vuelve a "Sin asociar" para escribirla a mano.`
+                    : 'Con quién se firma la obra. Vacío la firma con tu nombre.'}
                 </p>
               </div>
 

@@ -15,26 +15,39 @@ import {
  *
  * Una sola lectura de la colección para todas las fichas; hacer una consulta
  * por autor multiplicaría el coste de la portada.
+ *
+ * Una obra llega a una ficha por dos caminos: porque se la asociaron a mano
+ * (`authorProfileId`) o porque la subió la cuenta enlazada a esa ficha. El
+ * primero manda y cada obra suma en una sola: sin esa desambiguación, la obra
+ * que un autor sube y además asocia a su propia ficha contaría dos veces.
  */
-async function statsByUserId(userIds = []) {
+async function statsByAuthor(authors = []) {
   const stats = {};
 
-  if (!adminDb || userIds.length === 0) {
+  if (!adminDb || authors.length === 0) {
     return stats;
   }
+
+  const profileIds = new Set(authors.map((author) => author.id));
+  const byUserId = new Map(
+    authors.filter((author) => author.userId).map((author) => [author.userId, author.id])
+  );
 
   const snapshot = await adminDb.collection('literature').where('status', '==', 'approved').get();
 
   snapshot.docs.forEach((doc) => {
     const work = doc.data();
+    const profileId = profileIds.has(work.authorProfileId)
+      ? work.authorProfileId
+      : byUserId.get(work.authorId);
 
-    if (!userIds.includes(work.authorId)) return;
+    if (!profileId) return;
 
-    const entry = stats[work.authorId] || { publications: 0, totalLikes: 0, genres: [] };
+    const entry = stats[profileId] || { publications: 0, totalLikes: 0, genres: [] };
     entry.publications += 1;
     entry.totalLikes += work.likesCount || 0;
     if (work.genre) entry.genres.push(work.genre);
-    stats[work.authorId] = entry;
+    stats[profileId] = entry;
   });
 
   return stats;
@@ -46,7 +59,7 @@ async function statsByUserId(userIds = []) {
  * van a cero, que es lo correcto para alguien que no publica aquí.
  */
 function present(author, stats = {}) {
-  const own = (author.userId && stats[author.userId]) || null;
+  const own = stats[author.id] || null;
 
   return {
     id: author.id,
@@ -67,7 +80,7 @@ function present(author, stats = {}) {
 export async function getAuthors(_req, res) {
   try {
     const authors = await listAuthors();
-    const stats = await statsByUserId(authors.map((a) => a.userId).filter(Boolean));
+    const stats = await statsByAuthor(authors);
 
     const presented = authors
       .map((author) => present(author, stats))
@@ -91,7 +104,7 @@ export async function getAuthorById(req, res) {
       return res.status(404).json({ ok: false, message: 'Ese autor no existe' });
     }
 
-    const stats = await statsByUserId(author.userId ? [author.userId] : []);
+    const stats = await statsByAuthor([author]);
     return res.json({ ok: true, author: present(author, stats) });
   } catch (error) {
     return res.status(500).json({
@@ -121,7 +134,7 @@ export async function postAuthor(req, res) {
 export async function patchAuthor(req, res) {
   try {
     const author = await updateAuthor(req.params.id, req.body);
-    const stats = await statsByUserId(author.userId ? [author.userId] : []);
+    const stats = await statsByAuthor([author]);
 
     return res.json({
       ok: true,

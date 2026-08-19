@@ -4,6 +4,7 @@ import { ThemeContext } from '../../context/ThemeContext';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import EventAgenda from '../../components/EventAgenda';
+import HomeEditorial from '../../components/HomeEditorial';
 import SiteSearch from '../../components/SiteSearch';
 import { FOCUS_GROUP_TYPES, getAllAuthors, getFocusGroupSessions, getHomeContent } from '../../services/api';
 import { FOCUS_GROUP_NAME, meetingState } from '../../config/focusGroup';
@@ -287,6 +288,13 @@ export default function Home() {
             tiene fecha de caducidad, y anunciarlo por debajo del catálogo es no
             anunciarlo. */}
         <EventAgenda events={events} isDark={isDark} />
+
+        {/* ================= ESCRITO DE ENTRADA =================
+            La editorial que abre la portada. Va por debajo de la agenda —un
+            evento caduca y el escrito no— y por encima del catálogo, que es
+            donde se lee antes de ponerse a mirar obras. Se retira sola si el
+            admin no ha escrito nada o tiene el interruptor apagado. */}
+        <HomeEditorial content={home} isDark={isDark} />
 
         {/* ================= OBRAS DESTACADAS ================= */}
         {featuredWorks.length > 0 && (

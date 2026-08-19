@@ -43,3 +43,25 @@ export function formatBytes(bytes) {
 
   return `${value.toFixed(exponent === 0 ? 0 : 1)} ${units[exponent]}`;
 }
+
+/**
+ * Saca el `public_id` de Cloudinary a partir de la URL guardada en el
+ * documento, que es lo único que conservamos de un archivo subido.
+ *
+ * Entre `/upload/` y el nombre del archivo la URL mete la versión (`v1712…`) y,
+ * a veces, transformaciones. Nada de eso forma parte del identificador: si se
+ * cuelan dentro, `destroy` no encuentra el archivo y responde "not found" sin
+ * lanzar error, que es la manera más silenciosa de ir dejando huérfanos en la
+ * cuenta.
+ */
+export function cloudinaryPublicId(url) {
+  const rest = String(url || '').split('/upload/')[1];
+
+  if (!rest) return null;
+
+  const segments = rest.split('/');
+  const versionIndex = segments.findIndex(segment => /^v\d+$/.test(segment));
+  const path = (versionIndex === -1 ? segments : segments.slice(versionIndex + 1)).join('/');
+
+  return path.replace(/\.[^/.]+$/, '') || null;
+}

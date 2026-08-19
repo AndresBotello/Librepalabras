@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { MAX_PDF_BYTES, createLiteraryWork, formatBytes, uploadCover, uploadPdf } from '../services/api';
+import React, { useEffect, useRef, useState } from 'react';
+import { MAX_PDF_BYTES, createLiteraryWork, formatBytes, getAllAuthors, uploadCover, uploadPdf } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import genresData from '../config/genres.json';
 
@@ -16,7 +16,12 @@ export default function LiteraryWorkForm({ isDark, onSuccess }) {
     tags: '',
     type: 'free',
     price: '',
+    authorProfileId: '',
   });
+  // El catálogo de /authors, para poder asociar la obra a una ficha existente.
+  // Si la petición falla no se bloquea nada: el desplegable se queda vacío y la
+  // firma sigue siendo el texto libre de siempre.
+  const [catalogAuthors, setCatalogAuthors] = useState([]);
   const [files, setFiles] = useState({
     cover: null,
     pdf: null,
@@ -25,10 +30,30 @@ export default function LiteraryWorkForm({ isDark, onSuccess }) {
     cover: null,
     pdf: null,
   });
+  // Se guardan para poder vaciarlos al quitar un archivo: si el input conserva
+  // el valor, volver a elegir el mismo fichero no dispara `change` —el valor no
+  // ha cambiado— y parece que el control se ha quedado muerto.
+  const coverInputRef = useRef(null);
+  const pdfInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getAllAuthors()
+      .then((response) => {
+        if (!cancelled && response?.ok) setCatalogAuthors(response.authors || []);
+      })
+      .catch(() => {
+        // Silencioso a propósito: asociar es opcional y el formulario funciona
+        // igual sin catálogo. Un error rojo aquí solo asustaría.
+      });
+
+    return () => { cancelled = true; };
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -67,6 +92,20 @@ export default function LiteraryWorkForm({ isDark, onSuccess }) {
 
     setFiles(prev => ({ ...prev, [name]: file }));
     setError('');
+  };
+
+  // Portada y PDF son opcionales, así que elegirlos tiene que poder deshacerse:
+  // sin esto, un clic por error obligaba a recargar la página para volver a
+  // enviar la obra sin archivo.
+  const handleRemoveFile = (name) => {
+    setFiles(prev => ({ ...prev, [name]: null }));
+    setFilePreview(prev => ({ ...prev, [name]: null }));
+
+    if (name === 'cover' && coverInputRef.current) {
+      coverInputRef.current.value = '';
+    } else if (name === 'pdf' && pdfInputRef.current) {
+      pdfInputRef.current.value = '';
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -113,6 +152,9 @@ export default function LiteraryWorkForm({ isDark, onSuccess }) {
         // Vacío significa "fírmala con mi nombre": lo resuelve el backend, que
         // es quien sabe cómo se llama la cuenta.
         author: formData.author.trim(),
+        // Vacío = sin asociar. Con ficha, el backend firma la obra con su
+        // nombre e ignora el texto libre de arriba.
+        authorProfileId: formData.authorProfileId || null,
         genre: formData.genre,
         description: formData.description,
         content: formData.content,
@@ -134,6 +176,7 @@ export default function LiteraryWorkForm({ isDark, onSuccess }) {
           tags: '',
           type: 'free',
           price: '',
+          authorProfileId: '',
         });
         setFiles({ cover: null, pdf: null });
         setFilePreview({ cover: null, pdf: null });
@@ -148,6 +191,8 @@ export default function LiteraryWorkForm({ isDark, onSuccess }) {
       setUploading(false);
     }
   };
+
+  const selectedProfile = catalogAuthors.find(author => author.id === formData.authorProfileId) || null;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -182,6 +227,33 @@ export default function LiteraryWorkForm({ isDark, onSuccess }) {
         </p>
       </div>
 
+      {/* Autor del catálogo */}
+      <div>
+        <label htmlFor="work-author-profile" className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+          Autor registrado <span className={isDark ? 'text-gray-500' : 'text-gray-500'}>(opcional)</span>
+        </label>
+        <select
+          id="work-author-profile"
+          name="authorProfileId"
+          value={formData.authorProfileId}
+          onChange={handleChange}
+          disabled={catalogAuthors.length === 0}
+          className={`w-full px-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-1 disabled:opacity-60 ${isDark ? 'bg-gray-700 border-gray-600 text-gray-100 focus:ring-blue-500' : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500'}`}
+        >
+          <option value="">Sin asociar — firmar a mano</option>
+          {catalogAuthors.map(author => (
+            <option key={author.id} value={author.id}>
+              {author.name}
+            </option>
+          ))}
+        </select>
+        <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+          {catalogAuthors.length === 0
+            ? 'Todavía no hay autores en el catálogo, así que firma la obra a mano abajo.'
+            : 'Asóciala a una ficha del catálogo de autores y la obra contará en su página. La obra sigue siendo tuya para editarla y borrarla.'}
+        </p>
+      </div>
+
       {/* Autor de la obra */}
       <div>
         <label htmlFor="work-author" className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -191,15 +263,17 @@ export default function LiteraryWorkForm({ isDark, onSuccess }) {
           id="work-author"
           type="text"
           name="author"
-          value={formData.author}
+          value={selectedProfile ? selectedProfile.name : formData.author}
           onChange={handleChange}
+          disabled={Boolean(selectedProfile)}
           placeholder={ownName ? `${ownName} (tú)` : 'Nombre del autor'}
           maxLength="120"
-          className={`w-full px-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-1 ${isDark ? 'bg-gray-700 border-gray-600 text-gray-100 focus:ring-blue-500' : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500'}`}
+          className={`w-full px-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-1 disabled:opacity-60 disabled:cursor-not-allowed ${isDark ? 'bg-gray-700 border-gray-600 text-gray-100 focus:ring-blue-500' : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500'}`}
         />
         <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-          Déjalo vacío para firmarla con tu nombre. Escribe otro para publicar la obra de otra
-          persona: la obra aparecerá a nombre de quien indiques, y seguirá siendo tuya para editarla.
+          {selectedProfile
+            ? `La firma la pone la ficha elegida: ${selectedProfile.name}. Vuelve a "Sin asociar" para escribirla a mano.`
+            : 'Déjalo vacío para firmarla con tu nombre. Escribe otro para publicar la obra de otra persona: la obra aparecerá a nombre de quien indiques, y seguirá siendo tuya para editarla.'}
         </p>
       </div>
 
@@ -278,7 +352,7 @@ export default function LiteraryWorkForm({ isDark, onSuccess }) {
       {/* Portada - Upload */}
       <div>
         <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-          📖 Portada (Imagen)
+          📖 Portada (opcional)
         </label>
         <div
           className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
@@ -288,6 +362,7 @@ export default function LiteraryWorkForm({ isDark, onSuccess }) {
           }`}
         >
           <input
+            ref={coverInputRef}
             type="file"
             name="cover"
             accept="image/*"
@@ -317,7 +392,7 @@ export default function LiteraryWorkForm({ isDark, onSuccess }) {
                   🖼️
                 </p>
                 <p className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Sube tu portada
+                  Sube una portada
                 </p>
                 <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
                   PNG, JPG (Máx. 5MB)
@@ -325,13 +400,27 @@ export default function LiteraryWorkForm({ isDark, onSuccess }) {
               </div>
             )}
           </label>
+
+          {filePreview.cover && (
+            <button
+              type="button"
+              onClick={() => handleRemoveFile('cover')}
+              disabled={uploading}
+              className={`mt-2 text-xs font-semibold transition-colors disabled:opacity-50 ${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}
+            >
+              Quitar portada
+            </button>
+          )}
         </div>
+        <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+          Sin portada la obra se publica igual: en el catálogo se dibuja una tapa con su título.
+        </p>
       </div>
 
       {/* PDF - Upload */}
       <div>
         <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-          📄 Archivo PDF
+          📄 Archivo PDF (opcional)
         </label>
         <div
           className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
@@ -341,6 +430,7 @@ export default function LiteraryWorkForm({ isDark, onSuccess }) {
           }`}
         >
           <input
+            ref={pdfInputRef}
             type="file"
             name="pdf"
             accept=".pdf"
@@ -366,7 +456,7 @@ export default function LiteraryWorkForm({ isDark, onSuccess }) {
                   📑
                 </p>
                 <p className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Sube tu PDF
+                  Sube un PDF
                 </p>
                 <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
                   Máximo {formatBytes(MAX_PDF_BYTES)}
@@ -374,7 +464,21 @@ export default function LiteraryWorkForm({ isDark, onSuccess }) {
               </div>
             )}
           </label>
+
+          {filePreview.pdf && (
+            <button
+              type="button"
+              onClick={() => handleRemoveFile('pdf')}
+              disabled={uploading}
+              className={`mt-2 text-xs font-semibold transition-colors disabled:opacity-50 ${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}
+            >
+              Quitar PDF
+            </button>
+          )}
         </div>
+        <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+          Sin PDF la obra se lee en línea, con el contenido que escribiste arriba.
+        </p>
       </div>
 
       {/* Tipo */}
