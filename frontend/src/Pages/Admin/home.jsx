@@ -13,6 +13,8 @@ import { isoToLocalInput, localInputToIso } from '../../utils/datetime';
 
 const MAX_FEATURED = 6;
 const MAX_EVENTS = 6;
+// Mismo tope que valida el servidor en siteConfig.service.js.
+const MAX_POPUPS = 6;
 // El mismo tope que aplica el servidor en siteConfig.service.js: así el
 // contador dice la verdad y el recorte no sorprende al guardar.
 const MAX_EDITORIAL_BODY = 20000;
@@ -97,6 +99,7 @@ export default function AdminHome() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
+  const [popupUploadProgress, setPopupUploadProgress] = useState(null);
   const [feedback, setFeedback] = useState(null);
 
   useEffect(() => {
@@ -204,6 +207,71 @@ export default function AdminHome() {
     });
   };
 
+  /**
+   * A diferencia de un evento, una invitación no tiene sentido sin imagen: se
+   * crea la fila y se sube la imagen en el mismo paso, en vez de dejar un
+   * hueco que el admin tendría que rellenar después.
+   */
+  const handlePopupUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const current = content?.popups || [];
+
+    if (current.length >= MAX_POPUPS) {
+      setFeedback({ type: 'error', text: `Solo puedes añadir ${MAX_POPUPS} imágenes.` });
+      event.target.value = '';
+      return;
+    }
+
+    setPopupUploadProgress(0);
+    setFeedback(null);
+
+    try {
+      const response = await uploadCoverWithProgress(file, setPopupUploadProgress);
+
+      setContent((prev) => ({
+        ...prev,
+        popups: [...(prev.popups || []), { id: newRowId(), imageUrl: response.url, link: '', alt: '' }],
+      }));
+
+      setFeedback({ type: 'success', text: 'Imagen añadida. Recuerda guardar los cambios.' });
+    } catch (error) {
+      setFeedback({ type: 'error', text: error.message });
+    } finally {
+      setPopupUploadProgress(null);
+      event.target.value = '';
+    }
+  };
+
+  const updatePopup = (id, key, value) => {
+    setContent((prev) => ({
+      ...prev,
+      popups: (prev.popups || []).map((item) => (item.id === id ? { ...item, [key]: value } : item)),
+    }));
+    setFeedback(null);
+  };
+
+  const removePopup = (id) => {
+    setContent((prev) => ({
+      ...prev,
+      popups: (prev.popups || []).filter((item) => item.id !== id),
+    }));
+    setFeedback(null);
+  };
+
+  const movePopup = (index, direction) => {
+    setContent((prev) => {
+      const list = [...(prev.popups || [])];
+      const target = index + direction;
+
+      if (target < 0 || target >= list.length) return prev;
+
+      [list[index], list[target]] = [list[target], list[index]];
+      return { ...prev, popups: list };
+    });
+  };
+
   const handleImageUpload = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -246,6 +314,7 @@ export default function AdminHome() {
   };
 
   const events = content?.events || [];
+  const popups = content?.popups || [];
   const featuredIds = content?.featuredWorkIds || [];
 
   const featuredWorks = useMemo(
@@ -830,6 +899,159 @@ export default function AdminHome() {
                     >
                       + Añadir evento
                     </button>
+                  )}
+                </section>
+
+                {/* Invitaciones emergentes */}
+                <section className={cardClass}>
+                  <div className="flex items-start justify-between gap-6 mb-1">
+                    <div>
+                      <h2 className="text-lg font-bold mb-1">Invitaciones emergentes</h2>
+                      <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                        Imágenes que aparecen en una ventana al entrar a la portada, una sola vez
+                        por visita. Se cierran deslizando o tocando la ✕, y no vuelven a salir
+                        hasta que la persona entre de nuevo al sitio en otra sesión.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={Boolean(content.popupsActive)}
+                      aria-label="Mostrar invitaciones emergentes"
+                      onClick={() => handleChange('popupsActive', !content.popupsActive)}
+                      className={`relative w-14 h-8 shrink-0 rounded-full transition-colors ${
+                        content.popupsActive ? 'bg-brand-700' : isDark ? 'bg-slate-700' : 'bg-slate-300'
+                      }`}
+                    >
+                      <span className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full transition-transform ${
+                        content.popupsActive ? 'translate-x-6' : 'translate-x-0'
+                      }`} />
+                    </button>
+                  </div>
+
+                  <p className={`text-xs mb-6 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+                    {popups.length}/{MAX_POPUPS} imágenes.
+                  </p>
+
+                  {popups.length === 0 ? (
+                    <p className={`text-sm py-8 text-center rounded-lg border border-dashed ${
+                      isDark ? 'border-slate-700 text-slate-500' : 'border-slate-300 text-slate-500'
+                    }`}>
+                      Todavía no hay imágenes.
+                    </p>
+                  ) : (
+                    <ul className="space-y-4 mb-4">
+                      {popups.map((popup, index) => (
+                        <li
+                          key={popup.id}
+                          className={`rounded-lg border p-4 ${
+                            isDark ? 'border-slate-700 bg-slate-800/40' : 'border-slate-200 bg-slate-50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-3 mb-4">
+                            <span className={`text-xs font-bold tracking-wider uppercase ${
+                              isDark ? 'text-slate-400' : 'text-slate-500'
+                            }`}>
+                              Imagen {index + 1}
+                            </span>
+
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => movePopup(index, -1)}
+                                disabled={index === 0}
+                                aria-label="Subir imagen en el orden"
+                                className={`px-2 py-1 rounded text-sm disabled:opacity-30 ${
+                                  isDark ? 'hover:bg-slate-700' : 'hover:bg-slate-200'
+                                }`}
+                              >
+                                ↑
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => movePopup(index, 1)}
+                                disabled={index === popups.length - 1}
+                                aria-label="Bajar imagen en el orden"
+                                className={`px-2 py-1 rounded text-sm disabled:opacity-30 ${
+                                  isDark ? 'hover:bg-slate-700' : 'hover:bg-slate-200'
+                                }`}
+                              >
+                                ↓
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => removePopup(popup.id)}
+                                className={`px-2 py-1 rounded text-sm font-medium ${
+                                  isDark ? 'text-rose-400 hover:bg-rose-950/50' : 'text-rose-600 hover:bg-rose-50'
+                                }`}
+                              >
+                                Quitar
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col sm:flex-row gap-4">
+                            <img
+                              src={popup.imageUrl}
+                              alt=""
+                              className="w-full sm:w-40 h-40 sm:h-28 object-cover rounded-lg shrink-0"
+                            />
+
+                            <div className="flex-1 min-w-0 space-y-3">
+                              <div>
+                                <label className={labelClass}>Enlace al tocar la imagen (opcional)</label>
+                                <input
+                                  type="text"
+                                  placeholder="https://…"
+                                  value={popup.link}
+                                  onChange={(e) => updatePopup(popup.id, 'link', e.target.value)}
+                                  className={inputClass}
+                                />
+                                <p className={`text-xs mt-1.5 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+                                  Debe empezar por «https://», o por «/» si es una página de este sitio.
+                                  Déjalo vacío si la imagen es solo informativa.
+                                </p>
+                              </div>
+
+                              <div>
+                                <label className={labelClass}>Texto alternativo (opcional)</label>
+                                <input
+                                  type="text"
+                                  maxLength={160}
+                                  placeholder="Describe la imagen para lectores de pantalla"
+                                  value={popup.alt}
+                                  onChange={(e) => updatePopup(popup.id, 'alt', e.target.value)}
+                                  className={inputClass}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {popups.length < MAX_POPUPS && (
+                    <div className="flex flex-wrap items-center gap-3">
+                      <label className={`px-4 py-2.5 rounded-lg text-sm font-semibold cursor-pointer transition-colors ${
+                        isDark ? 'bg-slate-800 text-slate-200 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      }`}>
+                        + Añadir imagen
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handlePopupUpload}
+                          className="hidden"
+                        />
+                      </label>
+
+                      {popupUploadProgress !== null && (
+                        <span className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                          Subiendo… {popupUploadProgress}%
+                        </span>
+                      )}
+                    </div>
                   )}
                 </section>
 

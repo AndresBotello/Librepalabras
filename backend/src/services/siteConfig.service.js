@@ -55,6 +55,8 @@ export const DEFAULT_HOME = {
   editorialSignatureFont: '',
   featuredWorkIds: [],
   events: [],
+  popupsActive: false,
+  popups: [],
 };
 
 const cache = new Map();
@@ -187,6 +189,9 @@ export async function updateSettings(input = {}, updatedBy = null) {
 
 const MAX_FEATURED = 6;
 const MAX_EVENTS = 6;
+// Un carrusel emergente con demasiadas imágenes deja de ser una invitación y
+// pasa a ser un obstáculo entre la visita y el sitio.
+const MAX_POPUPS = 6;
 // Da para un escrito largo de verdad —el que motivó esto ronda los 6.000
 // caracteres— sin que un pegado accidental de un libro entero acabe en un
 // documento de Firestore, que tiene un techo duro de 1 MB.
@@ -275,6 +280,54 @@ function parseEvents(input) {
       date,
       place: String(item?.place ?? '').trim().slice(0, 100),
       description: String(item?.description ?? '').trim().slice(0, 300),
+    };
+  });
+}
+
+/**
+ * Invitaciones emergentes de la portada: un carrusel de imágenes que se
+ * muestra una sola vez por sesión al entrar al sitio. Solo la imagen es
+ * obligatoria —igual que el banner principal, debe subirse desde el panel—;
+ * el enlace es opcional porque una invitación puede ser puramente informativa
+ * (un cartel de un evento que no tiene dónde inscribirse en línea).
+ */
+function parsePopups(input) {
+  if (!Array.isArray(input)) {
+    throw Object.assign(new Error('popups debe ser una lista'), { status: 400 });
+  }
+
+  if (input.length > MAX_POPUPS) {
+    throw Object.assign(new Error(`Puedes añadir como máximo ${MAX_POPUPS} imágenes`), { status: 400 });
+  }
+
+  return input.map((item, index) => {
+    const position = index + 1;
+    const imageUrl = String(item?.imageUrl ?? '').trim();
+
+    if (!imageUrl || !isOwnCloudinaryUrl(imageUrl)) {
+      throw Object.assign(
+        new Error(`La imagen ${position} debe subirse desde el panel (URL de Cloudinary propia)`),
+        { status: 400 }
+      );
+    }
+
+    // A diferencia del enlace de un evento, aquí vacío es válido: la
+    // invitación puede ser un simple cartel sin destino.
+    const rawLink = String(item?.link ?? '').trim();
+    const link = rawLink ? parseEventLink(rawLink) : '';
+
+    if (rawLink && !link) {
+      throw Object.assign(
+        new Error(`El enlace de la imagen ${position} debe ser una dirección https:// o una ruta interna que empiece por /`),
+        { status: 400 }
+      );
+    }
+
+    return {
+      id: String(item?.id ?? '').trim().slice(0, 60) || randomUUID(),
+      imageUrl,
+      link: link || '',
+      alt: String(item?.alt ?? '').trim().slice(0, 160),
     };
   });
 }
@@ -398,6 +451,18 @@ export async function updateHomeContent(input = {}, updatedBy = null) {
 
   if (input.events !== undefined) {
     updates.events = parseEvents(input.events);
+  }
+
+  if (input.popupsActive !== undefined) {
+    if (typeof input.popupsActive !== 'boolean') {
+      throw Object.assign(new Error('popupsActive debe ser true o false'), { status: 400 });
+    }
+
+    updates.popupsActive = input.popupsActive;
+  }
+
+  if (input.popups !== undefined) {
+    updates.popups = parsePopups(input.popups);
   }
 
   if (Object.keys(updates).length === 0) {

@@ -5,6 +5,7 @@ import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import EventAgenda from '../../components/EventAgenda';
 import HomeEditorial from '../../components/HomeEditorial';
+import HomeInvitationPopup from '../../components/HomeInvitationPopup';
 import SiteSearch from '../../components/SiteSearch';
 import { FOCUS_GROUP_TYPES, getAllAuthors, getFocusGroupSessions, getHomeContent } from '../../services/api';
 import { FOCUS_GROUP_NAME, meetingState } from '../../config/focusGroup';
@@ -187,6 +188,12 @@ export default function Home() {
         isDark ? 'bg-gray-950 text-stone-200' : 'bg-gray-50 text-stone-800'
       }`}>
         <Navbar />
+
+        <HomeInvitationPopup
+          popups={home?.popups || []}
+          active={Boolean(home?.popupsActive)}
+          isDark={isDark}
+        />
 
         {/* ================= HERO SECTION ================= */}
         {/* El recorte NO va en la sección: el panel de resultados del buscador
