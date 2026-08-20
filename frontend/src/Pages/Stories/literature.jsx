@@ -18,6 +18,36 @@ const HERO_OVERLAY = [
   'color-mix(in srgb, var(--color-gray-950) 95%, transparent) 100%)',
 ].join(' ');
 
+const BOOK_SALES_EMAIL = 'librepalabras@gmail.com';
+
+// Compone la URL de Gmail (no un simple mailto:) porque así lo pidió el
+// negocio: el correo de ventas es una cuenta de Gmail y se quiere que el
+// botón abra directamente el compositor web con todo pre-rellenado.
+function buildBookPurchaseGmailUrl(book) {
+  const subject = `Compra de libro: ${book.title}`;
+  const referenceUrl = `${window.location.origin}${window.location.pathname}?libro=${book.id}`;
+  const body = [
+    `Título: ${book.title}`,
+    `Autor: ${book.author}`,
+    `Precio: $${book.price.toFixed(2)}`,
+    ...(book.isbn ? [`ISBN: ${book.isbn}`] : []),
+    '',
+    'Estoy interesado en comprar este libro publicado en Liberapalabras.com',
+    '',
+    `Referencia: ${referenceUrl}`,
+  ].join('\n');
+
+  const params = new URLSearchParams({
+    view: 'cm',
+    fs: '1',
+    to: BOOK_SALES_EMAIL,
+    su: subject,
+    body,
+  });
+
+  return `https://mail.google.com/mail/?${params.toString()}`;
+}
+
 export default function Literature() {
   const { isDark } = useContext(ThemeContext);
   const [promotionalBooks, setPromotionalBooks] = useState([]);
@@ -483,10 +513,15 @@ export default function Literature() {
                   {/* Botón Comprar */}
                   {/* Un paso más oscuro que el resto del acento: el turquesa
                       medio con texto blanco se queda en 3,7:1 y no llega a AA. */}
-                  <button className="w-full bg-amber-700 hover:bg-amber-800 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors">
+                  <a
+                    href={buildBookPurchaseGmailUrl(selectedBook)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full bg-amber-700 hover:bg-amber-800 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                  >
                     <ShoppingCart className="w-5 h-5" />
                     Comprar Ahora
-                  </button>
+                  </a>
                 </div>
               </div>
 
