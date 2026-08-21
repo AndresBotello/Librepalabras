@@ -707,15 +707,14 @@ export default function Login({ initialMode = 'login' }) {
           <div className="max-w-md relative z-10 w-full">
             <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 shadow-2xl text-white">
               <p className="text-base font-serif italic mb-6 leading-relaxed text-amber-100">
-                "La literatura es el arte de la palabra, y aquí en el Valle, cada palabra cuenta una historia que merece ser liberada."
+                "Que la salvaje esperanza siempre sea tuya, querida alma inamansable"
               </p>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-gradient-to-tr from-brand-700 to-amber-700 rounded-full flex-shrink-0 flex items-center justify-center border border-amber-300/40 shadow-inner">
-                  <span className="text-white text-xs font-bold tracking-wider">AD</span>
+                  <span className="text-white text-xs font-bold tracking-wider">GA</span>
                 </div>
                 <div>
-                  <p className="font-semibold text-sm text-white">Andrés Felipe Dana</p>
-                  <p className="text-gray-300 text-xs">Fundador y Community Manager</p>
+                  <p className="font-semibold text-sm text-white">Gonzalo Arango</p>
                 </div>
               </div>
             </div>

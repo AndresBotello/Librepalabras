@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateRequest } from '../middlewares/auth.middleware.js';
+import { authenticateRequest, attachUserIfPresent } from '../middlewares/auth.middleware.js';
 import { authorizeRoles } from '../middlewares/role.middleware.js';
 import {
   getAuthorById,
@@ -12,8 +12,11 @@ import {
 const router = Router();
 
 // El catálogo es público: es lo que se ve en /authors y en la portada.
-router.get('/', getAuthors);
-router.get('/:id', getAuthorById);
+// `attachUserIfPresent` deja que un admin logueado siga viendo el userId de
+// cada ficha (lo necesita el panel de autores para no enlazar dos veces la
+// misma cuenta) sin exigir sesión al visitante anónimo.
+router.get('/', attachUserIfPresent, getAuthors);
+router.get('/:id', attachUserIfPresent, getAuthorById);
 
 // Quién entra al catálogo lo decide el administrador, y nadie más. No hay
 // ninguna vía por la que la aplicación cree fichas sola.

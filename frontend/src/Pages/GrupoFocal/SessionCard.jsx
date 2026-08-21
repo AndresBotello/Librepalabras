@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarDays, MessageSquare, Video } from 'lucide-react';
+import { CalendarDays, MessageSquare, Users, Video } from 'lucide-react';
 import { FOCUS_GROUP_TYPES } from '../../services/api';
 import { MEETING_STATE_LABELS, meetingState } from '../../config/focusGroup';
 import { formatMeetingDate, stateBadgeClasses } from './helpers';
@@ -42,9 +42,17 @@ export default function SessionCard({ session, isDark }) {
       </p>
 
       <div className={`flex items-center justify-between mt-5 pt-4 border-t text-xs ${isDark ? 'border-stone-800 text-stone-500' : 'border-stone-200 text-stone-500'}`}>
-        <span className="inline-flex items-center gap-1.5">
-          <MessageSquare className="w-3.5 h-3.5" />
-          {session.commentsCount || 0} comentarios
+        <span className="inline-flex items-center gap-3">
+          <span className="inline-flex items-center gap-1.5">
+            <MessageSquare className="w-3.5 h-3.5" />
+            {session.commentsCount || 0}
+          </span>
+          {isSync && session.attendeesCount > 0 && (
+            <span className="inline-flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5" />
+              {session.attendeesCount}
+            </span>
+          )}
         </span>
         <span className="font-bold text-amber-600 dark:text-amber-400 group-hover:underline">
           {isSync ? 'Ver encuentro →' : 'Participar →'}

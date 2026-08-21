@@ -3,7 +3,9 @@ import { Link, useParams } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import FeaturedAuthors from '../../components/FeaturedAuthors';
+import ReadingToolbar from '../../components/ReadingToolbar';
 import { ThemeContext } from '../../context/ThemeContext';
+import { readingContentStyle, useReadingPreferences } from '../../context/ReadingPreferencesContext';
 import { getOpinionColumnById } from '../../services/api';
 
 function formatDate(value) {
@@ -16,6 +18,7 @@ function formatDate(value) {
 export default function OpinionColumnDetailPage() {
   const { slug } = useParams();
   const { isDark } = useContext(ThemeContext);
+  const { fontScale, highContrast, dyslexiaFont } = useReadingPreferences();
   const [column, setColumn] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -116,11 +119,21 @@ export default function OpinionColumnDetailPage() {
                 </div>
               </header>
 
+              <ReadingToolbar isDark={isDark} />
+
               <div
-                className={isDark
-                  ? 'max-w-none text-base leading-8 text-slate-300 [&_p]:mb-5 [&_p]:leading-8 [&_strong]:font-bold [&_strong]:text-slate-100 [&_blockquote]:border-l-4 [&_blockquote]:border-slate-600 [&_blockquote]:pl-4 [&_blockquote]:italic [&_img]:my-6 [&_img]:rounded-2xl [&_img]:shadow-md [&_a]:text-amber-300 [&_a]:underline'
-                  : 'max-w-none text-base leading-8 text-slate-700 [&_p]:mb-5 [&_p]:leading-8 [&_strong]:font-bold [&_strong]:text-slate-900 [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_img]:my-6 [&_img]:rounded-2xl [&_img]:shadow-md [&_a]:text-brand-700 [&_a]:underline'
+                className={
+                  highContrast
+                    ? `max-w-none rounded-lg p-6 -mx-2 text-base leading-8 [&_p]:mb-5 [&_p]:leading-8 [&_strong]:font-bold [&_blockquote]:border-l-4 [&_blockquote]:pl-4 [&_blockquote]:italic [&_img]:my-6 [&_img]:rounded-2xl [&_img]:shadow-md [&_a]:underline ${
+                        isDark
+                          ? 'bg-black text-white [&_strong]:text-white [&_blockquote]:border-slate-500 [&_a]:text-amber-300'
+                          : 'bg-white text-black border border-slate-900/10 [&_strong]:text-black [&_blockquote]:border-slate-400 [&_a]:text-brand-700'
+                      }`
+                    : isDark
+                      ? 'max-w-none text-base leading-8 text-slate-300 [&_p]:mb-5 [&_p]:leading-8 [&_strong]:font-bold [&_strong]:text-slate-100 [&_blockquote]:border-l-4 [&_blockquote]:border-slate-600 [&_blockquote]:pl-4 [&_blockquote]:italic [&_img]:my-6 [&_img]:rounded-2xl [&_img]:shadow-md [&_a]:text-amber-300 [&_a]:underline'
+                      : 'max-w-none text-base leading-8 text-slate-700 [&_p]:mb-5 [&_p]:leading-8 [&_strong]:font-bold [&_strong]:text-slate-900 [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_img]:my-6 [&_img]:rounded-2xl [&_img]:shadow-md [&_a]:text-brand-700 [&_a]:underline'
                 }
+                style={readingContentStyle({ fontScale, dyslexiaFont })}
                 dangerouslySetInnerHTML={{ __html: column.content }}
               />
 

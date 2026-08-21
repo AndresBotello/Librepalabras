@@ -4,23 +4,6 @@ import Footer from '../../components/Footer';
 import { ThemeContext } from '../../context/ThemeContext';
 import { LEGAL_CONTACT_EMAIL, MIN_AGE, TERMS_UPDATED_AT, TERMS_VERSION } from '../../config/legal';
 
-/**
- * Términos y condiciones de LiberaPalabras.
- *
- * El texto vive aquí como datos y no como JSX suelto para que se pueda corregir
- * una cláusula sin tocar el maquetado, y para que todas las secciones se vean
- * igual sin depender de que quien edite recuerde las clases.
- *
- * Cada apartado describe lo que la plataforma hace de verdad —obras en revisión
- * antes de publicarse, firma de autor distinta de la cuenta, descargas de pago,
- * concursos con jurado, encuentros del grupo focal, la revista— porque unas
- * condiciones genéricas no protegen de los conflictos que sí pueden pasar aquí.
- *
- * IMPORTANTE: esto es una base sólida y adaptada a la plataforma, no un
- * dictamen legal. Antes de publicarlo conviene que lo revise un abogado, sobre
- * todo los apartados de datos personales y de obras de pago.
- */
-
 const SECTIONS = [
   {
     title: 'Qué es LiberaPalabras',

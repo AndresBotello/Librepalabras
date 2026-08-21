@@ -5,11 +5,15 @@ import {
   createSession,
   deleteComment,
   deleteSession,
+  getAttendance,
   getComment,
   getSessionById,
   incrementSessionViews,
+  listAttendees,
   listComments,
   listSessions,
+  removeAttendance,
+  setAttendance,
   toggleCommentLike as toggleLike,
   updateSession,
 } from '../services/focusGroup.service.js';
@@ -98,7 +102,14 @@ export async function getSession(req, res) {
       incrementSessionViews(session.id);
     }
 
-    return res.json({ ok: true, session, comments });
+    // Si hay quien pregunta, se le dice si ya confirmó su asistencia; a un
+    // visitante anónimo no le corresponde ese dato porque no tiene con qué
+    // identificarlo.
+    const attending = req.auth?.uid && session.type === SESSION_TYPES.SYNC
+      ? Boolean(await getAttendance(session.id, req.auth.uid))
+      : false;
+
+    return res.json({ ok: true, session, comments, attending });
   } catch (error) {
     console.error('Error al obtener el encuentro:', error);
     return res.status(500).json({ ok: false, message: 'Error al obtener el encuentro' });
@@ -168,6 +179,11 @@ export async function createFocusGroupSession(req, res) {
       views: 0,
       commentsCount: 0,
       lastCommentAt: null,
+      // Solo una cátedra tiene a quién avisar; una tertulia no tiene hora a la
+      // que asistir, pero se inicializan igual para no dejar campos ausentes
+      // según el tipo.
+      attendeesCount: 0,
+      reminderSentAt: null,
       createdBy: req.auth.uid,
       createdAt: now,
       updatedAt: now,
@@ -238,6 +254,12 @@ export async function updateFocusGroupSession(req, res) {
           return res.status(400).json({ ok: false, message: 'La fecha y hora de la reunión no son válidas' });
         }
         updates.scheduledAt = startsAt;
+
+        // Reprogramar reabre la ventana del recordatorio: quien ya confirmó
+        // asistencia para la hora vieja necesita el aviso para la hora nueva.
+        if (startsAt !== existing.scheduledAt) {
+          updates.reminderSentAt = null;
+        }
       }
 
       if (duration !== undefined) {
@@ -382,6 +404,64 @@ export async function toggleSessionCommentLike(req, res) {
   } catch (error) {
     console.error('Error al dar me gusta al comentario:', error);
     return res.status(500).json({ ok: false, message: 'Error al registrar el me gusta' });
+  }
+}
+
+// ============================================================
+// Asistencia (RSVP)
+// ============================================================
+
+export async function toggleSessionAttendance(req, res) {
+  try {
+    const { id } = req.params;
+    const session = await getSessionById(id);
+
+    if (!session || !session.isPublished) {
+      return res.status(404).json({ ok: false, message: 'Encuentro no encontrado' });
+    }
+
+    if (session.type !== SESSION_TYPES.SYNC) {
+      return res.status(400).json({ ok: false, message: 'Solo una cátedra admite confirmar asistencia' });
+    }
+
+    const alreadyAttending = await getAttendance(id, req.auth.uid);
+
+    if (alreadyAttending) {
+      await removeAttendance(id, req.auth.uid);
+      return res.json({ ok: true, attending: false, message: 'Ya no estás en la lista de asistentes' });
+    }
+
+    await setAttendance(id, req.auth.uid, {
+      uid: req.auth.uid,
+      name: displayName(req.user),
+      email: req.user?.email || req.auth.email || null,
+      confirmedAt: new Date().toISOString(),
+    });
+
+    return res.status(201).json({ ok: true, attending: true, message: 'Asistencia confirmada' });
+  } catch (error) {
+    console.error('Error al confirmar la asistencia:', error);
+    return res.status(500).json({ ok: false, message: 'Error al confirmar la asistencia' });
+  }
+}
+
+/** Vista de administración: quién confirmó asistencia a una cátedra. */
+export async function getSessionAttendees(req, res) {
+  try {
+    const { id } = req.params;
+    const session = await getSessionById(id);
+
+    if (!session) {
+      return res.status(404).json({ ok: false, message: 'Encuentro no encontrado' });
+    }
+
+    const attendees = await listAttendees(id);
+    attendees.sort((a, b) => (a.confirmedAt < b.confirmedAt ? 1 : -1));
+
+    return res.json({ ok: true, attendees, total: attendees.length });
+  } catch (error) {
+    console.error('Error al listar los asistentes:', error);
+    return res.status(500).json({ ok: false, message: 'Error al obtener los asistentes' });
   }
 }
 

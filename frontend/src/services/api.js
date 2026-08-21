@@ -549,6 +549,16 @@ export function toggleFocusGroupCommentLike(id, commentId) {
   return request(`/focus-group/${id}/comments/${commentId}/like`, { method: 'POST' });
 }
 
+/** Confirma o retira la asistencia a una cátedra. Alterna en cada llamada. */
+export function toggleFocusGroupAttendance(id) {
+  return request(`/focus-group/${id}/rsvp`, { method: 'POST' });
+}
+
+/** Solo admin: quién confirmó asistencia a una cátedra. */
+export function getFocusGroupAttendees(id) {
+  return request(`/focus-group/${id}/attendees`);
+}
+
 // Concursos
 export const CONTEST_MIN_SCORE = 0;
 export const CONTEST_MAX_SCORE = 5;

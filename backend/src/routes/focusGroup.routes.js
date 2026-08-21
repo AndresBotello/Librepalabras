@@ -8,7 +8,9 @@ import {
   deleteFocusGroupSession,
   deleteSessionComment,
   getSession,
+  getSessionAttendees,
   getSessions,
+  toggleSessionAttendance,
   toggleSessionCommentLike,
   updateFocusGroupSession,
 } from '../controllers/focusGroup.controller.js';
@@ -25,9 +27,13 @@ router.post('/:id/comments', authenticateRequest, commentRateLimiter, addSession
 router.delete('/:id/comments/:commentId', authenticateRequest, deleteSessionComment);
 router.post('/:id/comments/:commentId/like', authenticateRequest, likeRateLimiter, toggleSessionCommentLike);
 
+// Confirmar asistencia a una cátedra: hace falta sesión, sea cual sea el rol.
+router.post('/:id/rsvp', authenticateRequest, likeRateLimiter, toggleSessionAttendance);
+
 // Crear y gestionar encuentros: solo administradores.
 router.post('/', authenticateRequest, authorizeRoles(['admin']), createFocusGroupSession);
 router.patch('/:id', authenticateRequest, authorizeRoles(['admin']), updateFocusGroupSession);
 router.delete('/:id', authenticateRequest, authorizeRoles(['admin']), deleteFocusGroupSession);
+router.get('/:id/attendees', authenticateRequest, authorizeRoles(['admin']), getSessionAttendees);
 
 export default router;

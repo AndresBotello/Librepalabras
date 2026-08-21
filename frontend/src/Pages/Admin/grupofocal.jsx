@@ -7,6 +7,7 @@ import {
   Pencil,
   Plus,
   Trash2,
+  UserCheck,
   Users,
   Video,
   X,
@@ -14,6 +15,7 @@ import {
 import AdminSidebar from '../../components/AdminSidebar';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
+import FocusGroupAttendeesModal from '../../components/FocusGroupAttendeesModal';
 import { ThemeContext } from '../../context/ThemeContext';
 import { useDialog } from '../../context/DialogContext';
 import {
@@ -62,6 +64,7 @@ export default function AdminGrupoFocal() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
+  const [attendeesSession, setAttendeesSession] = useState(null);
 
   const isSync = form.type === FOCUS_GROUP_TYPES.SYNC;
 
@@ -72,6 +75,7 @@ export default function AdminGrupoFocal() {
       meetings: published.filter((item) => item.type === FOCUS_GROUP_TYPES.SYNC).length,
       topics: published.filter((item) => item.type === FOCUS_GROUP_TYPES.ASYNC).length,
       comments: sessions.reduce((sum, item) => sum + (item.commentsCount || 0), 0),
+      attendees: sessions.reduce((sum, item) => sum + (item.attendeesCount || 0), 0),
     };
   }, [sessions]);
 
@@ -254,10 +258,11 @@ export default function AdminGrupoFocal() {
             </div>
 
             {!loading && sessions.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 <StatTile isDark={isDark} icon={Video} label="Cátedras publicadas" value={stats.meetings} />
                 <StatTile isDark={isDark} icon={MessageSquare} label="Tertulias abiertas" value={stats.topics} />
                 <StatTile isDark={isDark} icon={Users} label="Comentarios recibidos" value={stats.comments} />
+                <StatTile isDark={isDark} icon={UserCheck} label="Confirmados a cátedras" value={stats.attendees} />
               </div>
             )}
 
@@ -466,6 +471,18 @@ export default function AdminGrupoFocal() {
                               <Eye className="w-3.5 h-3.5" />
                               {session.views || 0} visitas
                             </span>
+                            {sync && (
+                              <button
+                                type="button"
+                                onClick={() => setAttendeesSession(session)}
+                                className={`inline-flex items-center gap-1.5 font-semibold transition-colors ${
+                                  isDark ? 'text-amber-400 hover:text-amber-300' : 'text-brand-700 hover:underline'
+                                }`}
+                              >
+                                <UserCheck className="w-3.5 h-3.5" />
+                                {session.attendeesCount || 0} confirmados
+                              </button>
+                            )}
                           </div>
                         </div>
 
@@ -496,6 +513,14 @@ export default function AdminGrupoFocal() {
                   );
                 })}
               </div>
+            )}
+
+            {attendeesSession && (
+              <FocusGroupAttendeesModal
+                session={attendeesSession}
+                isDark={isDark}
+                onClose={() => setAttendeesSession(null)}
+              />
             )}
           </div>
         </main>

@@ -20,7 +20,7 @@ const HERO_OVERLAY = [
 
 const BOOK_SALES_EMAIL = 'librepalabras@gmail.com';
 
-// Compone la URL de Gmail (no un simple mailto:) porque así lo pidió el
+
 // negocio: el correo de ventas es una cuenta de Gmail y se quiere que el
 // botón abra directamente el compositor web con todo pre-rellenado.
 function buildBookPurchaseGmailUrl(book) {

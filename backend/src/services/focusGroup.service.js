@@ -19,6 +19,7 @@ import { adminDb } from '../config/firebaseAdmin.js';
 
 const COLLECTION = 'focusGroupSessions';
 const COMMENTS = 'comments';
+const ATTENDEES = 'attendees';
 
 // Tope de conversación que se sirve de una vez. Un tema con más de 200
 // comentarios necesitaría paginación, no una respuesta más grande.
@@ -83,23 +84,30 @@ export async function updateSession(id, updates) {
   return toDoc(updated);
 }
 
+// Las escrituras por lote van de 500 en 500; con el tope de comentarios que se
+// sirve, o con la asistencia de un encuentro, esto casi siempre es un solo
+// lote, pero el bucle lo deja correcto aunque una subcolección haya
+// acumulado miles de documentos.
+async function deleteSubcollection(docRef, name) {
+  const snapshot = await docRef.collection(name).get();
+
+  for (let index = 0; index < snapshot.docs.length; index += 450) {
+    const batch = adminDb.batch();
+    snapshot.docs.slice(index, index + 450).forEach((doc) => batch.delete(doc.ref));
+    await batch.commit();
+  }
+}
+
 /**
- * Borrar el encuentro tiene que llevarse la conversación con él: en Firestore
- * una subcolección sobrevive al borrado de su documento padre y quedaría
- * ocupando espacio sin que nada la enlace.
+ * Borrar el encuentro tiene que llevarse la conversación y la asistencia con
+ * él: en Firestore una subcolección sobrevive al borrado de su documento
+ * padre y quedaría ocupando espacio sin que nada la enlace.
  */
 export async function deleteSession(id) {
   const docRef = sessionsCollection().doc(id);
-  const comments = await docRef.collection(COMMENTS).get();
 
-  // Las escrituras por lote van de 500 en 500; con el tope de comentarios que
-  // se sirve esto casi siempre es un solo lote, pero el bucle lo deja correcto
-  // aunque un tema haya acumulado miles.
-  for (let index = 0; index < comments.docs.length; index += 450) {
-    const batch = adminDb.batch();
-    comments.docs.slice(index, index + 450).forEach((doc) => batch.delete(doc.ref));
-    await batch.commit();
-  }
+  await deleteSubcollection(docRef, COMMENTS);
+  await deleteSubcollection(docRef, ATTENDEES);
 
   await docRef.delete();
 }
@@ -190,4 +198,81 @@ export async function toggleCommentLike(sessionId, commentId, userId) {
 
     return { liked: !liked, likesCount: next.length };
   });
+}
+
+// ============================================================
+// Asistencia (RSVP) — solo tiene sentido para una cátedra: una tertulia no
+// tiene hora a la que "asistir".
+// ============================================================
+
+/**
+ * Confirmar y quitar la confirmación son la misma operación en los dos
+ * sentidos: el documento existe o no existe, y `attendeesCount` en la sesión
+ * se mantiene en el mismo lote para no tener que sumarlo aparte en cada
+ * lectura.
+ */
+export async function setAttendance(sessionId, uid, attendee) {
+  const { FieldValue } = await import('firebase-admin/firestore');
+  const sessionRef = sessionsCollection().doc(sessionId);
+  const attendeeRef = sessionRef.collection(ATTENDEES).doc(uid);
+
+  return adminDb.runTransaction(async (transaction) => {
+    const existing = await transaction.get(attendeeRef);
+
+    if (existing.exists) {
+      return { attending: existing.data() };
+    }
+
+    transaction.set(attendeeRef, attendee);
+    transaction.update(sessionRef, { attendeesCount: FieldValue.increment(1) });
+
+    return { attending: attendee };
+  });
+}
+
+export async function removeAttendance(sessionId, uid) {
+  const { FieldValue } = await import('firebase-admin/firestore');
+  const sessionRef = sessionsCollection().doc(sessionId);
+  const attendeeRef = sessionRef.collection(ATTENDEES).doc(uid);
+
+  return adminDb.runTransaction(async (transaction) => {
+    const existing = await transaction.get(attendeeRef);
+
+    if (!existing.exists) {
+      return false;
+    }
+
+    transaction.delete(attendeeRef);
+    transaction.update(sessionRef, { attendeesCount: FieldValue.increment(-1) });
+
+    return true;
+  });
+}
+
+export async function getAttendance(sessionId, uid) {
+  const doc = await sessionsCollection().doc(sessionId).collection(ATTENDEES).doc(uid).get();
+  return doc.exists ? doc.data() : null;
+}
+
+export async function listAttendees(sessionId) {
+  const snapshot = await sessionsCollection().doc(sessionId).collection(ATTENDEES).get();
+  return snapshot.docs.map((doc) => doc.data());
+}
+
+export async function markReminderSent(sessionId) {
+  await sessionsCollection().doc(sessionId).update({ reminderSentAt: new Date().toISOString() });
+}
+
+/**
+ * Las cátedras que todavía no han avisado a quien confirmó asistencia. Un solo
+ * `where` (como en el resto del archivo) para no obligar a crear un índice
+ * compuesto: publicadas, sin recordatorio y a tiempo se filtra en memoria,
+ * que con las decenas de cátedras que hay de sobra.
+ */
+export async function listSyncSessionsPendingReminder() {
+  const snapshot = await sessionsCollection().where('type', '==', SESSION_TYPES.SYNC).get();
+
+  return snapshot.docs
+    .map(toDoc)
+    .filter((session) => session.isPublished && !session.reminderSentAt && session.scheduledAt);
 }

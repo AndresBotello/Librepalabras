@@ -13,6 +13,8 @@ import { GenreIcon } from '../../config/genreIcons';
 import LiteraryComments from '../../components/LiteraryComments';
 import FeaturedAuthors from '../../components/FeaturedAuthors';
 import LiteraryRatings from '../../components/LiteraryRatings';
+import ReadingToolbar from '../../components/ReadingToolbar';
+import { readingContentStyle, useReadingPreferences } from '../../context/ReadingPreferencesContext';
 
 if (typeof window !== 'undefined' && 'Worker' in window) {
   pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -22,6 +24,7 @@ const WORKS_PER_PAGE = 12;
 
 export default function Stories() {
   const { isDark } = useContext(ThemeContext);
+  const { fontScale, highContrast, dyslexiaFont } = useReadingPreferences();
   const [works, setWorks] = useState([]);
   const [loadedWork, setLoadedWork] = useState(null);
   const [currentPdfPage, setCurrentPdfPage] = useState(1);
@@ -466,6 +469,8 @@ export default function Stories() {
               </button>
             </div>
 
+            <ReadingToolbar isDark={isDark} />
+
             {/* CONTENEDOR TIPO HOJA DE LIBRO (CANVAS DE LECTURA) */}
 
             {/* Dos columnas también aquí: la lectura conserva su ancho (9 de 12
@@ -546,9 +551,16 @@ export default function Stories() {
               {/* CUERPO TEXTUAL LITERARIO */}
               {story?.content && (
                 <section className="px-6 sm:px-20 py-10">
-                  <div className={`prose dark:prose-invert max-w-none font-serif text-base sm:text-lg leading-relaxed text-justify space-y-6 ${
-                    isDark ? 'text-slate-300' : 'text-stone-800'
-                  }`}>
+                  <div
+                    className={`prose dark:prose-invert max-w-none font-serif text-base sm:text-lg leading-relaxed text-justify space-y-6 rounded-lg transition-colors ${
+                      highContrast
+                        ? isDark
+                          ? 'bg-black text-white p-6 -mx-6'
+                          : 'bg-white text-black p-6 -mx-6 border border-stone-900/10'
+                        : isDark ? 'text-slate-300' : 'text-stone-800'
+                    }`}
+                    style={readingContentStyle({ fontScale, dyslexiaFont })}
+                  >
                     {/* Render de párrafos con primera letra capitular */}
                     {story.content.split('\n\n').map((paragraph, index) => {
                       if (!paragraph.trim()) return null;

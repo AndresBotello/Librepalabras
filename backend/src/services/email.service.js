@@ -124,3 +124,46 @@ export function renderInvitationEmail({ inviteUrl, role, invitedByName, siteName
 
   return { html, text };
 }
+
+/** Recordatorio de una cátedra del Grupo Focal, para quien confirmó asistencia. */
+export function renderFocusGroupReminderEmail({ session, attendeeName, sessionUrl }) {
+  const whenText = new Date(session.scheduledAt).toLocaleString('es-CO', {
+    timeZone: 'America/Bogota',
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  const html = `
+  <div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;color:#1c1917;">
+    <h1 style="font-size:22px;margin:0 0 16px;color:${BRAND_COLOR};">Tu cátedra es mañana</h1>
+    <p style="font-size:15px;line-height:1.6;margin:0 0 12px;">
+      Hola${attendeeName ? ` ${attendeeName}` : ''}, confirmaste tu asistencia a <strong>${session.title}</strong>.
+    </p>
+    <p style="font-size:15px;line-height:1.6;margin:0 0 24px;">
+      Empieza el <strong>${whenText}</strong> (hora de Colombia).
+    </p>
+    <p style="margin:0 0 16px;">
+      <a href="${session.meetingUrl}"
+         style="display:inline-block;background:${BRAND_COLOR};color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;font-size:15px;">
+        Entrar a la videollamada
+      </a>
+    </p>
+    ${sessionUrl ? `<p style="font-size:13px;line-height:1.6;color:#57534e;margin:0 0 8px;">
+      También puedes ver el detalle del encuentro aquí:<br>
+      <span style="word-break:break-all;color:${BRAND_COLOR};">${sessionUrl}</span>
+    </p>` : ''}
+    <hr style="border:none;border-top:1px solid #e7e5e4;margin:24px 0;">
+    <p style="font-size:12px;color:#a8a29e;margin:0;">
+      Recibiste este correo porque confirmaste tu asistencia a este encuentro. Si ya no puedes ir, puedes retirar tu confirmación desde la ficha del encuentro.
+    </p>
+  </div>`;
+
+  const text = `Confirmaste tu asistencia a "${session.title}", que empieza el ${whenText} (hora de Colombia).\n\n`
+    + `Enlace de la videollamada: ${session.meetingUrl}\n`
+    + (sessionUrl ? `Detalle del encuentro: ${sessionUrl}\n` : '');
+
+  return { html, text };
+}
