@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { CheckCircle2, Clock, Loader2, Lock, Trophy, Users } from 'lucide-react';
 import AdminSidebar from '../../components/AdminSidebar';
 import Navbar from '../../components/Navbar';
@@ -34,9 +35,11 @@ export default function AdminConcursos() {
   const [busyId, setBusyId] = useState(null);
   const [status, setStatus] = useState(null);
   const [editions, setEditions] = useState({});
+  const [names, setNames] = useState({});
   const [stats, setStats] = useState({});
 
   const editionValue = (contest) => editions[contest.id] ?? contest.edition ?? '';
+  const nameValue = (contest) => names[contest.id] ?? contest.name ?? '';
 
   // Las inscripciones se cuentan aparte del catálogo: el catálogo dice qué
   // convocatorias hay, esto dice cuánta gente se presentó a cada una.
@@ -67,10 +70,34 @@ export default function AdminConcursos() {
       const response = await setContestState(contest.id, {
         status: nextStatus,
         edition: editionValue(contest),
+        name: nameValue(contest),
       });
 
       if (response.contests) setContests(response.contests);
       setStatus({ type: 'success', message: `"${contest.name}" quedó en estado ${nextStatus}.` });
+    } catch (error) {
+      setStatus({ type: 'error', message: error.message });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const saveName = async (contest) => {
+    const trimmed = nameValue(contest).trim();
+    if (!trimmed || trimmed === contest.name) return;
+
+    setBusyId(contest.id);
+    setStatus(null);
+
+    try {
+      const response = await setContestState(contest.id, {
+        status: contest.status,
+        edition: editionValue(contest),
+        name: trimmed,
+      });
+
+      if (response.contests) setContests(response.contests);
+      setStatus({ type: 'success', message: `El concurso ahora se llama "${trimmed}".` });
     } catch (error) {
       setStatus({ type: 'error', message: error.message });
     } finally {
@@ -131,11 +158,31 @@ export default function AdminConcursos() {
                       className={`rounded-2xl border p-5 ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}
                     >
                       <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-                        <div className="min-w-0">
-                          <p className={`font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                            {contest.name}
-                          </p>
-                          <p className={`text-xs mt-0.5 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <input
+                              type="text"
+                              value={nameValue(contest)}
+                              onChange={(event) => setNames((previous) => ({
+                                ...previous,
+                                [contest.id]: event.target.value,
+                              }))}
+                              maxLength={140}
+                              className={`${inputClasses} font-semibold flex-1 min-w-[220px]`}
+                            />
+
+                            {nameValue(contest).trim() && nameValue(contest).trim() !== contest.name && (
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => saveName(contest)}
+                                className="px-3 py-2 rounded-xl text-xs font-semibold text-white bg-brand-700 hover:bg-brand-800 disabled:opacity-50 transition-colors"
+                              >
+                                Guardar nombre
+                              </button>
+                            )}
+                          </div>
+                          <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
                             {contest.audience}
                           </p>
                         </div>
@@ -249,6 +296,14 @@ export default function AdminConcursos() {
                                 <span className={isDark ? 'text-gray-500' : 'text-gray-500'}>
                                   {item.rated} calificados · {item.published} publicados
                                 </span>
+                                <Link
+                                  to={`/concursos/panel?contest=${encodeURIComponent(contest.id)}&edition=${encodeURIComponent(item.edition || '')}`}
+                                  className={`font-semibold underline-offset-2 hover:underline ${
+                                    isDark ? 'text-amber-400' : 'text-brand-700'
+                                  }`}
+                                >
+                                  Ver participantes ↗
+                                </Link>
                               </li>
                             ))}
                           </ul>

@@ -452,8 +452,11 @@ export function toggleBookFavorite(bookId) {
  * el visitante sigue escribiendo: sin ella, respuestas lentas podrían llegar
  * desordenadas y pintar resultados de una búsqueda ya abandonada.
  */
-export function searchContent(query, { signal } = {}) {
-  return request(`/search?q=${encodeURIComponent(query)}`, { signal });
+export function searchContent(query, { signal, type } = {}) {
+  const params = new URLSearchParams({ q: query });
+  if (type) params.set('tipo', type);
+
+  return request(`/search?${params.toString()}`, { signal });
 }
 
 // Revista Poliversia
@@ -580,11 +583,11 @@ export function getContestStats() {
   return request('/contest/stats');
 }
 
-/** Solo admin: abre, anuncia o cierra una convocatoria. */
-export function setContestState(id, { status, edition }) {
+/** Solo admin: abre, anuncia o cierra una convocatoria, y puede renombrarla. */
+export function setContestState(id, { status, edition, name }) {
   return request(`/contest/catalog/${id}`, {
     method: 'PATCH',
-    body: JSON.stringify({ status, edition }),
+    body: JSON.stringify({ status, edition, name }),
   });
 }
 

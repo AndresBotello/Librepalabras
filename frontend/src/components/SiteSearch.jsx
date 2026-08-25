@@ -2,11 +2,11 @@ import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 
 import { useNavigate } from 'react-router-dom';
 import { Clock, Loader2, Search, X } from 'lucide-react';
 import { searchContent } from '../services/api';
+import { Highlighted } from '../utils/searchHighlight';
+import { MIN_QUERY_LENGTH, useHighlightTerms } from '../utils/searchText';
+import { TYPE_BADGE, TYPE_LABEL } from '../utils/searchTypes';
 
 const DEBOUNCE_MS = 350;
-
-// El mismo mínimo que aplica el servidor. Comprobarlo aquí solo evita el viaje.
-const MIN_QUERY_LENGTH = 2;
 
 // Cuántos resultados se ven de cada grupo antes de pedir el resto. Tres dejan
 // claro qué hay en el grupo sin que un tipo con muchas coincidencias empuje a
@@ -16,29 +16,6 @@ const PREVIEW_PER_GROUP = 3;
 const RECENT_KEY = 'librepalabras:busquedas-recientes';
 const MAX_RECENT = 5;
 
-const TYPE_BADGE = {
-  obra: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
-  columna: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
-  autor: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
-  poliversia: 'bg-violet-500/15 text-violet-300 border-violet-500/30',
-  concurso: 'bg-rose-500/15 text-rose-300 border-rose-500/30',
-};
-
-/**
- * Nombre del grupo por tipo.
- *
- * No se toma del `label` del resultado porque ese varía dentro de un mismo
- * tipo: un cuento premiado se anuncia como «Ganadores» y uno normal como
- * «Concursos», y el encabezado del grupo tiene que ser uno solo.
- */
-const TYPE_LABEL = {
-  obra: 'Obras',
-  columna: 'Columnas de opinión',
-  autor: 'Autores',
-  poliversia: 'Poliversia',
-  concurso: 'Concursos',
-};
-
 /** Sitios a los que ir cuando no hay nada escrito o la búsqueda no encuentra nada. */
 const SHORTCUTS = [
   { label: 'Biblioteca', url: '/stories' },
@@ -47,16 +24,6 @@ const SHORTCUTS = [
   { label: 'Ganadores', url: '/concursos/ganadores' },
   { label: 'Poliversia', url: '/poleversia' },
 ];
-
-/**
- * Copia de las palabras vacías del servidor (`search.service.js`). Solo se usa
- * para no subrayar palabras que la búsqueda descartó: resaltar el «de» de un
- * título cuando nadie buscó «de» es ruido que confunde.
- */
-const STOPWORDS = new Set([
-  'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'de', 'del', 'al',
-  'y', 'o', 'en', 'con', 'por', 'para', 'que', 'se', 'su', 'sus', 'lo', 'es',
-]);
 
 // Constante y no un `[]` nuevo en cada render: así el arreglo vacío no cuenta
 // como un cambio de resultados para React.
@@ -78,97 +45,6 @@ const EMPTY_OUTCOME = {
 // que un cambio futuro en el servidor convierta un resultado en un redirector.
 function isInternalPath(url) {
   return typeof url === 'string' && url.startsWith('/') && !url.startsWith('//');
-}
-
-/**
- * Texto sin tildes ni mayúsculas **conservando la longitud**, para poder buscar
- * posiciones aquí y recortar sobre el original.
- *
- * `String.normalize('NFD')` no sirve tal cual: parte «í» en dos caracteres y
- * cualquier posición calculada sobre el resultado se desplaza respecto al texto
- * de partida. Aquí se normaliza carácter a carácter y se descarta el cambio
- * cuando no deja exactamente una unidad.
- */
-function foldKeepingLength(text) {
-  let folded = '';
-
-  for (const character of text) {
-    if (character.length > 1) {
-      folded += character;
-      continue;
-    }
-
-    const base = character.normalize('NFD')[0].toLowerCase();
-    folded += base.length === 1 ? base : character;
-  }
-
-  return folded;
-}
-
-function isWordCharacter(character) {
-  return character !== undefined && /[\p{L}\p{N}]/u.test(character);
-}
-
-/**
- * Parte el texto en trozos marcando los que coinciden con algún término.
- *
- * Se exige que la coincidencia empiece una palabra, la misma regla con la que
- * el servidor puntúa: si no, buscar «nada» subrayaría el final de «dominada» y
- * el resaltado contaría una historia distinta de la del buscador.
- */
-function splitByTerms(text, terms) {
-  if (!text || terms.length === 0) return [{ text, match: false }];
-
-  const folded = foldKeepingLength(text);
-  const ranges = [];
-
-  for (const term of terms) {
-    let from = 0;
-
-    while (from <= folded.length - term.length) {
-      const at = folded.indexOf(term, from);
-      if (at === -1) break;
-
-      if (!isWordCharacter(folded[at - 1])) {
-        ranges.push([at, at + term.length]);
-      }
-
-      from = at + 1;
-    }
-  }
-
-  if (ranges.length === 0) return [{ text, match: false }];
-
-  ranges.sort((a, b) => a[0] - b[0]);
-
-  const pieces = [];
-  let cursor = 0;
-
-  for (const [start, end] of ranges) {
-    // Los términos pueden solaparse ("poe" y "poesia" sobre el mismo título):
-    // lo que ya quedó dentro de un trozo resaltado no se vuelve a abrir.
-    if (end <= cursor) continue;
-
-    const from = Math.max(start, cursor);
-    if (from > cursor) pieces.push({ text: text.slice(cursor, from), match: false });
-
-    pieces.push({ text: text.slice(from, end), match: true });
-    cursor = end;
-  }
-
-  if (cursor < text.length) pieces.push({ text: text.slice(cursor), match: false });
-
-  return pieces;
-}
-
-function Highlighted({ text, terms }) {
-  const pieces = useMemo(() => splitByTerms(text || '', terms), [text, terms]);
-
-  return pieces.map((piece, index) => (
-    piece.match
-      ? <mark key={index} className="bg-transparent text-amber-300 font-semibold">{piece.text}</mark>
-      : <React.Fragment key={index}>{piece.text}</React.Fragment>
-  ));
 }
 
 function readRecent() {
@@ -255,14 +131,7 @@ export default function SiteSearch() {
   const total = settled ? outcome.total : 0;
 
   /** Los términos tal como los entiende el servidor, para resaltarlos igual. */
-  const highlightTerms = useMemo(() => {
-    const tokens = foldKeepingLength(term)
-      .split(/[^\p{L}\p{N}]+/u)
-      .filter((token) => token.length >= MIN_QUERY_LENGTH);
-
-    const meaningful = tokens.filter((token) => !STOPWORDS.has(token));
-    return [...new Set(meaningful.length ? meaningful : tokens)];
-  }, [term]);
+  const highlightTerms = useHighlightTerms(term);
 
   /**
    * Los resultados repartidos en grupos, en el orden en que aparece el primero
@@ -727,12 +596,39 @@ export default function SiteSearch() {
 
                         {group.truncated && (
                           <p className="px-5 py-1.5 text-[11px] text-stone-500">
-                            {`Se muestran los ${group.items.length} más relevantes de ${group.total}. Afina la búsqueda para ver el resto.`}
+                            {`Se muestran los ${group.items.length} más relevantes de ${group.total}. `}
+                            <button
+                              type="button"
+                              onMouseDown={(event) => {
+                                event.preventDefault();
+                                rememberSearch(term);
+                                setIsOpen(false);
+                                navigate(`/buscar?q=${encodeURIComponent(term)}&tipo=${encodeURIComponent(group.type)}`);
+                              }}
+                              className="text-amber-300/90 hover:underline"
+                            >
+                              {`Ver los ${group.total} en ${group.label}`}
+                            </button>
                           </p>
                         )}
                       </li>
                     ))}
                   </ul>
+
+                  <div className="border-t border-stone-800/80 px-5 py-3">
+                    <button
+                      type="button"
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        rememberSearch(term);
+                        setIsOpen(false);
+                        navigate(`/buscar?q=${encodeURIComponent(term)}`);
+                      }}
+                      className="text-xs font-semibold text-amber-300/90 hover:underline"
+                    >
+                      {`Ver todos los resultados para «${term}» →`}
+                    </button>
+                  </div>
                 </>
               )}
             </>

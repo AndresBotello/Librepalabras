@@ -31,6 +31,7 @@ export function mergeContestStates(states = {}) {
 
     return {
       ...contest,
+      name: saved.name?.trim() ? saved.name : contest.name,
       status: CONTEST_STATUSES.includes(saved.status) ? saved.status : contest.status,
       edition: saved.edition !== undefined ? saved.edition : contest.edition,
       updatedAt: saved.updatedAt || null,

@@ -6,7 +6,6 @@ import Footer from '../../components/Footer';
 import AdminSidebar from '../../components/AdminSidebar';
 import {
   clearErrorLogs,
-  deleteOrphanFile,
   formatBytes,
   getSystemHealth,
 } from '../../services/api';
@@ -74,39 +73,6 @@ export default function AdminSalud() {
     }
   };
 
-  const handleDeleteOrphan = async (file) => {
-    const confirmed = await confirm({
-      title: 'Eliminar archivo de Cloudinary',
-      message: 'El archivo se borrará definitivamente. Comprueba antes que de verdad no lo usa nadie.',
-      detail: file.publicId,
-      confirmLabel: 'Eliminar archivo',
-      variant: 'danger',
-    });
-
-    if (!confirmed) return;
-
-    setBusy(file.publicId);
-
-    try {
-      const response = await deleteOrphanFile(file.publicId, file.resourceType);
-      setFeedback({ type: 'success', text: response.message });
-
-      setHealth((prev) => ({
-        ...prev,
-        orphanFiles: {
-          ...prev.orphanFiles,
-          total: prev.orphanFiles.total - 1,
-          totalBytes: prev.orphanFiles.totalBytes - file.bytes,
-          items: prev.orphanFiles.items.filter((item) => item.publicId !== file.publicId),
-        },
-      }));
-    } catch (error) {
-      setFeedback({ type: 'error', text: error.message });
-    } finally {
-      setBusy(null);
-    }
-  };
-
   const cardClass = `rounded-xl border p-6 transition-colors ${
     isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'
   }`;
@@ -137,7 +103,7 @@ export default function AdminSalud() {
                 <p className={`text-sm mt-1 ${mutedClass}`}>
                   {health?.checkedAt
                     ? `Última comprobación: ${new Date(health.checkedAt).toLocaleString('es-CO')}`
-                    : 'Cuota, base de datos, errores y archivos huérfanos.'}
+                    : 'Cuota, base de datos y errores.'}
                 </p>
               </div>
 
@@ -299,74 +265,6 @@ export default function AdminSalud() {
                         </li>
                       ))}
                     </ul>
-                  )}
-                </section>
-
-                {/* Archivos huérfanos */}
-                <section className={cardClass}>
-                  <h2 className="text-lg font-bold mb-1">Archivos huérfanos</h2>
-                  <p className={`text-xs mb-5 ${mutedClass}`}>
-                    Están en Cloudinary pero ningún documento los referencia. Consumen cuota sin usarse.
-                  </p>
-
-                  {!health.orphanFiles.ok ? (
-                    <ErrorBox message={health.orphanFiles.message} detail={health.orphanFiles.error} isDark={isDark} />
-                  ) : health.orphanFiles.total === 0 ? (
-                    <p className={`text-sm py-6 text-center ${mutedClass}`}>
-                      ✅ No hay archivos huérfanos entre los {health.orphanFiles.scanned} revisados.
-                    </p>
-                  ) : (
-                    <>
-                      <div className={`px-4 py-3 rounded-lg mb-4 text-sm ${
-                        isDark ? 'bg-amber-950/40 text-amber-200' : 'bg-amber-50 text-amber-900'
-                      }`}>
-                        <strong>{health.orphanFiles.total} archivo(s)</strong> ocupando{' '}
-                        <strong>{formatBytes(health.orphanFiles.totalBytes)}</strong>.
-                        {health.orphanFiles.items.length < health.orphanFiles.total && (
-                          <> Se listan los {health.orphanFiles.items.length} más pesados.</>
-                        )}
-                      </div>
-
-                      <ul className="space-y-2">
-                        {health.orphanFiles.items.map((file) => (
-                          <li
-                            key={file.publicId}
-                            className={`flex flex-wrap items-center gap-3 px-4 py-3 rounded-lg ${
-                              isDark ? 'bg-slate-800/60' : 'bg-slate-50'
-                            }`}
-                          >
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-mono truncate">{file.publicId}</p>
-                              <p className={`text-xs mt-0.5 ${mutedClass}`}>
-                                {formatBytes(file.bytes)} · {file.format || file.resourceType} ·{' '}
-                                {new Date(file.createdAt).toLocaleDateString('es-CO')}
-                              </p>
-                            </div>
-
-                            <a
-                              href={file.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className={`text-xs font-semibold px-3 py-1.5 rounded-lg ${
-                                isDark ? 'text-amber-400 hover:bg-slate-700' : 'text-brand-700 hover:bg-slate-200'
-                              }`}
-                            >
-                              Ver ↗
-                            </a>
-
-                            <button
-                              onClick={() => handleDeleteOrphan(file)}
-                              disabled={busy === file.publicId}
-                              className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 ${
-                                isDark ? 'text-rose-400 hover:bg-slate-700' : 'text-rose-600 hover:bg-rose-50'
-                              }`}
-                            >
-                              {busy === file.publicId ? 'Borrando…' : 'Eliminar'}
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    </>
                   )}
                 </section>
               </>

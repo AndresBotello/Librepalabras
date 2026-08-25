@@ -7,6 +7,7 @@ import Authors from '../Pages/Home/authors.jsx';
 import Stories from '../Pages/Stories/stories.jsx';
 import Literature from '../Pages/Stories/literature.jsx';
 import PoliversiaCatalog from '../Pages/Poliversia/catalog.jsx';
+import SearchResults from '../Pages/Search/resultados.jsx';
 import GrupoFocal from '../Pages/GrupoFocal/index.jsx';
 import GrupoFocalEncuentro from '../Pages/GrupoFocal/encuentro.jsx';
 import Concursos from '../Pages/Concursos/index.jsx';
@@ -82,6 +83,7 @@ export default function AppRoutes() {
       <Route path="/poliversia" element={<Navigate to="/poleversia" replace />} />
       <Route path="/grupo-focal" element={<GrupoFocal />} />
       <Route path="/grupo-focal/:id" element={<GrupoFocalEncuentro />} />
+      <Route path="/buscar" element={<SearchResults />} />
       <Route path="/concursos" element={<Concursos />} />
       <Route path="/concursos/ganadores" element={<ContestWinners />} />
       <Route path="/columnas" element={<PublicOpinionColumnsPage />} />

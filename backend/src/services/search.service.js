@@ -205,6 +205,40 @@ const SOURCES = [
       url: `/poleversia?edicion=${encodeURIComponent(id)}`,
     }),
   },
+  {
+    type: 'libro',
+    label: 'Libros',
+    collection: 'promotionalBooks',
+    filter: ['isActive', '==', true],
+    fields: ['title', 'author', 'genre', 'tags', 'synopsis', 'description', 'coverImage'],
+    toEntry: (id, data) => ({
+      title: data.title,
+      subtitle: excerpt(data.synopsis || data.description),
+      author: data.author,
+      image: data.coverImage,
+      keywords: [data.genre, ...(Array.isArray(data.tags) ? data.tags : [])],
+      url: `/literature?libro=${encodeURIComponent(id)}`,
+    }),
+  },
+  {
+    type: 'encuentro',
+    label: 'Grupo Focal',
+    collection: 'focusGroupSessions',
+    filter: ['isPublished', '==', true],
+    fields: ['title', 'description', 'type'],
+    toEntry: (id, data) => ({
+      title: data.title,
+      subtitle: excerpt(data.description),
+      author: '',
+      image: null,
+      // 'sincronico' es una cátedra con fecha y enlace; 'asincronico' es una
+      // tertulia de tema abierto. Ninguno de los dos nombres técnicos se
+      // enseña al público, pero sí sirven para que la palabra que use el
+      // visitante ("catedra", "tertulia") encuentre el encuentro correcto.
+      keywords: [data.type === 'sincronico' ? 'catedra reunion' : 'tertulia debate', 'grupo focal'],
+      url: `/grupo-focal/${encodeURIComponent(id)}`,
+    }),
+  },
 ];
 
 /**
@@ -521,17 +555,40 @@ function collectMatches(entries, terms, scorer) {
 }
 
 /**
+ * Cuántos resultados de un solo tipo se sirven cuando se pide ese tipo entero
+ * (la página de resultados, al abrir "ver todos" de un grupo). Más alto que
+ * `MAX_PER_TYPE` porque aquí ya no compite por sitio con los demás grupos,
+ * pero sigue habiendo un tope: una consulta de una letra no debe devolver el
+ * catálogo completo en una sola respuesta.
+ */
+const MAX_TYPE_RESULTS = 200;
+
+/**
  * De todas las coincidencias a las que caben en la respuesta.
  *
  * El recorte es por tipo antes que global para que el desplegable pueda enseñar
  * algo de cada grupo. `counts` cuenta TODAS las coincidencias, no las
  * devueltas: es el número que se enseña junto al nombre del grupo, y tiene que
  * decir cuántas hay de verdad.
+ *
+ * Con `onlyType` se salta ese reparto: es la página de resultados pidiendo un
+ * solo grupo completo, así que no hay nada más con lo que repartir el cupo.
  */
-function toResponse(matches, approximate) {
+function toResponse(matches, approximate, onlyType) {
   const byScore = (a, b) => (
     b.score - a.score || a.result.title.localeCompare(b.result.title, 'es')
   );
+
+  if (onlyType) {
+    const own = matches.filter((match) => match.result.type === onlyType).sort(byScore);
+
+    return {
+      results: own.slice(0, MAX_TYPE_RESULTS).map((match) => match.result),
+      counts: { [onlyType]: own.length },
+      total: own.length,
+      approximate,
+    };
+  }
 
   const counts = {};
   const perType = new Map();
@@ -557,7 +614,12 @@ function toResponse(matches, approximate) {
   return { results, counts, total: matches.length, approximate };
 }
 
-export async function searchSite(rawQuery) {
+/**
+ * `type` limita la respuesta a un solo grupo, sin el recorte a `MAX_PER_TYPE`
+ * que existe para que el desplegable reparta sitio entre grupos: lo usa la
+ * página de resultados cuando alguien pide ver un grupo entero.
+ */
+export async function searchSite(rawQuery, { type } = {}) {
   const terms = parseQuery(rawQuery);
 
   if (terms.length === 0) {
@@ -568,7 +630,7 @@ export async function searchSite(rawQuery) {
   const strict = collectMatches(entries, terms, scoreTerm);
 
   // La búsqueda exacta ya trae de sobra: no se paga el recorrido tolerante.
-  if (strict.length >= ENOUGH_STRICT_MATCHES) return toResponse(strict, false);
+  if (strict.length >= ENOUGH_STRICT_MATCHES) return toResponse(strict, false, type);
 
   const approximate = collectMatches(entries, terms, scoreTermApproximate);
 
@@ -584,5 +646,5 @@ export async function searchSite(rawQuery) {
   // El aviso de "esto es lo más parecido" solo cuando nada coincidió de verdad:
   // si hubo aciertos exactos, los aproximados van detrás y no hay nada que
   // disculpar.
-  return toResponse([...best.values()], strict.length === 0 && best.size > 0);
+  return toResponse([...best.values()], strict.length === 0 && best.size > 0, type);
 }

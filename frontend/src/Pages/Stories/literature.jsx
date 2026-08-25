@@ -52,7 +52,6 @@ export default function Literature() {
   const { isDark } = useContext(ThemeContext);
   const [promotionalBooks, setPromotionalBooks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedBook, setSelectedBook] = useState(null);
 
   /**
    * La categoría llega en la URL (?genero=novela) desde el menú "Libros" de la
@@ -67,6 +66,30 @@ export default function Literature() {
   const setSelectedGenre = useCallback((value) => {
     setSearchParams(value && value !== 'all' ? { genero: value } : {}, { replace: true });
   }, [setSearchParams]);
+
+  /**
+   * El libro con la ficha abierta vive en la URL (?libro=id), no en el estado:
+   * así el buscador del sitio y el enlace de "Compra este libro" pueden llevar
+   * directo a una ficha concreta en vez de solo aterrizar en el catálogo.
+   */
+  const bookParam = searchParams.get('libro');
+  const selectedBook = promotionalBooks.find((book) => book.id === bookParam) || null;
+
+  const openBook = (book) => {
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous);
+      next.set('libro', book.id);
+      return next;
+    });
+  };
+
+  const closeBook = () => {
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous);
+      next.delete('libro');
+      return next;
+    });
+  };
 
   const genreLabel = genresData.genres.find((g) => g.value === selectedGenre)?.label || selectedGenre;
 
@@ -261,7 +284,7 @@ export default function Literature() {
                   <article key={book.id} className="group">
                     <button
                       type="button"
-                      onClick={() => setSelectedBook(book)}
+                      onClick={() => openBook(book)}
                       className="w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 rounded-md"
                       aria-label={`Ver detalles de ${book.title}`}
                     >
@@ -438,7 +461,7 @@ export default function Literature() {
                 Detalles del Libro
               </h2>
               <button
-                onClick={() => setSelectedBook(null)}
+                onClick={closeBook}
                 className={`p-2 rounded-lg transition-colors ${isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-700'}`}
               >
                 <X className="w-5 h-5" />

@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   AlertTriangle,
   ChevronDown,
@@ -56,11 +57,16 @@ export default function ContestPanel() {
   const { isDark } = useContext(ThemeContext);
   const { user } = useAuth();
   const { contests } = useContestCatalog();
+  const [searchParams] = useSearchParams();
   const [stories, setStories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('todos');
-  const [contestFilter, setContestFilter] = useState('todos');
-  const [editionFilter, setEditionFilter] = useState('todos');
+  // Llegar desde Admin > Concursos con ?contest=&edition= abre el panel ya
+  // filtrado en esa edición, en vez de mostrar todo y obligar a buscarla.
+  const [contestFilter, setContestFilter] = useState(searchParams.get('contest') || 'todos');
+  const [editionFilter, setEditionFilter] = useState(
+    searchParams.has('edition') ? searchParams.get('edition') : 'todos'
+  );
   const [expandedId, setExpandedId] = useState(null);
   const [status, setStatus] = useState(null);
   const [busyId, setBusyId] = useState(null);

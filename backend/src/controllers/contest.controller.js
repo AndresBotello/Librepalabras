@@ -30,6 +30,7 @@ import {
 import { NOTIFICATION_TYPES, createNotification } from '../services/notification.service.js';
 
 const MAX_EDITION_LENGTH = 40;
+const MAX_CONTEST_NAME_LENGTH = 140;
 
 /** El catálogo con el estado que decidió el administrador aplicado encima. */
 async function loadCatalog() {
@@ -623,7 +624,7 @@ export async function getContestStats(_req, res) {
 export async function setContestState(req, res) {
   try {
     const { id } = req.params;
-    const { status, edition } = req.body;
+    const { status, edition, name } = req.body;
 
     if (!getContest(id)) {
       return res.status(404).json({ ok: false, message: 'El concurso indicado no existe' });
@@ -643,16 +644,31 @@ export async function setContestState(req, res) {
       });
     }
 
+    if (name !== undefined && !String(name).trim()) {
+      return res.status(400).json({ ok: false, message: 'El nombre del concurso es obligatorio' });
+    }
+
+    if (name !== undefined && String(name).trim().length > MAX_CONTEST_NAME_LENGTH) {
+      return res.status(400).json({
+        ok: false,
+        message: `El nombre no puede superar los ${MAX_CONTEST_NAME_LENGTH} caracteres`,
+      });
+    }
+
     const state = {
       status,
       updatedAt: new Date().toISOString(),
       updatedBy: req.auth.uid,
     };
 
-    // `undefined` no se puede guardar en Firestore: si no llega edición, se
-    // deja la que hubiera.
+    // `undefined` no se puede guardar en Firestore: si no llega edición o
+    // nombre, se deja lo que hubiera.
     if (edition !== undefined) {
       state.edition = xss(String(edition).trim());
+    }
+
+    if (name !== undefined) {
+      state.name = xss(String(name).trim());
     }
 
     // El estado anterior se lee ANTES de escribir: solo se avisa cuando la
