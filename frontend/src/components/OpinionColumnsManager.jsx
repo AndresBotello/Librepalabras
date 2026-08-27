@@ -179,8 +179,7 @@ export default function OpinionColumnsManager() {
 
     try {
       setUploadingCover(true);
-      const response = await uploadCover(file);
-      const remoteUrl = response?.url || response?.data?.url || '';
+      const remoteUrl = await uploadCover(file);
       setForm((previous) => ({ ...previous, coverUrl: remoteUrl }));
       setCoverPreview(remoteUrl || localPreview);
       setSuccess(remoteUrl ? 'Portada cargada correctamente' : 'Vista previa actualizada');

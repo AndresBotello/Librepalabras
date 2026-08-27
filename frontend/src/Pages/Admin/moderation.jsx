@@ -5,6 +5,7 @@ import Footer from '../../components/Footer';
 import AdminSidebar from '../../components/AdminSidebar';
 import { getPendingWorks, reviewWork } from '../../services/api';
 import genresData from '../../config/genres.json';
+import scopesData from '../../config/scopes.json';
 
 /**
  * Las tres bandejas. La de pendientes es la de trabajo; las otras dos existen
@@ -82,6 +83,10 @@ export default function Moderation() {
 
   const getGenreInfo = (genre) => {
     return genresData.genres.find(g => g.value === genre);
+  };
+
+  const getScopeInfo = (scope) => {
+    return scopesData.scopes.find(s => s.value === scope);
   };
 
   const handleApprove = async (workId) => {
@@ -287,7 +292,12 @@ export default function Moderation() {
                                 )}
                               </td>
                               <td className={`px-6 py-4 text-sm transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                                {genreInfo?.emoji} {genreInfo?.label || work.genre}
+                                <span className="block">{genreInfo?.emoji} {genreInfo?.label || work.genre}</span>
+                                {work.scope && (
+                                  <span className="block text-xs mt-0.5 opacity-80">
+                                    {getScopeInfo(work.scope)?.emoji} {getScopeInfo(work.scope)?.label || work.scope}
+                                  </span>
+                                )}
                               </td>
                               <td className={`px-6 py-4 text-sm transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                                 {work.type === 'pdfSale'
@@ -416,6 +426,14 @@ export default function Moderation() {
                     <dt className={`text-xs font-semibold uppercase tracking-wider mb-0.5 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Género</dt>
                     <dd className={isDark ? 'text-gray-300' : 'text-gray-800'}>
                       {getGenreInfo(selectedWork.genre)?.emoji} {getGenreInfo(selectedWork.genre)?.label || selectedWork.genre}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className={`text-xs font-semibold uppercase tracking-wider mb-0.5 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Alcance</dt>
+                    <dd className={isDark ? 'text-gray-300' : 'text-gray-800'}>
+                      {selectedWork.scope
+                        ? `${getScopeInfo(selectedWork.scope)?.emoji || ''} ${getScopeInfo(selectedWork.scope)?.label || selectedWork.scope}`
+                        : 'Sin definir'}
                     </dd>
                   </div>
                   <div>

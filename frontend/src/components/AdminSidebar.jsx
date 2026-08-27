@@ -153,6 +153,10 @@ export default function AdminSidebar() {
     // El administrador siempre pudo publicar obra —AUTHOR_ROLES lo incluye—,
     // pero no había forma de llegar al formulario desde su propio panel.
     { icon: IconPublish, label: 'Publicar obra', path: '/collaborator/create' },
+    // Publicar obra no basta sin poder volver después a corregirla o
+    // retirarla: la pantalla ya existe para colaborador/juez (misma
+    // AuthorRoute que ya cubre a admin), solo faltaba el enlace aquí.
+    { icon: IconBooks, label: 'Mis obras publicadas', path: '/collaborator/publications' },
     { icon: IconPublish, label: 'Columnas de Opinión', path: '/admin/columnas' },
     { icon: IconModeration, label: 'Moderación de obras', path: '/admin/moderation' },
     { icon: IconComments, label: 'Comentarios reportados', path: '/admin/comentarios', badge: pendingReports },

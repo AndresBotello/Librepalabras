@@ -189,7 +189,9 @@ function toAuthor(doc) {
 export async function listAuthors() {
   if (!adminDb) return [];
 
-  const snapshot = await collection().orderBy('name').get();
+  // Por orden de alta en el catálogo: quien se sumó primero aparece primero,
+  // no por orden alfabético del nombre.
+  const snapshot = await collection().orderBy('createdAt').get();
   return snapshot.docs.map(toAuthor);
 }
 

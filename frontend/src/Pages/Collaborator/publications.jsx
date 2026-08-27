@@ -1,5 +1,8 @@
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext, useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, Italic, List, ListOrdered, Underline,
+} from 'lucide-react';
 import { ThemeContext } from '../../context/ThemeContext';
 import { AuthContext } from '../../context/AuthContext';
 import { useConfirm, useNotify } from '../../context/DialogContext';
@@ -9,12 +12,31 @@ import AreaSidebar from '../../components/AreaSidebar';
 import PdfViewer from '../../components/PdfViewer';
 import { getMyWorks, updateLiteraryWork, deleteLiteraryWork, getAllAuthors, uploadPdf, uploadCover } from '../../services/api';
 import genresData from '../../config/genres.json';
+import scopesData from '../../config/scopes.json';
 
 // Los mismos topes que aplica el servidor en backend/src/utils/files.js. Aquí
 // sirven para avisar antes de subir: sin esto, un archivo de más se pasaba
 // entero por la red para que el backend lo rechazara al final.
 const MAX_COVER_BYTES = 5 * 1024 * 1024;
 const MAX_PDF_BYTES = 10 * 1024 * 1024;
+
+/** Mismos comandos que el formulario de creación (`LiteraryWorkForm.jsx`). */
+const CONTENT_TOOLBAR = [
+  { command: 'bold', icon: Bold, title: 'Negrita' },
+  { command: 'italic', icon: Italic, title: 'Cursiva' },
+  { command: 'underline', icon: Underline, title: 'Subrayado' },
+  { command: 'justifyLeft', icon: AlignLeft, title: 'Alinear a la izquierda' },
+  { command: 'justifyCenter', icon: AlignCenter, title: 'Centrar' },
+  { command: 'justifyRight', icon: AlignRight, title: 'Alinear a la derecha' },
+  { command: 'justifyFull', icon: AlignJustify, title: 'Justificar' },
+  { command: 'insertUnorderedList', icon: List, title: 'Lista con viñetas' },
+  { command: 'insertOrderedList', icon: ListOrdered, title: 'Lista numerada' },
+];
+
+/** El HTML sin etiquetas, para contar caracteres reales y no marcado. */
+function stripHtml(value = '') {
+  return String(value).replace(/<[^>]*>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/\s+/g, ' ').trim();
+}
 
 export default function Publications() {
   const { isDark } = useContext(ThemeContext);
@@ -39,12 +61,27 @@ export default function Publications() {
     title: '',
     author: '',
     genre: '',
+    scope: '',
     description: '',
     content: '',
     pdfUrl: '',
     cover: '',
     authorProfileId: '',
   });
+  const editorRef = useRef(null);
+
+  // El `contentEditable` no es un input controlado: su HTML se guarda en
+  // `formData.content` al escribir, pero solo hay que reescribirlo desde fuera
+  // (al abrir una edición, o al cancelarla) cuando de verdad difiere de lo que
+  // ya tiene pintado; si no, cada tecla movería el cursor al principio.
+  useEffect(() => {
+    if (!editorRef.current) return;
+
+    const currentHtml = editorRef.current.innerHTML || '';
+    if (currentHtml !== (formData.content || '')) {
+      editorRef.current.innerHTML = formData.content || '';
+    }
+  }, [formData.content]);
 
   useEffect(() => {
     fetchPublications();
@@ -75,6 +112,7 @@ export default function Publications() {
       title: pub.title,
       author: pub.author || '',
       genre: pub.genre,
+      scope: pub.scope || '',
       description: pub.description || '',
       content: pub.content,
       pdfUrl: pub.pdfUrl || '',
@@ -90,6 +128,7 @@ export default function Publications() {
       title: '',
       author: '',
       genre: '',
+      scope: '',
       description: '',
       content: '',
       pdfUrl: '',
@@ -166,8 +205,22 @@ export default function Publications() {
     }
   };
 
+  const handleEditorInput = (event) => {
+    const nextContent = event?.currentTarget?.innerHTML ?? '';
+    setFormData(prev => ({ ...prev, content: nextContent }));
+  };
+
+  const applyFormatting = (command) => {
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    editor.focus();
+    document.execCommand(command, false, null);
+    setFormData(prev => ({ ...prev, content: editor.innerHTML || '' }));
+  };
+
   const handleSaveEdit = async () => {
-    if (!formData.title.trim() || !formData.content.trim()) {
+    if (!formData.title.trim() || !stripHtml(formData.content)) {
       notify.error('El título y el contenido son obligatorios.');
       return;
     }
@@ -190,6 +243,7 @@ export default function Publications() {
         title: formData.title,
         author: formData.author,
         genre: formData.genre,
+        scope: formData.scope,
         description: formData.description,
         content: formData.content,
         pdfUrl: formData.pdfUrl,
@@ -375,7 +429,12 @@ export default function Publications() {
                                 )}
                               </td>
                               <td className={`px-6 py-4 text-sm transition-colors ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                                {genresData.genres.find(g => g.value === pub.genre)?.label || pub.genre}
+                                <span className="block">{genresData.genres.find(g => g.value === pub.genre)?.label || pub.genre}</span>
+                                {pub.scope && (
+                                  <span className="block text-xs mt-0.5">
+                                    {scopesData.scopes.find(s => s.value === pub.scope)?.label || pub.scope}
+                                  </span>
+                                )}
                               </td>
                               <td className={`px-6 py-4 text-sm`}>
                                 <span className={`px-3 py-1 rounded-full text-xs font-semibold ${status.color}`}>
@@ -538,6 +597,24 @@ export default function Publications() {
 
               <div>
                 <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Alcance
+                </label>
+                <select
+                  value={formData.scope}
+                  onChange={(e) => setFormData(prev => ({ ...prev, scope: e.target.value }))}
+                  className={`w-full px-4 py-2 rounded-lg border transition-colors ${isDark ? 'bg-gray-800 border-gray-700 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}`}
+                >
+                  <option value="">Selecciona un alcance</option>
+                  {scopesData.scopes.map((scope) => (
+                    <option key={scope.value} value={scope.value}>
+                      {scope.emoji} {scope.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                   Descripción
                 </label>
                 <textarea
@@ -553,12 +630,30 @@ export default function Publications() {
                 <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                   Contenido
                 </label>
-                <textarea
-                  value={formData.content}
-                  onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-                  className={`w-full px-4 py-2 rounded-lg border transition-colors ${isDark ? 'bg-gray-800 border-gray-700 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}`}
-                  placeholder="Contenido de la obra"
-                  rows="6"
+
+                <div className="mb-2 flex flex-wrap gap-1.5">
+                  {CONTENT_TOOLBAR.map(({ command, icon: Icon, title }) => (
+                    <button
+                      key={command}
+                      type="button"
+                      title={title}
+                      aria-label={title}
+                      onClick={() => applyFormatting(command)}
+                      className={`p-2 rounded-lg border transition-colors ${isDark ? 'border-gray-700 bg-gray-800 text-gray-200 hover:bg-gray-700' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100'}`}
+                    >
+                      <Icon className="w-4 h-4" />
+                    </button>
+                  ))}
+                </div>
+
+                <div
+                  ref={editorRef}
+                  contentEditable
+                  suppressContentEditableWarning
+                  onInput={handleEditorInput}
+                  data-placeholder="Contenido de la obra"
+                  className={`w-full min-h-56 px-4 py-2 rounded-lg border text-sm leading-relaxed transition-colors overflow-y-auto ${isDark ? 'bg-gray-800 border-gray-700 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}`}
+                  style={{ whiteSpace: 'pre-wrap' }}
                 />
               </div>
 

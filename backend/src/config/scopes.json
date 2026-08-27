@@ -1,0 +1,22 @@
+{
+  "scopes": [
+    {
+      "value": "local",
+      "label": "Local",
+      "emoji": "📍",
+      "description": "Obras de autores o temática del municipio o la comunidad"
+    },
+    {
+      "value": "regional",
+      "label": "Regional",
+      "emoji": "🗺️",
+      "description": "Obras de autores o temática de la región o el departamento"
+    },
+    {
+      "value": "universal",
+      "label": "Universal",
+      "emoji": "🌎",
+      "description": "Obras de alcance o temática universal"
+    }
+  ]
+}

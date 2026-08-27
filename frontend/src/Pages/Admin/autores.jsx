@@ -116,6 +116,7 @@ export default function AdminAutores() {
     const fullName = `${user.nombres || ''} ${user.apellidos || ''}`.trim() || user.name || '';
 
     setForm((prev) => ({
+      ...prev,
       name: prev.name || fullName,
       bio: prev.bio || user.descripcion || '',
       photoURL: prev.photoURL || user.photoURL || '',

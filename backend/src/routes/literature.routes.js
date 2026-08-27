@@ -10,6 +10,7 @@ import {
   getPendingWorks,
   reviewWork,
   getGenres,
+  getScopes,
   addRating,
   addComment,
   deleteComment,
@@ -24,6 +25,7 @@ const router = Router();
 
 // Rutas públicas - PRIMERO las más específicas
 router.get('/genres', getGenres);
+router.get('/scopes', getScopes);
 router.get('/approved', getApprovedWorks);
 // Los autores ya no se deducen de aquí: son un catálogo propio en /api/authors.
 

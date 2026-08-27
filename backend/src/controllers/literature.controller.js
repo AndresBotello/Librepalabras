@@ -13,9 +13,63 @@ import { getAuthor } from '../services/author.service.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const genresData = JSON.parse(readFileSync(join(__dirname, '../config/genres.json'), 'utf-8'));
+const scopesData = JSON.parse(readFileSync(join(__dirname, '../config/scopes.json'), 'utf-8'));
 
 const VALID_GENRES = genresData.genres.map(g => g.value);
+const VALID_SCOPES = scopesData.scopes.map(s => s.value);
 const MAX_AUTHOR_LENGTH = 120;
+const MAX_CONTENT_LENGTH = 200000;
+
+/**
+ * El editor de la obra guarda HTML (negrita, cursiva, alineación...), no texto
+ * plano. Sin filtrar, ese HTML se re-inyecta tal cual al lector con
+ * `dangerouslySetInnerHTML`: cualquier `<script>` colado en el contenido se
+ * ejecutaría en el navegador de todo el que abra la obra. La lista blanca deja
+ * pasar el formato de un editor de texto (párrafos, énfasis, alineación,
+ * listas) y nada que pueda ejecutar código.
+ */
+function sanitizeWorkContent(value) {
+  if (typeof value !== 'string') return '';
+
+  const allowed = xss(value, {
+    whiteList: {
+      a: ['href', 'title', 'target', 'rel'],
+      b: [],
+      strong: [],
+      em: [],
+      i: [],
+      u: [],
+      p: ['style'],
+      div: ['style'],
+      span: ['style'],
+      br: [],
+      ul: [],
+      ol: [],
+      li: [],
+      blockquote: [],
+      h1: [],
+      h2: [],
+      h3: [],
+      h4: [],
+      hr: [],
+    },
+    stripIgnoreTag: true,
+    stripIgnoreTagBody: ['script', 'style'],
+  });
+
+  return allowed.trim().slice(0, MAX_CONTENT_LENGTH);
+}
+
+/** El contenido sin etiquetas, para validar longitud mínima sin contar el HTML. */
+function stripHtmlContent(value) {
+  if (typeof value !== 'string') return '';
+
+  return value
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 /**
  * A quién se le atribuye la obra.
@@ -68,13 +122,13 @@ async function resolveAuthorProfile(authorProfileId) {
 
 export async function createWork(req, res) {
   try {
-    const { title, genre, content, type, price, description, tags, cover, pdfUrl } = req.body;
+    const { title, genre, scope, content, type, price, description, tags, cover, pdfUrl } = req.body;
     const authorId = req.auth.uid;
 
-    if (!title?.trim() || !genre?.trim() || !content?.trim()) {
+    if (!title?.trim() || !genre?.trim() || !scope?.trim() || !stripHtmlContent(content).length) {
       return res.status(400).json({
         ok: false,
-        message: 'Título, género y contenido son obligatorios',
+        message: 'Título, género, alcance y contenido son obligatorios',
       });
     }
 
@@ -82,6 +136,13 @@ export async function createWork(req, res) {
       return res.status(400).json({
         ok: false,
         message: `Género inválido. Válidos: ${VALID_GENRES.join(', ')}`,
+      });
+    }
+
+    if (!VALID_SCOPES.includes(scope.toLowerCase())) {
+      return res.status(400).json({
+        ok: false,
+        message: `Alcance inválido. Válidos: ${VALID_SCOPES.join(', ')}`,
       });
     }
 
@@ -116,18 +177,23 @@ export async function createWork(req, res) {
       return res.status(400).json({ ok: false, message: authorError });
     }
 
+    // Al admin no le hace falta que otro admin le revise la obra: la
+    // moderación existe para vigilar a terceros, no para vigilarse a sí mismo.
+    const isAdmin = req.user?.role === 'admin';
+
     const now = new Date().toISOString();
     const work = {
       title: title.trim(),
       genre: genre.toLowerCase(),
-      content: content,
+      scope: scope.toLowerCase(),
+      content: sanitizeWorkContent(content),
       description: description?.trim() || '',
       tags: Array.isArray(tags) ? tags.filter(t => t.trim()) : [],
       cover: cover || null,
       pdfUrl: pdfUrl || null,
       type,
       price: type === 'pdfSale' ? parseFloat(price) : null,
-      status: 'pending_review',
+      status: isAdmin ? 'approved' : 'pending_review',
       authorId,
       author,
       // Ficha del catálogo, si se asoció a una. Vacío es lo normal.
@@ -154,9 +220,16 @@ export async function createWork(req, res) {
 
     const docRef = await adminDb.collection('literature').add(work);
 
+    // Sin revisión pendiente no hay paso por `reviewWork`, que es quien
+    // normalmente avisa de la obra nueva: hay que hacerlo aquí para que no se
+    // publique en silencio.
+    if (isAdmin) {
+      await notifyWorkReviewed({ ...work, id: docRef.id }, 'approved');
+    }
+
     return res.json({
       ok: true,
-      message: 'Obra enviada para revisión',
+      message: isAdmin ? 'Obra publicada' : 'Obra enviada para revisión',
       workId: docRef.id,
       work,
     });
@@ -339,7 +412,7 @@ export async function deleteComment(req, res) {
 
 export async function getApprovedWorks(req, res) {
   try {
-    const { genre, limit = 50, offset = 0 } = req.query;
+    const { genre, scope, limit = 50, offset = 0 } = req.query;
     const limitNum = Math.min(parseInt(limit) || 50, 100);
     const offsetNum = parseInt(offset) || 0;
 
@@ -355,6 +428,12 @@ export async function getApprovedWorks(req, res) {
       id: doc.id,
       ...doc.data(),
     }));
+
+    // Filtrado en memoria y no con otro `where`: combinarlo con el de género
+    // exigiría un índice compuesto en Firestore, igual que ordenar por fecha.
+    if (scope) {
+      allDocs = allDocs.filter(work => work.scope === scope.toLowerCase());
+    }
 
     allDocs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
@@ -559,7 +638,7 @@ export async function reviewWork(req, res) {
 export async function updateWork(req, res) {
   try {
     const { id } = req.params;
-    const { title, genre, content, description, tags, cover, pdfUrl } = req.body;
+    const { title, genre, scope, content, description, tags, cover, pdfUrl } = req.body;
     const authorId = req.auth.uid;
 
     const docRef = adminDb.collection('literature').doc(id);
@@ -593,7 +672,18 @@ export async function updateWork(req, res) {
       }
       updateData.genre = genre.toLowerCase();
     }
-    if (content?.trim()) updateData.content = content;
+    if (scope?.trim()) {
+      if (!VALID_SCOPES.includes(scope.toLowerCase())) {
+        return res.status(400).json({
+          ok: false,
+          message: `Alcance inválido. Válidos: ${VALID_SCOPES.join(', ')}`,
+        });
+      }
+      updateData.scope = scope.toLowerCase();
+    }
+    if (typeof content === 'string' && stripHtmlContent(content).length) {
+      updateData.content = sanitizeWorkContent(content);
+    }
 
     // Corregir la firma sin tener que borrar y volver a subir la obra.
     if (req.body.author !== undefined) {
@@ -717,6 +807,13 @@ export async function getGenres(req, res) {
   return res.json({
     ok: true,
     genres: genresData.genres,
+  });
+}
+
+export async function getScopes(req, res) {
+  return res.json({
+    ok: true,
+    scopes: scopesData.scopes,
   });
 }
 
@@ -850,7 +947,7 @@ export async function toggleWorkLike(req, res) {
  * revierte la revisión: la obra queda aprobada aunque el aviso no salga.
  */
 async function notifyWorkReviewed(work, status, reason) {
-  const workLink = `/literature?work=${work.id}`;
+  const workLink = `/stories?obra=${work.id}`;
 
   if (status === 'approved') {
     await Promise.all([

@@ -1,7 +1,30 @@
 import React, { useEffect, useRef, useState } from 'react';
+import {
+  AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, Italic, List, ListOrdered, Underline,
+} from 'lucide-react';
 import { MAX_PDF_BYTES, createLiteraryWork, formatBytes, getAllAuthors, uploadCover, uploadPdf } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import genresData from '../config/genres.json';
+import scopesData from '../config/scopes.json';
+
+/** Botones del editor de contenido. Cada uno es un comando de `execCommand`
+ *  sobre la selección actual del `contentEditable`. */
+const CONTENT_TOOLBAR = [
+  { command: 'bold', icon: Bold, title: 'Negrita' },
+  { command: 'italic', icon: Italic, title: 'Cursiva' },
+  { command: 'underline', icon: Underline, title: 'Subrayado' },
+  { command: 'justifyLeft', icon: AlignLeft, title: 'Alinear a la izquierda' },
+  { command: 'justifyCenter', icon: AlignCenter, title: 'Centrar' },
+  { command: 'justifyRight', icon: AlignRight, title: 'Alinear a la derecha' },
+  { command: 'justifyFull', icon: AlignJustify, title: 'Justificar' },
+  { command: 'insertUnorderedList', icon: List, title: 'Lista con viñetas' },
+  { command: 'insertOrderedList', icon: ListOrdered, title: 'Lista numerada' },
+];
+
+/** El HTML sin etiquetas, para contar caracteres reales y no marcado. */
+function stripHtml(value = '') {
+  return String(value).replace(/<[^>]*>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/\s+/g, ' ').trim();
+}
 
 export default function LiteraryWorkForm({ isDark, onSuccess }) {
   const { user } = useAuth();
@@ -11,6 +34,7 @@ export default function LiteraryWorkForm({ isDark, onSuccess }) {
     title: '',
     author: '',
     genre: '',
+    scope: '',
     description: '',
     content: '',
     tags: '',
@@ -35,10 +59,25 @@ export default function LiteraryWorkForm({ isDark, onSuccess }) {
   // ha cambiado— y parece que el control se ha quedado muerto.
   const coverInputRef = useRef(null);
   const pdfInputRef = useRef(null);
+  const editorRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // El `contentEditable` no es un input controlado: su HTML se guarda en
+  // `formData.content` al escribir, pero solo hay que reescribirlo desde fuera
+  // (por ejemplo, al limpiar el formulario tras enviar) cuando de verdad
+  // difiere de lo que ya tiene pintado; si no, cada tecla movería el cursor al
+  // principio.
+  useEffect(() => {
+    if (!editorRef.current) return;
+
+    const currentHtml = editorRef.current.innerHTML || '';
+    if (currentHtml !== (formData.content || '')) {
+      editorRef.current.innerHTML = formData.content || '';
+    }
+  }, [formData.content]);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,6 +97,20 @@ export default function LiteraryWorkForm({ isDark, onSuccess }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleEditorInput = (event) => {
+    const nextContent = event?.currentTarget?.innerHTML ?? '';
+    setFormData(prev => ({ ...prev, content: nextContent }));
+  };
+
+  const applyFormatting = (command) => {
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    editor.focus();
+    document.execCommand(command, false, null);
+    setFormData(prev => ({ ...prev, content: editor.innerHTML || '' }));
   };
 
   const handleFileChange = (e) => {
@@ -113,12 +166,14 @@ export default function LiteraryWorkForm({ isDark, onSuccess }) {
     setError('');
     setSuccess('');
 
-    if (!formData.title.trim() || !formData.genre || !formData.content.trim()) {
+    const plainContent = stripHtml(formData.content);
+
+    if (!formData.title.trim() || !formData.genre || !formData.scope || !plainContent) {
       setError('Completa todos los campos requeridos');
       return;
     }
 
-    if (formData.content.length < 100) {
+    if (plainContent.length < 100) {
       setError('El contenido debe tener al menos 100 caracteres');
       return;
     }
@@ -156,6 +211,7 @@ export default function LiteraryWorkForm({ isDark, onSuccess }) {
         // nombre e ignora el texto libre de arriba.
         authorProfileId: formData.authorProfileId || null,
         genre: formData.genre,
+        scope: formData.scope,
         description: formData.description,
         content: formData.content,
         tags,
@@ -166,11 +222,14 @@ export default function LiteraryWorkForm({ isDark, onSuccess }) {
       });
 
       if (response.ok) {
-        setSuccess('Obra enviada para revisión. El admin la revisará pronto.');
+        setSuccess(response.message === 'Obra publicada'
+          ? 'Obra publicada. Ya está visible en la biblioteca.'
+          : 'Obra enviada para revisión. El admin la revisará pronto.');
         setFormData({
           title: '',
           author: '',
           genre: '',
+          scope: '',
           description: '',
           content: '',
           tags: '',
@@ -297,6 +356,26 @@ export default function LiteraryWorkForm({ isDark, onSuccess }) {
         </select>
       </div>
 
+      {/* Alcance */}
+      <div>
+        <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+          Alcance *
+        </label>
+        <select
+          name="scope"
+          value={formData.scope}
+          onChange={handleChange}
+          className={`w-full px-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-1 ${isDark ? 'bg-gray-700 border-gray-600 text-gray-100 focus:ring-blue-500' : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500'}`}
+        >
+          <option value="">Selecciona un alcance</option>
+          {scopesData.scopes.map(scope => (
+            <option key={scope.value} value={scope.value}>
+              {scope.emoji} {scope.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
       {/* Descripción */}
       <div>
         <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -319,18 +398,35 @@ export default function LiteraryWorkForm({ isDark, onSuccess }) {
       {/* Contenido */}
       <div>
         <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-          Contenido * (Se preserva el formato)
+          Contenido *
         </label>
-        <textarea
-          name="content"
-          value={formData.content}
-          onChange={handleChange}
-          placeholder="Escribe tu obra aquí. Se mantendrá el formato exacto como lo escribas..."
-          rows={12}
-          className={`w-full px-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-1 font-mono resize-none ${isDark ? 'bg-gray-700 border-gray-600 text-gray-100 focus:ring-blue-500' : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500'}`}
+
+        <div className="mb-2 flex flex-wrap gap-1.5">
+          {CONTENT_TOOLBAR.map(({ command, icon: Icon, title }) => (
+            <button
+              key={command}
+              type="button"
+              title={title}
+              aria-label={title}
+              onClick={() => applyFormatting(command)}
+              className={`p-2 rounded-lg border transition-colors ${isDark ? 'border-gray-600 bg-gray-700 text-gray-200 hover:bg-gray-600' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100'}`}
+            >
+              <Icon className="w-4 h-4" />
+            </button>
+          ))}
+        </div>
+
+        <div
+          ref={editorRef}
+          contentEditable
+          suppressContentEditableWarning
+          onInput={handleEditorInput}
+          data-placeholder="Escribe tu obra aquí. Usa la barra de arriba para dar formato al texto..."
+          className={`w-full min-h-72 px-4 py-2 border rounded-lg text-sm leading-relaxed focus:outline-none focus:ring-1 overflow-y-auto ${isDark ? 'bg-gray-700 border-gray-600 text-gray-100 focus:ring-blue-500' : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500'}`}
+          style={{ whiteSpace: 'pre-wrap' }}
         />
         <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-          {formData.content.length} caracteres (mín. 100)
+          {stripHtml(formData.content).length} caracteres (mín. 100)
         </p>
       </div>
 

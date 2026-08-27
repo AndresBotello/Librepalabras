@@ -114,7 +114,7 @@ export async function uploadCover(file) {
       throw new Error(data?.message || `Error HTTP ${response.status}`);
     }
 
-    return data || {};
+    return data.url;
   } catch (error) {
     throw new Error(`Error al subir portada: ${error.message}`);
   }
@@ -313,6 +313,10 @@ export function reviewWork(id, status, reason = '') {
 
 export function getGenres() {
   return request('/literature/genres');
+}
+
+export function getScopes() {
+  return request('/literature/scopes');
 }
 
 export function addRating(workId, score) {

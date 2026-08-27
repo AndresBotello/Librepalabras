@@ -9,6 +9,7 @@ import Footer from '../../components/Footer';
 import { ThemeContext } from '../../context/ThemeContext';
 import { getApprovedWorks, toggleWorkLike, getWorkById } from '../../services/api';
 import genresData from '../../config/genres.json';
+import scopesData from '../../config/scopes.json';
 import { GenreIcon } from '../../config/genreIcons';
 import LiteraryComments from '../../components/LiteraryComments';
 import FeaturedAuthors from '../../components/FeaturedAuthors';
@@ -21,6 +22,15 @@ if (typeof window !== 'undefined' && 'Worker' in window) {
 }
 
 const WORKS_PER_PAGE = 12;
+
+/**
+ * El editor de obra guarda HTML (formato, alineación...); las obras que se
+ * subieron antes de tenerlo guardaron texto plano. Distinguirlos evita tratar
+ * un texto plano con un "<" suelto como marcado, y tratar HTML real como texto.
+ */
+function isHtmlContent(value = '') {
+  return /<[a-z][\s\S]*>/i.test(value);
+}
 
 export default function Stories() {
   const { isDark } = useContext(ThemeContext);
@@ -46,7 +56,35 @@ export default function Stories() {
   const selectedGenre = genresData.genres.some((g) => g.value === genreParam) ? genreParam : 'all';
 
   const setSelectedGenre = useCallback((value) => {
-    setSearchParams(value && value !== 'all' ? { genero: value } : {}, { replace: true });
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous);
+      if (value && value !== 'all') {
+        next.set('genero', value);
+      } else {
+        next.delete('genero');
+      }
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
+
+  /**
+   * Segunda categoría, independiente del género: un cuento puede ser Local a
+   * la vez que es cuento. Vive en su propio parámetro (?alcance=) para poder
+   * combinarse con el de género sin que uno pise al otro.
+   */
+  const scopeParam = searchParams.get('alcance');
+  const selectedScope = scopesData.scopes.some((s) => s.value === scopeParam) ? scopeParam : 'all';
+
+  const setSelectedScope = useCallback((value) => {
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous);
+      if (value && value !== 'all') {
+        next.set('alcance', value);
+      } else {
+        next.delete('alcance');
+      }
+      return next;
+    }, { replace: true });
   }, [setSearchParams]);
 
   /**
@@ -106,7 +144,7 @@ export default function Stories() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedGenre]);
+  }, [selectedGenre, selectedScope]);
 
   const loadWorks = async () => {
     try {
@@ -131,9 +169,15 @@ export default function Stories() {
     return genresData.genres.find(g => g.value === genre);
   }, []);
 
+  const getScopeInfo = useCallback((scope) => {
+    return scopesData.scopes.find(s => s.value === scope);
+  }, []);
+
   const filteredWorks = useMemo(() => {
-    return selectedGenre === 'all' ? works : works.filter(w => w.genre === selectedGenre);
-  }, [works, selectedGenre]);
+    return works
+      .filter(w => selectedGenre === 'all' || w.genre === selectedGenre)
+      .filter(w => selectedScope === 'all' || w.scope === selectedScope);
+  }, [works, selectedGenre, selectedScope]);
 
   const paginatedWorks = useMemo(() => {
     const startIndex = (currentPage - 1) * WORKS_PER_PAGE;
@@ -298,6 +342,41 @@ export default function Stories() {
               )}
             </div>
 
+            {/* Alcance: segunda clasificación, independiente del género. No
+                tiene menú propio en la barra superior —ese se comparte con
+                "Libros"—, así que el filtro vive aquí, siempre visible. */}
+            <div className={`mb-10 flex flex-wrap items-center gap-2`}>
+              <span className={`text-xs font-sans font-semibold uppercase tracking-wider mr-1 ${isDark ? 'text-slate-500' : 'text-stone-500'}`}>
+                Alcance
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedScope('all')}
+                className={`px-3 py-1.5 rounded-full text-sm font-serif transition-colors ${
+                  selectedScope === 'all'
+                    ? isDark ? 'bg-amber-500/10 text-amber-300' : 'bg-stone-900 text-stone-50'
+                    : isDark ? 'bg-slate-900 text-slate-400 hover:text-slate-200' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                }`}
+              >
+                Todos
+              </button>
+              {scopesData.scopes.map((scope) => (
+                <button
+                  key={scope.value}
+                  type="button"
+                  onClick={() => setSelectedScope(scope.value)}
+                  title={scope.description}
+                  className={`px-3 py-1.5 rounded-full text-sm font-serif transition-colors ${
+                    selectedScope === scope.value
+                      ? isDark ? 'bg-amber-500/10 text-amber-300' : 'bg-stone-900 text-stone-50'
+                      : isDark ? 'bg-slate-900 text-slate-400 hover:text-slate-200' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                  }`}
+                >
+                  {scope.emoji} {scope.label}
+                </button>
+              ))}
+            </div>
+
             {/* Dos columnas: las obras a la izquierda y los autores a la
                 derecha. En móvil no hay "al lado", así que la barra baja
                 debajo del listado. */}
@@ -313,7 +392,10 @@ export default function Stories() {
                 </p>
                 <button
                   type="button"
-                  onClick={() => setSelectedGenre('all')}
+                  onClick={() => {
+                    setSelectedGenre('all');
+                    setSelectedScope('all');
+                  }}
                   className={`text-sm font-semibold underline transition-colors ${
                     isDark ? 'text-amber-400 hover:text-amber-300' : 'text-brand-700 hover:text-brand-800'
                   }`}
@@ -377,7 +459,10 @@ export default function Stories() {
 
                       {/* Info emergente suave al pasar el mouse */}
                       <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-3 pl-4 flex flex-col justify-end text-white z-20">
-                        <span className="text-[10px] uppercase tracking-wider text-amber-300 font-sans mb-1">{genre?.label}</span>
+                        <span className="text-[10px] uppercase tracking-wider text-amber-300 font-sans mb-1">
+                          {genre?.label}
+                          {work.scope && ` · ${getScopeInfo(work.scope)?.label || work.scope}`}
+                        </span>
                         <h4 className="font-serif font-bold text-xs line-clamp-3">{work.title}</h4>
                         <p className="text-[11px] text-slate-300 mt-1">{work.author || 'Anónimo'}</p>
                       </div>
@@ -490,6 +575,7 @@ export default function Stories() {
                   isDark ? 'bg-amber-500/10 text-amber-400' : 'bg-amber-100/60 text-amber-900'
                 }`}>
                   {genreInfo?.label || 'Obra Literaria'}
+                  {story?.scope && ` · ${getScopeInfo(story.scope)?.label || story.scope}`}
                 </span>
 
                 <h1 className={`text-3xl sm:text-5xl font-serif font-bold leading-tight mb-4 ${
@@ -551,29 +637,49 @@ export default function Stories() {
               {/* CUERPO TEXTUAL LITERARIO */}
               {story?.content && (
                 <section className="px-6 sm:px-20 py-10">
-                  <div
-                    className={`prose dark:prose-invert max-w-none font-serif text-base sm:text-lg leading-relaxed text-justify space-y-6 rounded-lg transition-colors ${
-                      highContrast
-                        ? isDark
-                          ? 'bg-black text-white p-6 -mx-6'
-                          : 'bg-white text-black p-6 -mx-6 border border-stone-900/10'
-                        : isDark ? 'text-slate-300' : 'text-stone-800'
-                    }`}
-                    style={readingContentStyle({ fontScale, dyslexiaFont })}
-                  >
-                    {/* Render de párrafos con primera letra capitular */}
-                    {story.content.split('\n\n').map((paragraph, index) => {
-                      if (!paragraph.trim()) return null;
-                      if (index === 0) {
-                        return (
-                          <p key={index} className="first-letter:float-left first-letter:text-5xl first-letter:font-serif first-letter:font-bold first-letter:mr-3 first-letter:leading-none first-letter:text-amber-600 dark:first-letter:text-amber-400">
-                            {paragraph}
-                          </p>
-                        );
-                      }
-                      return <p key={index}>{paragraph}</p>;
-                    })}
-                  </div>
+                  {isHtmlContent(story.content) ? (
+                    // Obras nuevas: el editor guarda HTML (negrita, alineación,
+                    // listas...), ya saneado en el servidor. La letra capitular
+                    // se ancla al primer hijo en vez de a un <p> fijo, porque el
+                    // editor puede envolver el primer párrafo en distintas
+                    // etiquetas según el navegador con el que se escribió.
+                    <div
+                      className={`prose dark:prose-invert max-w-none font-serif text-base sm:text-lg leading-relaxed text-justify space-y-6 rounded-lg transition-colors [&>*:first-child]:first-letter:float-left [&>*:first-child]:first-letter:text-5xl [&>*:first-child]:first-letter:font-serif [&>*:first-child]:first-letter:font-bold [&>*:first-child]:first-letter:mr-3 [&>*:first-child]:first-letter:leading-none [&>*:first-child]:first-letter:text-amber-600 dark:[&>*:first-child]:first-letter:text-amber-400 ${
+                        highContrast
+                          ? isDark
+                            ? 'bg-black text-white p-6 -mx-6'
+                            : 'bg-white text-black p-6 -mx-6 border border-stone-900/10'
+                          : isDark ? 'text-slate-300' : 'text-stone-800'
+                      }`}
+                      style={readingContentStyle({ fontScale, dyslexiaFont })}
+                      dangerouslySetInnerHTML={{ __html: story.content }}
+                    />
+                  ) : (
+                    // Obras antiguas: texto plano guardado antes del editor con
+                    // formato, separado en párrafos por líneas en blanco.
+                    <div
+                      className={`prose dark:prose-invert max-w-none font-serif text-base sm:text-lg leading-relaxed text-justify space-y-6 rounded-lg transition-colors ${
+                        highContrast
+                          ? isDark
+                            ? 'bg-black text-white p-6 -mx-6'
+                            : 'bg-white text-black p-6 -mx-6 border border-stone-900/10'
+                          : isDark ? 'text-slate-300' : 'text-stone-800'
+                      }`}
+                      style={readingContentStyle({ fontScale, dyslexiaFont })}
+                    >
+                      {story.content.split('\n\n').map((paragraph, index) => {
+                        if (!paragraph.trim()) return null;
+                        if (index === 0) {
+                          return (
+                            <p key={index} className="first-letter:float-left first-letter:text-5xl first-letter:font-serif first-letter:font-bold first-letter:mr-3 first-letter:leading-none first-letter:text-amber-600 dark:first-letter:text-amber-400">
+                              {paragraph}
+                            </p>
+                          );
+                        }
+                        return <p key={index}>{paragraph}</p>;
+                      })}
+                    </div>
+                  )}
                 </section>
               )}
 
