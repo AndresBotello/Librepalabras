@@ -4,15 +4,24 @@ import {
   uploadPdf,
   uploadMagazinePdf as uploadMagazinePdfService,
 } from '../services/upload.service.js';
-import { MAX_PDF_BYTES, formatBytes, looksLikePdf, sanitizeFileName } from '../utils/files.js';
+import {
+  MAX_PDF_BYTES,
+  formatBytes,
+  looksLikeImage,
+  looksLikePdf,
+  sanitizeFileName,
+} from '../utils/files.js';
 
 export async function uploadCover(req, res) {
   if (!req.file) {
     return res.status(400).json({ ok: false, message: 'No se recibió archivo' });
   }
 
-  if (!req.file.mimetype.startsWith('image/')) {
-    return res.status(400).json({ ok: false, message: 'El archivo debe ser una imagen' });
+  // Mimetype/extensión los declara el cliente y se pueden falsear; la firma
+  // binaria del archivo no. Sin esto se podía subir, por ejemplo, un SVG con
+  // <script> anunciándose como "image/png".
+  if (!req.file.mimetype.startsWith('image/') || !looksLikeImage(req.file.buffer)) {
+    return res.status(400).json({ ok: false, message: 'El archivo debe ser una imagen válida (JPG, PNG, GIF o WEBP)' });
   }
 
   if (req.file.size > 5 * 1024 * 1024) {
@@ -34,8 +43,8 @@ export async function uploadProfilePhoto(req, res) {
     return res.status(400).json({ ok: false, message: 'No se recibió archivo' });
   }
 
-  if (!req.file.mimetype.startsWith('image/')) {
-    return res.status(400).json({ ok: false, message: 'El archivo debe ser una imagen' });
+  if (!req.file.mimetype.startsWith('image/') || !looksLikeImage(req.file.buffer)) {
+    return res.status(400).json({ ok: false, message: 'El archivo debe ser una imagen válida (JPG, PNG, GIF o WEBP)' });
   }
 
   if (req.file.size > 5 * 1024 * 1024) {

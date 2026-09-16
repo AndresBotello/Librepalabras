@@ -4,6 +4,7 @@ import Footer from '../../components/Footer';
 import { ThemeContext } from '../../context/ThemeContext';
 import { LEGAL_CONTACT_EMAIL, MIN_AGE, TERMS_UPDATED_AT, TERMS_VERSION } from '../../config/legal';
 
+
 const SECTIONS = [
   {
     title: 'Qué es LiberaPalabras',

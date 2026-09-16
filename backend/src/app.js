@@ -1,4 +1,5 @@
 import express from 'express';
+import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import compression from 'compression';
@@ -64,6 +65,13 @@ const allowedOrigins = (configuredOrigins || 'http://localhost:5173')
   .filter(Boolean);
 
 // Middlewares de compresión y seguridad
+app.use(helmet({
+  // El frontend vive en otro dominio y consume esta API con fetch en modo
+  // 'cors' con credenciales. El valor por defecto de helmet ('same-origin')
+  // es para servir HTML/estáticos propios; aquí bloquearía sin necesidad
+  // cualquier consumo cross-origin de las respuestas.
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
 app.use(compression()); // Activar Gzip
 app.use(globalLimiter); // Rate limiting global
 app.use(cors({
@@ -142,6 +150,7 @@ app.use((error, req, res, _next) => {
 });
 
 console.log('✓ Rutas registradas correctamente');
+console.log('✓ Cabeceras de seguridad (helmet) habilitadas');
 console.log('✓ Compresión Gzip habilitada');
 console.log(`✓ Rate limiting ${isProduction ? 'habilitado' : 'desactivado (desarrollo)'}`);
 

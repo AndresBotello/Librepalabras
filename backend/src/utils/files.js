@@ -34,6 +34,38 @@ export function looksLikePdf(buffer) {
   return buffer.subarray(0, 5).toString('latin1') === '%PDF-';
 }
 
+// Firmas binarias de los formatos de imagen que de verdad soportamos. El
+// mimetype y la extensión los pone el cliente y se pueden falsear (ej: subir
+// un SVG con <script> declarando Content-Type "image/png"); la firma no.
+// SVG queda fuera a propósito: es texto/XML, no tiene firma binaria que
+// comprobar, y es justo el formato que permite inyectar script.
+const IMAGE_SIGNATURES = [
+  { bytes: [0xff, 0xd8, 0xff] }, // JPEG
+  { bytes: [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] }, // PNG
+  { bytes: [0x47, 0x49, 0x46, 0x38] }, // GIF87a / GIF89a
+];
+
+export function looksLikeImage(buffer) {
+  if (!buffer || buffer.length < 12) {
+    return false;
+  }
+
+  const matchesKnownSignature = IMAGE_SIGNATURES.some(({ bytes }) =>
+    buffer.subarray(0, bytes.length).equals(Buffer.from(bytes))
+  );
+
+  if (matchesKnownSignature) {
+    return true;
+  }
+
+  // WEBP: contenedor RIFF con la marca "WEBP" en el byte 8.
+  const isWebp =
+    buffer.subarray(0, 4).toString('latin1') === 'RIFF' &&
+    buffer.subarray(8, 12).toString('latin1') === 'WEBP';
+
+  return isWebp;
+}
+
 export function formatBytes(bytes) {
   if (!bytes) return '0 B';
 
