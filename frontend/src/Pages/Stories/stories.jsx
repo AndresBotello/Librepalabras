@@ -68,7 +68,7 @@ export default function Stories() {
   }, [setSearchParams]);
 
   /**
-   * Segunda categoría, independiente del género: un cuento puede ser Local a
+   * Segunda categoría, independiente del género: un cuento puede ser Nacional a
    * la vez que es cuento. Vive en su propio parámetro (?alcance=) para poder
    * combinarse con el de género sin que uno pise al otro.
    */

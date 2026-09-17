@@ -1,10 +1,10 @@
 {
   "scopes": [
     {
-      "value": "local",
-      "label": "Local",
+      "value": "nacional",
+      "label": "Nacional",
       "emoji": "📍",
-      "description": "Obras de autores o temática del municipio o la comunidad"
+      "description": "Obras de autores o temática del país"
     },
     {
       "value": "regional",
