@@ -1,5 +1,6 @@
-import React, { useState, useContext, useEffect, useMemo } from 'react';
+import React, { useState, useContext, useEffect, useMemo, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import ReCAPTCHA from 'react-google-recaptcha';
 import { Mail, Lock, Eye, EyeOff, User, Phone, Calendar, ArrowRight, X, CheckCircle2 } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
@@ -7,7 +8,7 @@ import { ThemeContext } from '../../context/ThemeContext';
 import { loginWithEmail, loginWithGoogle, registerWithEmail, sendPasswordReset } from '../../services/auth';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { homeRouteForRole } from '../../utils/roles';
-import { getInvitationByToken } from '../../services/api';
+import { getInvitationByToken, verifyCaptcha } from '../../services/api';
 import gendersData from '../../config/genders.json';
 import { TERMS_VERSION } from '../../config/legal';
 
@@ -31,6 +32,8 @@ export default function Login({ initialMode = 'login' }) {
   // Solo cuenta al registrarse. Arranca siempre en falso: la aceptación tiene
   // que ser un acto del usuario, así que ni se premarca ni se recuerda.
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState('');
+  const captchaRef = useRef(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
   const [resetOpen, setResetOpen] = useState(false);
@@ -153,6 +156,11 @@ export default function Login({ initialMode = 'login' }) {
         setStatusMessage('Para crear tu cuenta debes aceptar los Términos y Condiciones');
         return false;
       }
+
+      if (!captchaToken) {
+        setStatusMessage('Completa el captcha para crear tu cuenta');
+        return false;
+      }
     }
 
     return true;
@@ -172,6 +180,10 @@ export default function Login({ initialMode = 'login' }) {
       if (isLogin) {
         sessionUser = await loginWithEmail(formData.email, formData.password, rememberMe);
       } else {
+        // Se verifica ANTES de crear la cuenta en Firebase: si el captcha no
+        // pasa, no queremos una cuenta creada sin perfil ni sesión.
+        await verifyCaptcha(captchaToken);
+
         const profileData = {
           nombres: formData.nombres,
           apellidos: formData.apellidos,
@@ -203,6 +215,10 @@ export default function Login({ initialMode = 'login' }) {
       navigate(homeRouteForRole(currentUser?.role), { replace: true });
     } catch (error) {
       setStatusMessage(error.message || 'No se pudo conectar con el servidor.');
+      // El token de reCAPTCHA es de un solo uso: si algo falló, hay que pedir
+      // uno nuevo antes de dejar reintentar.
+      captchaRef.current?.reset();
+      setCaptchaToken('');
     } finally {
       setIsSubmitting(false);
     }
@@ -300,6 +316,8 @@ export default function Login({ initialMode = 'login' }) {
   const goToMode = (mode) => {
     setIsLogin(mode === 'login');
     setStatusMessage('');
+    captchaRef.current?.reset();
+    setCaptchaToken('');
     navigate(mode === 'login' ? '/login' : '/register');
   };
 
@@ -625,10 +643,24 @@ export default function Login({ initialMode = 'login' }) {
                 </div>
               )}
 
+              {/* Captcha. Solo al registrarse, igual que la aceptación de
+                  términos: a quien ya tiene cuenta no le hace falta. */}
+              {!isLogin && (
+                <div className="mt-5 flex justify-center">
+                  <ReCAPTCHA
+                    ref={captchaRef}
+                    sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+                    onChange={setCaptchaToken}
+                    onExpired={() => setCaptchaToken('')}
+                    theme={isDark ? 'dark' : 'light'}
+                  />
+                </div>
+              )}
+
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={isSubmitting || (!isLogin && !acceptedTerms)}
+                disabled={isSubmitting || (!isLogin && (!acceptedTerms || !captchaToken))}
                 className="w-full text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-2 mt-6 text-sm tracking-wider uppercase bg-brand-700 hover:bg-brand-800 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? 'Procesando...' : isLogin ? 'Iniciar Sesión' : 'Crear mi Cuenta'}

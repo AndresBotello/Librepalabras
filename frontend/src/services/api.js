@@ -186,6 +186,13 @@ export function createSession(payload) {
   });
 }
 
+export function verifyCaptcha(token) {
+  return request('/auth/verify-captcha', {
+    method: 'POST',
+    body: JSON.stringify({ token }),
+  });
+}
+
 export function logoutSession() {
   return request('/auth/logout', {
     method: 'POST',

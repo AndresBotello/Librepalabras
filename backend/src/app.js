@@ -111,6 +111,7 @@ app.use('/api', maintenanceGuard);
 
 // Rutas con rate limiting más estricto para auth
 app.use('/api/auth/session', authLimiter);
+app.use('/api/auth/verify-captcha', authLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/stories', storyRoutes);
 app.use('/api/admin', adminRoutes);

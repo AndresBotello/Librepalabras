@@ -160,6 +160,54 @@ function validateAndSanitizeProfile(profile) {
   return sanitized;
 }
 
+/**
+ * Se llama justo antes de crear la cuenta en Firebase desde el formulario de
+ * registro. Va aparte de `createSession` porque esa ruta se ejecuta DESPUÉS de
+ * que Firebase ya creó el usuario: si el captcha fallara ahí, la cuenta
+ * quedaría creada en Firebase sin perfil ni sesión.
+ */
+export async function verifyCaptcha(req, res) {
+  const { token } = req.body;
+
+  if (!token || typeof token !== 'string') {
+    return res.status(400).json({ ok: false, message: 'Falta completar el captcha.' });
+  }
+
+  const secret = process.env.RECAPTCHA_SECRET_KEY;
+
+  if (!secret) {
+    // En producción no arrancar el servidor por esto sería desproporcionado
+    // para una sola ruta, pero tampoco se puede dejar pasar en silencio.
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(503).json({ ok: false, message: 'El captcha no está configurado en el servidor.' });
+    }
+
+    return res.json({ ok: true });
+  }
+
+  try {
+    const googleResponse = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ secret, response: token }),
+    });
+
+    const result = await googleResponse.json();
+
+    if (!result.success) {
+      return res.status(400).json({ ok: false, message: 'No se pudo verificar el captcha. Vuelve a intentarlo.' });
+    }
+
+    return res.json({ ok: true });
+  } catch (error) {
+    return res.status(502).json({
+      ok: false,
+      message: 'No se pudo verificar el captcha. Vuelve a intentarlo.',
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
 export async function getCurrentUser(req, res) {
   return res.json({
     ok: true,
