@@ -89,7 +89,7 @@ export default function OpinionColumnDetailPage() {
             mientras se baja por la columna. Debajo de lg no cabe la barra, así
             que se reordena para que abra la página en vez de cerrarla. */}
         <div className="mx-auto grid max-w-[1200px] items-start gap-6 lg:grid-cols-[minmax(0,1fr)_19rem]">
-          <div className="lg:sticky lg:top-6 lg:order-2">
+          <div className="order-2 lg:sticky lg:top-6">
             <FeaturedAuthors
               isDark={isDark}
               title="Nuestros columnistas"
@@ -98,7 +98,7 @@ export default function OpinionColumnDetailPage() {
             />
           </div>
 
-          <article className={`min-w-0 overflow-hidden rounded-[32px] border shadow-sm lg:order-1 ${isDark ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+          <article className={`order-1 min-w-0 overflow-hidden rounded-[32px] border shadow-sm ${isDark ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
             {column.coverUrl && (
               <div className={`overflow-hidden ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}>
                 <img src={column.coverUrl} alt={column.title} className="h-72 w-full object-cover sm:h-96" />

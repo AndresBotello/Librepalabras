@@ -82,11 +82,11 @@ export default function PublicOpinionColumnsPage() {
           </header>
 
           {/* Los tres autores de la casa viven en la columna derecha, fija al
-              hacer scroll. Van primero en el DOM y se reordenan en xl: por
-              debajo de ese ancho no hay "derecha" donde ponerlos, y ahí es
-              mejor que encabecen la sección a que queden enterrados al final. */}
+              hacer scroll en xl. Por debajo de ese ancho no hay "derecha"
+              donde ponerlos, así que quedan debajo: primero se leen las
+              columnas y al final se conoce a quién las escribe. */}
           <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_19rem]">
-            <div className="mb-2 xl:sticky xl:top-6 xl:order-2 xl:mb-0">
+            <div className="order-2 mb-2 xl:sticky xl:top-6 xl:mb-0">
               <FeaturedAuthors
                 isDark={isDark}
                 title="Nuestros columnistas"
@@ -95,7 +95,7 @@ export default function PublicOpinionColumnsPage() {
               />
             </div>
 
-            <div className="min-w-0 xl:order-1">
+            <div className="order-1 min-w-0">
               {loading ? (
                 <div className="rounded-[28px] border border-slate-200 bg-white p-10 text-center text-slate-600 shadow-sm">
                   Cargando columnas...

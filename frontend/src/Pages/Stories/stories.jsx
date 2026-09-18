@@ -21,7 +21,9 @@ if (typeof window !== 'undefined' && 'Worker' in window) {
   pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 }
 
-const WORKS_PER_PAGE = 12;
+// Múltiplo de 5 a propósito: en xl (5 columnas) cada página llena filas
+// completas en vez de dejar una última fila coja antes de pasar de página.
+const WORKS_PER_PAGE = 15;
 
 /**
  * El editor de obra guarda HTML (formato, alineación...); las obras que se
