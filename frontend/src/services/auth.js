@@ -23,7 +23,7 @@ const AUTH_ERROR_MESSAGES = {
   'auth/wrong-password': 'El correo o la contraseña no son correctos.',
   'auth/user-not-found': 'El correo o la contraseña no son correctos.',
   'auth/invalid-email': 'El correo electrónico no tiene un formato válido.',
-  'auth/user-disabled': 'Esta cuenta está deshabilitada. Contacta al equipo de LibrePalabras.',
+  'auth/user-disabled': 'Esta cuenta está deshabilitada. Contacta al equipo de Liberapalabras.',
   'auth/too-many-requests': 'Demasiados intentos fallidos. Espera unos minutos antes de volver a intentar.',
   'auth/email-already-in-use': 'Ya existe una cuenta registrada con este correo.',
   'auth/weak-password': 'La contraseña es muy débil. Usa al menos 6 caracteres.',

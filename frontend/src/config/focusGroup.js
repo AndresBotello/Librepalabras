@@ -11,7 +11,7 @@ export const FOCUS_GROUP_NAME = 'Grupo Focal Alfredo Correa De Andreís';
 export const FOCUS_GROUP_MOTTO = 'Nos hace falta ser más sentipensantes y menos racionalistas';
 
 export const FOCUS_GROUP_INTRO =
-  'Un espacio de encuentro y pensamiento crítico de Librepalabras. Nos reunimos por videollamada ' +
+  'Un espacio de encuentro y pensamiento crítico de Liberapalabras. Nos reunimos por videollamada ' +
   'en la Cátedra —con fecha, hora y enlace— y abrimos temas en la Tertulia para debatir sin prisa, ' +
   'cada quien a su tiempo, en la conversación de cada publicación.';
 

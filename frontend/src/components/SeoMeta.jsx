@@ -8,59 +8,59 @@ import { useLocation } from 'react-router-dom';
  * el JavaScript, de modo que lee lo que este componente deja en el <head>.
  */
 
-const SITE_URL = 'https://librepalabras.com';
+const SITE_URL = 'https://liberapalabras.com';
 
 const DEFAULT_META = {
-  title: 'Librepalabras | Libre Palabras, revista literaria de Valledupar y el Caribe',
+  title: 'Liberapalabras | Libera Palabras, revista literaria de Valledupar y el Caribe',
   description:
-    'Librepalabras (Libre Palabras) es el ecosistema literario del Cesar: cuentos, ensayo, poesía y memoria de Valledupar y el Caribe colombiano. Lee a nuestros autores, participa en los concursos y publica tu obra.',
+    'Liberapalabras (Libera Palabras) es el ecosistema literario del Cesar: cuentos, ensayo, poesía y memoria de Valledupar y el Caribe colombiano. Lee a nuestros autores, participa en los concursos y publica tu obra.',
 };
 
 const ROUTE_META = {
   '/': DEFAULT_META,
   '/home': DEFAULT_META,
   '/literature': {
-    title: 'Literatura | Librepalabras',
+    title: 'Literatura | Liberapalabras',
     description:
-      'Cuentos, ensayo, poesía y crónica publicados por los autores de Librepalabras. Literatura viva de Valledupar y el Caribe colombiano.',
+      'Cuentos, ensayo, poesía y crónica publicados por los autores de Liberapalabras. Literatura viva de Valledupar y el Caribe colombiano.',
   },
   '/stories': {
-    title: 'Relatos | Librepalabras',
+    title: 'Relatos | Liberapalabras',
     description:
-      'Relatos y narrativa breve de la comunidad de Librepalabras: memoria, ficción y voces del Cesar.',
+      'Relatos y narrativa breve de la comunidad de Liberapalabras: memoria, ficción y voces del Cesar.',
   },
   '/poleversia': {
-    title: 'Poleversia | Librepalabras',
+    title: 'Poleversia | Liberapalabras',
     description:
-      'Poleversia, la colección editorial de Librepalabras: libros y publicaciones para leer en línea.',
+      'Poleversia, la colección editorial de Liberapalabras: libros y publicaciones para leer en línea.',
   },
   '/grupo-focal': {
-    title: 'Grupo Focal Alfredo Correa De Andreís | Librepalabras',
+    title: 'Grupo Focal Alfredo Correa De Andreís | Liberapalabras',
     description:
       'Cátedra y Tertulia Alfredo Correa De Andreís: reuniones virtuales y debate abierto sobre memoria, palabra y pensamiento crítico en el Caribe colombiano.',
   },
   '/authors': {
-    title: 'Autores | Librepalabras',
+    title: 'Autores | Liberapalabras',
     description:
-      'Conoce a los autores de Librepalabras: escritores de Valledupar, el Cesar y el Caribe colombiano.',
+      'Conoce a los autores de Liberapalabras: escritores de Valledupar, el Cesar y el Caribe colombiano.',
   },
   '/concursos': {
-    title: 'Concursos literarios | Librepalabras',
+    title: 'Concursos literarios | Liberapalabras',
     description:
-      'Convocatorias y concursos literarios de Librepalabras: bases, categorías, fechas y cómo participar.',
+      'Convocatorias y concursos literarios de Liberapalabras: bases, categorías, fechas y cómo participar.',
   },
   '/concursos/ganadores': {
-    title: 'Ganadores de los concursos | Librepalabras',
+    title: 'Ganadores de los concursos | Liberapalabras',
     description:
-      'Obras y autores premiados en los concursos literarios de Librepalabras.',
+      'Obras y autores premiados en los concursos literarios de Liberapalabras.',
   },
   '/login': {
-    title: 'Iniciar sesión | Librepalabras',
-    description: 'Accede a tu cuenta de Librepalabras.',
+    title: 'Iniciar sesión | Liberapalabras',
+    description: 'Accede a tu cuenta de Liberapalabras.',
   },
   '/register': {
-    title: 'Crear cuenta | Librepalabras',
-    description: 'Regístrate en Librepalabras para publicar tu obra y participar en los concursos.',
+    title: 'Crear cuenta | Liberapalabras',
+    description: 'Regístrate en Liberapalabras para publicar tu obra y participar en los concursos.',
   },
 };
 
@@ -76,7 +76,7 @@ function resolveMeta(pathname) {
   // Ficha de un encuentro concreto (/grupo-focal/:id).
   if (pathname.startsWith('/grupo-focal/')) {
     return {
-      title: 'Encuentro del Grupo Focal | Librepalabras',
+      title: 'Encuentro del Grupo Focal | Liberapalabras',
       description: ROUTE_META['/grupo-focal'].description,
     };
   }
@@ -85,7 +85,7 @@ function resolveMeta(pathname) {
   // página cuando carga los datos; esto es solo el punto de partida.
   if (pathname.startsWith('/concursos/')) {
     return {
-      title: 'Concurso literario | Librepalabras',
+      title: 'Concurso literario | Liberapalabras',
       description: ROUTE_META['/concursos'].description,
     };
   }

@@ -37,10 +37,10 @@ function buildIcsContent(session) {
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//LibrePalabras//Grupo Focal//ES',
+    'PRODID:-//Liberapalabras//Grupo Focal//ES',
     'CALSCALE:GREGORIAN',
     'BEGIN:VEVENT',
-    `UID:focus-group-${session.id}@librepalabras`,
+    `UID:focus-group-${session.id}@liberapalabras`,
     `DTSTAMP:${toIcsDate(new Date().toISOString())}`,
     `DTSTART:${toIcsDate(start.toISOString())}`,
     `DTEND:${toIcsDate(end.toISOString())}`,

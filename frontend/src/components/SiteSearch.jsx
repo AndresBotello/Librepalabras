@@ -13,7 +13,7 @@ const DEBOUNCE_MS = 350;
 // los demás fuera de la pantalla.
 const PREVIEW_PER_GROUP = 3;
 
-const RECENT_KEY = 'librepalabras:busquedas-recientes';
+const RECENT_KEY = 'liberapalabras:busquedas-recientes';
 const MAX_RECENT = 5;
 
 /** Sitios a los que ir cuando no hay nada escrito o la búsqueda no encuentra nada. */

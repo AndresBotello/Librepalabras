@@ -328,7 +328,7 @@ export default function EventAgenda({ events = [], isDark }) {
             </h2>
           </div>
           <p className={`text-base sm:text-lg max-w-md mt-6 md:mt-0 leading-relaxed ${isDark ? 'text-stone-400' : 'text-stone-600'}`}>
-            Encuentros, lanzamientos y convocatorias de Librepalabras y de la comunidad literaria del Caribe.
+            Encuentros, lanzamientos y convocatorias de Liberapalabras y de la comunidad literaria del Caribe.
           </p>
         </div>
 

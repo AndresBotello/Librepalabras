@@ -91,7 +91,7 @@ app.use((req, res, next) => {
 app.get('/', (_req, res) => {
   res.json({
     ok: true,
-    message: 'Backend de LibrePalabras funcionando',
+    message: 'Backend de Liberapalabras funcionando',
   });
 });
 

@@ -6,43 +6,43 @@
 -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://librepalabras.com/</loc>
+    <loc>https://liberapalabras.com/</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://librepalabras.com/literature</loc>
+    <loc>https://liberapalabras.com/literature</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://librepalabras.com/stories</loc>
+    <loc>https://liberapalabras.com/stories</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://librepalabras.com/poleversia</loc>
+    <loc>https://liberapalabras.com/poleversia</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://librepalabras.com/authors</loc>
+    <loc>https://liberapalabras.com/authors</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://librepalabras.com/concursos</loc>
+    <loc>https://liberapalabras.com/concursos</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://librepalabras.com/concursos/ganadores</loc>
+    <loc>https://liberapalabras.com/concursos/ganadores</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
