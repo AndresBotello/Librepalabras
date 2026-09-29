@@ -203,6 +203,12 @@ export function getCurrentSession() {
   return request('/auth/me');
 }
 
+export function deleteMyAccount() {
+  return request('/auth/account', {
+    method: 'DELETE',
+  });
+}
+
 export function createStory(payload) {
   return request('/stories', {
     method: 'POST',

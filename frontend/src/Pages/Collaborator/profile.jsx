@@ -1,12 +1,13 @@
 import React, { useContext, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ThemeContext } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { useNotify } from '../../context/DialogContext';
+import { useConfirm, useNotify } from '../../context/DialogContext';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import AreaSidebar from '../../components/AreaSidebar';
 import { updateUserById, uploadProfilePhoto } from '../../services/api';
-import { getAccountProviders, changePassword, addPasswordToAccount } from '../../services/auth';
+import { getAccountProviders, changePassword, addPasswordToAccount, deleteAccount } from '../../services/auth';
 import { ROLE_LABELS } from '../../utils/roles';
 
 const EMPTY_PASSWORD_FORM = { current: '', next: '', confirm: '' };
@@ -32,8 +33,10 @@ const ROLE_BADGE_COLORS = {
 
 export default function Profile() {
   const { isDark } = useContext(ThemeContext);
-  const { user, refreshAuth } = useAuth();
+  const { user, refreshAuth, logout } = useAuth();
   const notify = useNotify();
+  const confirm = useConfirm();
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [profileImage, setProfileImage] = useState(user?.photoURL || null);
@@ -83,6 +86,52 @@ export default function Profile() {
   }, [user?.uid]);
 
   const isAddingPassword = providers.ready && !providers.hasPassword;
+
+  // Eliminar cuenta: no disponible para administradores, que no pueden
+  // quedarse sin acceso propio al panel por voluntad propia.
+  const canDeleteAccount = user?.role !== 'admin';
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteSaving, setDeleteSaving] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
+  const closeDeleteForm = () => {
+    setDeleteOpen(false);
+    setDeletePassword('');
+    setDeleteError('');
+  };
+
+  const handleDeleteAccount = async (e) => {
+    e.preventDefault();
+    setDeleteError('');
+
+    if (providers.hasPassword && !deletePassword) {
+      setDeleteError('Escribe tu contraseña para confirmar.');
+      return;
+    }
+
+    const confirmed = await confirm({
+      title: '¿Eliminar tu cuenta definitivamente?',
+      message: 'Se cerrará tu sesión y se borrará tu perfil, tus obras, comentarios, calificaciones y cualquier otro dato asociado a tu cuenta.',
+      detail: 'Esta acción no se puede deshacer.',
+      confirmLabel: 'Eliminar mi cuenta',
+      variant: 'danger',
+    });
+
+    if (!confirmed) return;
+
+    setDeleteSaving(true);
+
+    try {
+      await deleteAccount(providers.hasPassword ? deletePassword : undefined);
+      await logout();
+      notify.success('Tu cuenta fue eliminada correctamente.');
+      navigate('/', { replace: true });
+    } catch (err) {
+      setDeleteError(err.message || 'No se pudo eliminar la cuenta.');
+      setDeleteSaving(false);
+    }
+  };
 
   const closePasswordForm = () => {
     setPasswordOpen(false);
@@ -624,6 +673,93 @@ export default function Profile() {
                   </form>
                 )}
               </div>
+
+              {/* Zona de peligro: eliminar la cuenta. Fuera del alcance de los
+                  administradores, que necesitan seguir teniendo acceso al panel. */}
+              {canDeleteAccount && (
+                <div className={`mt-8 rounded-lg p-8 transition-colors border ${
+                  isDark ? 'bg-rose-950/20 border-rose-900' : 'bg-rose-50 border-rose-200'
+                }`}>
+                  <h3 className={`text-xl font-bold mb-2 transition-colors ${isDark ? 'text-rose-300' : 'text-rose-800'}`}>
+                    Eliminar cuenta
+                  </h3>
+                  <p className={`text-sm mb-6 transition-colors ${isDark ? 'text-rose-200/80' : 'text-rose-700'}`}>
+                    Borra tu perfil y toda la información asociada a tu cuenta (obras, comentarios,
+                    calificaciones, participaciones y demás). Es una acción definitiva e irreversible.
+                  </p>
+
+                  {!deleteOpen ? (
+                    <button
+                      type="button"
+                      onClick={() => setDeleteOpen(true)}
+                      className={`px-4 py-2 rounded-lg font-semibold text-sm border transition-colors ${
+                        isDark
+                          ? 'border-rose-800 text-rose-300 hover:bg-rose-900/40'
+                          : 'border-rose-300 text-rose-700 hover:bg-rose-100'
+                      }`}
+                    >
+                      Eliminar mi cuenta
+                    </button>
+                  ) : (
+                    <form onSubmit={handleDeleteAccount} className="space-y-4">
+                      {deleteError && (
+                        <div className={`rounded-lg px-4 py-3 text-sm border ${
+                          isDark ? 'bg-rose-950/40 border-rose-800 text-rose-300' : 'bg-rose-50 border-rose-200 text-rose-800'
+                        }`}>
+                          {deleteError}
+                        </div>
+                      )}
+
+                      {providers.hasPassword ? (
+                        <div>
+                          <label htmlFor="delete-account-password" className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Confirma tu contraseña
+                          </label>
+                          <input
+                            id="delete-account-password"
+                            type="password"
+                            autoComplete="current-password"
+                            value={deletePassword}
+                            onChange={(e) => setDeletePassword(e.target.value)}
+                            className={`w-full px-4 py-2 rounded-lg border transition-colors focus:outline-none focus:ring-2 ${
+                              isDark
+                                ? 'bg-gray-800 border-gray-700 text-gray-100 focus:ring-gray-600'
+                                : 'bg-white border-gray-300 text-gray-900 focus:ring-gray-300'
+                            }`}
+                          />
+                        </div>
+                      ) : (
+                        <p className={`text-sm rounded-lg px-4 py-3 border ${
+                          isDark ? 'bg-gray-800/60 border-gray-700 text-gray-300' : 'bg-gray-50 border-gray-200 text-gray-600'
+                        }`}>
+                          Tu cuenta entra con Google: al continuar te pediremos que confirmes tu identidad
+                          en una ventana emergente antes de borrar nada.
+                        </p>
+                      )}
+
+                      <div className="flex gap-3 justify-end pt-2">
+                        <button
+                          type="button"
+                          onClick={closeDeleteForm}
+                          disabled={deleteSaving}
+                          className={`px-4 py-2 rounded-lg font-semibold text-sm border transition-colors disabled:opacity-50 ${
+                            isDark ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={deleteSaving}
+                          className="px-4 py-2 rounded-lg font-semibold text-sm text-white bg-rose-600 hover:bg-rose-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {deleteSaving ? 'Eliminando...' : 'Eliminar mi cuenta definitivamente'}
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

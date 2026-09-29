@@ -15,7 +15,7 @@ import {
   updatePassword,
 } from 'firebase/auth';
 import { auth, googleProvider } from '../config/firebase';
-import { createSession, logoutSession } from './api';
+import { createSession, deleteMyAccount, logoutSession } from './api';
 
 const AUTH_ERROR_MESSAGES = {
   'auth/network-request-failed': 'No hay conexión a internet. Revisa tu red e intenta de nuevo.',
@@ -251,6 +251,48 @@ export async function addPasswordToAccount(newPassword) {
       await reauthenticateWithPopup(currentUser, googleProvider);
       await linkWithCredential(currentUser, credential);
     }
+  });
+}
+
+/**
+ * Borra la cuenta por voluntad propia: primero prueba de identidad reciente
+ * (mismo criterio que cambiar la contraseña), y solo entonces se llama al
+ * backend, que es quien de verdad borra el perfil y todo lo que dejó en la
+ * plataforma. `currentPassword` se ignora en cuentas que solo entran con
+ * Google: ahí la prueba de identidad es la ventana emergente.
+ */
+export async function deleteAccount(currentPassword) {
+  return withFriendlyErrors(async () => {
+    const currentUser = await waitForCurrentUser();
+
+    if (!currentUser) {
+      throw new Error(SESSION_EXPIRED);
+    }
+
+    const providerIds = currentUser.providerData.map((provider) => provider.providerId);
+
+    if (providerIds.includes(PASSWORD_PROVIDER)) {
+      if (!currentPassword) {
+        throw new Error('Escribe tu contraseña para confirmar.');
+      }
+
+      const credential = EmailAuthProvider.credential(currentUser.email, currentPassword);
+
+      try {
+        await reauthenticateWithCredential(currentUser, credential);
+      } catch (error) {
+        if (error?.code === 'auth/wrong-password' || error?.code === 'auth/invalid-credential') {
+          throw new Error('La contraseña no es correcta.', { cause: error });
+        }
+
+        throw error;
+      }
+    } else {
+      await reauthenticateWithPopup(currentUser, googleProvider);
+    }
+
+    await deleteMyAccount();
+    await signOut(auth).catch(() => null);
   });
 }
 

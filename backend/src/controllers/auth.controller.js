@@ -2,6 +2,7 @@ import { adminAuth, authSessionMaxAgeMs, defaultUserRole, firebaseAdminReady } f
 import { upsertUserProfile, updateUserProfile } from '../services/user.service.js';
 import { invalidateUserCache, primeUserCache } from '../middlewares/auth.middleware.js';
 import { acceptInvitation, findValidInvitation } from '../services/invitation.service.js';
+import { deleteUserAccount } from '../services/accountDeletion.service.js';
 
 const sessionCookieOptions = {
   httpOnly: true,
@@ -223,6 +224,51 @@ export async function logout(req, res) {
     ok: true,
     message: 'Sesión cerrada correctamente',
   });
+}
+
+/**
+ * Borrado de cuenta a petición del propio usuario (derecho al olvido).
+ *
+ * Un administrador queda fuera a propósito: su cuenta suele ser la única con
+ * acceso al panel, y un autoborrado accidental dejaría la plataforma sin
+ * nadie que pueda gestionarla. Si un administrador quiere irse, primero le
+ * transfiere el rol a otra cuenta.
+ */
+export async function deleteAccount(req, res) {
+  try {
+    if (!req.user || !req.user.uid) {
+      return res.status(401).json({
+        ok: false,
+        message: 'No autorizado',
+      });
+    }
+
+    if (req.user.role === 'admin') {
+      return res.status(403).json({
+        ok: false,
+        message: 'Las cuentas de administrador no se pueden eliminar desde aquí.',
+      });
+    }
+
+    const { uid } = req.user;
+
+    await deleteUserAccount(uid);
+
+    invalidateUserCache(uid);
+    res.clearCookie('session', sessionCookieOptions);
+
+    return res.json({
+      ok: true,
+      message: 'Tu cuenta y toda tu información fueron eliminadas correctamente.',
+    });
+  } catch (error) {
+    console.error('Error al eliminar la cuenta:', error);
+    return res.status(500).json({
+      ok: false,
+      message: 'No se pudo eliminar la cuenta',
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 }
 
 export async function updateProfile(req, res) {
