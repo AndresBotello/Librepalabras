@@ -6,7 +6,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "backfill:names": "node scripts/backfillGoogleNames.js",
+    "backfill:comments": "node scripts/backfillCommentNames.js"
   },
   "dependencies": {
     "cloudinary": "^2.10.0",

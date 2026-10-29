@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { richEditorHandlers } from '../utils/richPaste';
 import {
   AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, Italic, List, ListOrdered, Underline,
 } from 'lucide-react';
@@ -421,6 +422,7 @@ export default function LiteraryWorkForm({ isDark, onSuccess }) {
           contentEditable
           suppressContentEditableWarning
           onInput={handleEditorInput}
+          {...richEditorHandlers((html) => setFormData((prev) => ({ ...prev, content: html })))}
           data-placeholder="Escribe tu obra aquí. Usa la barra de arriba para dar formato al texto..."
           className={`w-full min-h-72 px-4 py-2 border rounded-lg text-sm leading-relaxed focus:outline-none focus:ring-1 overflow-y-auto ${isDark ? 'bg-gray-700 border-gray-600 text-gray-100 focus:ring-blue-500' : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500'}`}
           style={{ whiteSpace: 'pre-wrap' }}

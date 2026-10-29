@@ -18,6 +18,11 @@ import {
   resolveCommentReport,
 } from '../controllers/moderation.controller.js';
 import {
+  getAnalyticsOverview,
+  getAnalyticsWorkDetail,
+  deleteAnalyticsComment,
+} from '../controllers/workAnalytics.controller.js';
+import {
   deleteInvitation,
   getInvitations,
   postInvitation,
@@ -54,6 +59,11 @@ router.delete('/files/:id', deletePdfFile);
 router.get('/comment-reports', getCommentReports);
 router.get('/comment-reports/count', getCommentReportsCount);
 router.patch('/comment-reports/:id', resolveCommentReport);
+
+// Análisis de las obras: totales, interacción y comentarios
+router.get('/works-analytics', getAnalyticsOverview);
+router.get('/works-analytics/:id', getAnalyticsWorkDetail);
+router.delete('/works-analytics/:id/comments/:commentId', deleteAnalyticsComment);
 
 // Invitaciones con rol preasignado
 router.get('/invitations', getInvitations);

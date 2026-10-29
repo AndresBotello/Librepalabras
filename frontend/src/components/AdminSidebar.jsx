@@ -112,6 +112,14 @@ const IconHealth = () => (
   </svg>
 );
 
+const IconAnalytics = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="18" y1="20" x2="18" y2="10" />
+    <line x1="12" y1="20" x2="12" y2="4" />
+    <line x1="6" y1="20" x2="6" y2="14" />
+  </svg>
+);
+
 export default function AdminSidebar() {
   const { isDark } = useContext(ThemeContext);
   const { user, logout } = useAuth();
@@ -158,6 +166,7 @@ export default function AdminSidebar() {
     // AuthorRoute que ya cubre a admin), solo faltaba el enlace aquí.
     { icon: IconBooks, label: 'Mis obras publicadas', path: '/collaborator/publications' },
     { icon: IconPublish, label: 'Columnas de Opinión', path: '/admin/columnas' },
+    { icon: IconAnalytics, label: 'Análisis de obras', path: '/admin/analisis' },
     { icon: IconModeration, label: 'Moderación de obras', path: '/admin/moderation' },
     { icon: IconComments, label: 'Comentarios reportados', path: '/admin/comentarios', badge: pendingReports },
     { icon: IconAuthors, label: 'Autores', path: '/admin/autores' },

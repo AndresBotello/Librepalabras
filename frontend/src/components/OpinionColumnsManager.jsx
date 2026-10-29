@@ -1,4 +1,5 @@
 import { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { richEditorHandlers } from '../utils/richPaste';
 import { useAuth } from '../context/AuthContext';
 import { ThemeContext } from '../context/ThemeContext';
 import {
@@ -392,6 +393,7 @@ export default function OpinionColumnsManager() {
                 contentEditable
                 suppressContentEditableWarning
                 onInput={handleEditorInput}
+          {...richEditorHandlers((html) => setForm((previous) => ({ ...previous, content: html })))}
                 className={`min-h-[220px] rounded-2xl border px-4 py-3 shadow-inner outline-none ${isDark ? 'border-slate-600 bg-slate-800 text-slate-100 focus:border-amber-400 focus:bg-slate-800' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-brand-500 focus:bg-white'}`}
                 data-placeholder="Escribe tu columna aquí..."
                 style={{ whiteSpace: 'pre-wrap' }}

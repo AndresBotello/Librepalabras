@@ -305,6 +305,33 @@ export function deleteOpinionColumn(id) {
   });
 }
 
+/** `before` es la fecha del último comentario ya mostrado (paginación por cursor). */
+export function getOpinionColumnComments(columnId, { before, limit } = {}) {
+  const params = new URLSearchParams();
+  if (before) params.set('before', before);
+  if (limit) params.set('limit', String(limit));
+
+  const query = params.toString();
+  return request(`/opinion-columns/${columnId}/comments${query ? `?${query}` : ''}`);
+}
+
+/**
+ * Sin sesión hay que mandar `captchaToken` (y opcionalmente `name`). `website`
+ * es el campo trampa: la interfaz lo deja siempre vacío.
+ */
+export function addOpinionColumnComment(columnId, payload) {
+  return request(`/opinion-columns/${columnId}/comments`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteOpinionColumnComment(columnId, commentId) {
+  return request(`/opinion-columns/${columnId}/comments/${commentId}`, {
+    method: 'DELETE',
+  });
+}
+
 /**
  * Obras de la bandeja de moderación. Sin argumento devuelve las pendientes,
  * que es lo que espera el contador del dashboard; con `status` sirve también
@@ -554,10 +581,14 @@ export function deleteFocusGroupSession(id) {
   return request(`/focus-group/${id}`, { method: 'DELETE' });
 }
 
-export function addFocusGroupComment(id, text) {
+/**
+ * Con sesión basta el texto. Sin ella hay que mandar también `name` y
+ * `captchaToken`; `website` es el campo trampa y la interfaz lo deja vacío.
+ */
+export function addFocusGroupComment(id, payload) {
   return request(`/focus-group/${id}/comments`, {
     method: 'POST',
-    body: JSON.stringify({ text }),
+    body: JSON.stringify(typeof payload === 'string' ? { text: payload } : payload),
   });
 }
 
@@ -773,6 +804,22 @@ export function getCommentReports(status = 'pending') {
 
 export function getCommentReportsCount() {
   return request('/admin/comment-reports/count');
+}
+
+/** Análisis de las obras aprobadas. `authorId` vacío = todas; `days` es la ventana de la serie diaria. */
+export function getWorksAnalytics({ authorId = '', days = 30 } = {}) {
+  const params = new URLSearchParams({ days: String(days) });
+  if (authorId) params.set('authorId', authorId);
+
+  return request(`/admin/works-analytics?${params.toString()}`);
+}
+
+export function getWorkAnalyticsDetail(workId, { days = 30 } = {}) {
+  return request(`/admin/works-analytics/${workId}?days=${days}`);
+}
+
+export function deleteAnalyticsComment(workId, commentId) {
+  return request(`/admin/works-analytics/${workId}/comments/${commentId}`, { method: 'DELETE' });
 }
 
 /** `action`: 'dismiss' deja el comentario, 'remove' lo elimina. */

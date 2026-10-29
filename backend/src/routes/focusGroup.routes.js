@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticateRequest, attachUserIfPresent } from '../middlewares/auth.middleware.js';
 import { authorizeRoles } from '../middlewares/role.middleware.js';
-import { commentRateLimiter, likeRateLimiter } from '../middlewares/rateLimiter.middleware.js';
+import { publicCommentRateLimiter, likeRateLimiter } from '../middlewares/rateLimiter.middleware.js';
 import {
   addSessionComment,
   createFocusGroupSession,
@@ -22,8 +22,10 @@ const router = Router();
 router.get('/', attachUserIfPresent, getSessions);
 router.get('/:id', attachUserIfPresent, getSession);
 
-// Conversación: hace falta sesión, sea cual sea el rol.
-router.post('/:id/comments', authenticateRequest, commentRateLimiter, addSessionComment);
+// Conversación: comentar está abierto a visitantes sin cuenta (con nombre,
+// captcha y límite por IP); borrar y reaccionar exigen sesión.
+// `attachUserIfPresent` va antes del limitador porque este exime a los admins.
+router.post('/:id/comments', attachUserIfPresent, publicCommentRateLimiter, addSessionComment);
 router.delete('/:id/comments/:commentId', authenticateRequest, deleteSessionComment);
 router.post('/:id/comments/:commentId/like', authenticateRequest, likeRateLimiter, toggleSessionCommentLike);
 

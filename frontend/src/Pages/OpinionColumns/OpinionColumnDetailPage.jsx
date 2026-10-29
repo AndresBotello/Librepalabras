@@ -4,6 +4,7 @@ import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import FeaturedAuthors from '../../components/FeaturedAuthors';
 import ReadingToolbar from '../../components/ReadingToolbar';
+import OpinionColumnComments from '../../components/OpinionColumnComments';
 import { ThemeContext } from '../../context/ThemeContext';
 import { readingContentStyle, useReadingPreferences } from '../../context/ReadingPreferencesContext';
 import { getOpinionColumnById } from '../../services/api';
@@ -136,6 +137,8 @@ export default function OpinionColumnDetailPage() {
                 style={readingContentStyle({ fontScale, dyslexiaFont })}
                 dangerouslySetInnerHTML={{ __html: column.content }}
               />
+
+              <OpinionColumnComments columnId={column.id} isDark={isDark} />
 
               <div className={`flex items-center justify-between gap-4 border-t pt-6 ${isDark ? 'border-slate-700' : 'border-slate-200'}`}>
                 <Link to="/columnas" className={`inline-flex rounded-full border px-5 py-2.5 text-sm font-semibold uppercase tracking-[0.12em] transition ${isDark ? 'border-slate-600 bg-slate-800 text-slate-200 hover:bg-slate-700' : 'border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100'}`}>

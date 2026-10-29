@@ -1,12 +1,13 @@
 import xss from 'xss';
 import { adminDb } from '../config/firebaseAdmin.js';
+import { contentTooLongMessage, sanitizeRichHtml } from '../utils/richText.js';
 
 const VALID_STATUSES = ['draft', 'pending_review', 'changes_requested', 'published', 'rejected'];
 const REVIEW_STATUSES = ['published', 'rejected', 'changes_requested'];
 const MAX_TITLE_LENGTH = 180;
 const MAX_SUBTITLE_LENGTH = 320;
 const MAX_AUTHOR_LENGTH = 140;
-const MAX_CONTENT_LENGTH = 60000;
+const MAX_CONTENT_LENGTH = 100000;
 
 function sanitizeText(value, maxLength) {
   if (value === undefined || value === null) {
@@ -32,34 +33,7 @@ function sanitizeCoverUrl(value) {
 }
 
 function sanitizeHtmlContent(value) {
-  if (typeof value !== 'string') return '';
-
-  const allowed = xss(value, {
-    whiteList: {
-      a: ['href', 'title', 'target', 'rel'],
-      b: [],
-      strong: [],
-      em: [],
-      i: [],
-      u: [],
-      p: [],
-      br: [],
-      ul: [],
-      ol: [],
-      li: [],
-      blockquote: [],
-      h2: [],
-      h3: [],
-      h4: [],
-      span: ['style'],
-      img: ['src', 'alt', 'title'],
-      hr: [],
-    },
-    stripIgnoreTag: true,
-    stripIgnoreTagBody: ['script', 'style'],
-  });
-
-  return allowed.trim().slice(0, MAX_CONTENT_LENGTH);
+  return sanitizeRichHtml(value, { allowImages: true });
 }
 
 function stripHtml(value = '') {
@@ -271,6 +245,10 @@ export async function createOpinionColumn(req, res) {
       return res.status(400).json({ ok: false, message: 'El contenido debe tener al menos 80 caracteres' });
     }
 
+    if (sanitizeHtmlContent(content).length > MAX_CONTENT_LENGTH) {
+      return res.status(413).json({ ok: false, message: contentTooLongMessage(MAX_CONTENT_LENGTH) });
+    }
+
     const input = {
       title: cleanedTitle,
       subtitle: sanitizeText(subtitle, MAX_SUBTITLE_LENGTH),
@@ -352,6 +330,10 @@ export async function updateOpinionColumn(req, res) {
       const sanitizedContent = sanitizeHtmlContent(content);
       if (!stripHtml(sanitizedContent).length) {
         return res.status(400).json({ ok: false, message: 'El contenido es obligatorio' });
+      }
+
+      if (sanitizedContent.length > MAX_CONTENT_LENGTH) {
+        return res.status(413).json({ ok: false, message: contentTooLongMessage(MAX_CONTENT_LENGTH) });
       }
       updates.content = sanitizedContent;
     }
@@ -480,7 +462,9 @@ export async function deleteOpinionColumn(req, res) {
       return res.status(403).json({ ok: false, message: 'No tienes permisos para eliminar esta columna' });
     }
 
-    await adminDb.collection('opinionColumns').doc(id).delete();
+    // `recursiveDelete` también borra la subcolección de comentarios: un
+    // `delete()` simple dejaría los comentarios huérfanos en Firestore.
+    await adminDb.recursiveDelete(adminDb.collection('opinionColumns').doc(id));
     return res.json({ ok: true, message: 'Columna eliminada correctamente' });
   } catch (error) {
     console.error('Error al eliminar la columna:', error);

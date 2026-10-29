@@ -24,6 +24,28 @@ export async function getUserProfile(uid) {
   };
 }
 
+const MAX_DISPLAY_NAME_LENGTH = 100;
+
+/**
+ * El nombre que Google (u otro proveedor) tiene de la cuenta, listo para
+ * guardarlo en `nombres`. Va entero ahí y no partido en nombre y apellido:
+ * separar "Juan Carlos Pérez Gómez" sería adivinar, y como el resto del sistema
+ * une `nombres` y `apellidos` para mostrarlos, el resultado se ve igual.
+ *
+ * Se quitan `<` y `>` porque el nombre lo elige quien se registra en Google y
+ * acaba en listados, comentarios y correos.
+ */
+export function nombresFromDisplayName(displayName) {
+  if (typeof displayName !== 'string') return '';
+
+  return displayName
+    .replace(/[<>]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, MAX_DISPLAY_NAME_LENGTH)
+    .trim();
+}
+
 export async function upsertUserProfile(decodedClaims, additionalData = {}, options = {}) {
   if (!adminDb) {
     return null;
@@ -50,9 +72,14 @@ export async function upsertUserProfile(decodedClaims, additionalData = {}, opti
       ? 'admin'
       : (invitedRole && isValidRole(invitedRole) ? invitedRole : preferredRole || defaultUserRole);
 
+    // El registro con correo manda nombres y apellidos en `additionalData`; el
+    // de Google no manda nada, y sin esto la cuenta quedaba sin nombre.
+    const googleName = nombresFromDisplayName(name);
+
     const profile = {
       ...baseProfile,
       photoURL: picture || null,
+      ...(googleName ? { nombres: googleName } : {}),
       ...additionalData,
       role: initialRole,
       createdAt: now,
@@ -86,6 +113,16 @@ export async function upsertUserProfile(decodedClaims, additionalData = {}, opti
 
   if (picture) {
     profile.photoURL = picture;
+  }
+
+  // Cuentas de Google creadas antes de que se guardara el nombre: se completa
+  // al entrar. Solo si de verdad falta, para no pisar un nombre que la persona
+  // escribió o editó ella misma.
+  if (!String(profile.nombres || '').trim()) {
+    const googleName = nombresFromDisplayName(name);
+    if (googleName) {
+      profile.nombres = googleName;
+    }
   }
 
   await docRef.set(profile, { merge: true });

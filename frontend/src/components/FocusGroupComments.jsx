@@ -1,5 +1,6 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import ReCAPTCHA from 'react-google-recaptcha';
 import { Loader2, MessageCircle, Send, Trash2 } from 'lucide-react';
 import { ThemeContext } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -10,8 +11,13 @@ import {
   toggleFocusGroupCommentLike,
 } from '../services/api';
 
-const MAX_LENGTH = 1000;
+// Cinco mil caracteres: caben tres párrafos de siete renglones con saludo y
+// conclusiones, que es lo que piden los foros académicos de este espacio.
+const MAX_LENGTH = 5000;
 const MIN_LENGTH = 3;
+const MAX_NAME = 60;
+const MIN_NAME = 2;
+const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
 
 function formatDate(value) {
   if (!value) return '';
@@ -39,27 +45,49 @@ export default function FocusGroupComments({ sessionId, comments = [], allowComm
   const { user, isAuthenticated } = useAuth();
   const { confirm, notify } = useDialog();
 
+  const captchaRef = useRef(null);
+
   const [text, setText] = useState('');
+  const [name, setName] = useState('');
+  // Campo trampa para bots: oculto a las personas, debe quedar siempre vacío.
+  const [website, setWebsite] = useState('');
+  const [captchaToken, setCaptchaToken] = useState('');
+  const [formError, setFormError] = useState('');
   const [sending, setSending] = useState(false);
   const [likingId, setLikingId] = useState(null);
 
   const userId = user?.uid;
   const isAdmin = user?.role === 'admin';
   const trimmed = text.trim();
-  const canSend = trimmed.length >= MIN_LENGTH && !sending;
+  const needsCaptcha = !isAuthenticated && Boolean(RECAPTCHA_SITE_KEY);
+  const canSend = trimmed.length >= MIN_LENGTH
+    && !sending
+    && (isAuthenticated || name.trim().length >= MIN_NAME)
+    && (!needsCaptcha || Boolean(captchaToken));
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!canSend) return;
 
     setSending(true);
+    setFormError('');
     try {
-      const response = await addFocusGroupComment(sessionId, trimmed);
+      const payload = { text: trimmed, website };
+      if (!isAuthenticated) {
+        payload.name = name.trim();
+        payload.captchaToken = captchaToken;
+      }
+
+      const response = await addFocusGroupComment(sessionId, payload);
       setText('');
       onChange?.([...comments, response.comment]);
     } catch (error) {
-      notify.error(error.message);
+      setFormError(error.message);
     } finally {
+      // El token de reCAPTCHA es de un solo uso: haya salido bien o mal, hay
+      // que pedir uno nuevo para el siguiente comentario.
+      captchaRef.current?.reset();
+      setCaptchaToken('');
       setSending(false);
     }
   };
@@ -122,13 +150,36 @@ export default function FocusGroupComments({ sessionId, comments = [], allowComm
         <p className={`text-sm ${isDark ? 'text-stone-400' : 'text-stone-600'}`}>
           Los comentarios están cerrados en este encuentro.
         </p>
-      ) : isAuthenticated ? (
-        <form onSubmit={handleSubmit} className="mb-6">
+      ) : (
+        <form onSubmit={handleSubmit} className="mb-6 space-y-3">
+          {!isAuthenticated && (
+            <div>
+              <label htmlFor="focus-comment-name" className={`mb-1 block text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-stone-400' : 'text-stone-600'}`}>
+                Tu nombre
+              </label>
+              <input
+                id="focus-comment-name"
+                type="text"
+                value={name}
+                onChange={(event) => setName(event.target.value.slice(0, MAX_NAME))}
+                placeholder="Nombres y apellidos"
+                autoComplete="name"
+                disabled={sending}
+                className={`w-full px-4 py-2.5 rounded-xl border text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/40 ${
+                  isDark
+                    ? 'bg-stone-950 border-stone-700 text-stone-100 placeholder-stone-500'
+                    : 'bg-stone-50 border-stone-300 text-stone-900 placeholder-stone-400'
+                }`}
+              />
+            </div>
+          )}
+
           <textarea
             value={text}
             onChange={(event) => setText(event.target.value.slice(0, MAX_LENGTH))}
-            rows={3}
+            rows={6}
             placeholder="Aporta al tema: una idea, una pregunta, una experiencia…"
+            aria-label="Tu comentario"
             disabled={sending}
             className={`w-full px-4 py-3 rounded-xl border text-sm resize-y transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/40 ${
               isDark
@@ -136,28 +187,63 @@ export default function FocusGroupComments({ sessionId, comments = [], allowComm
                 : 'bg-stone-50 border-stone-300 text-stone-900 placeholder-stone-400'
             }`}
           />
-          <div className="flex items-center justify-between gap-3 mt-2">
+
+          {/* Campo trampa: fuera de pantalla y fuera del orden de tabulación. */}
+          <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
+            <label htmlFor="focus-comment-website">No rellenar</label>
+            <input
+              id="focus-comment-website"
+              type="text"
+              tabIndex={-1}
+              autoComplete="off"
+              value={website}
+              onChange={(event) => setWebsite(event.target.value)}
+            />
+          </div>
+
+          {needsCaptcha && (
+            <div className="overflow-x-auto">
+              <ReCAPTCHA
+                ref={captchaRef}
+                sitekey={RECAPTCHA_SITE_KEY}
+                theme={isDark ? 'dark' : 'light'}
+                onChange={(token) => setCaptchaToken(token || '')}
+                onExpired={() => setCaptchaToken('')}
+              />
+            </div>
+          )}
+
+          {formError && (
+            <p role="alert" className={`text-sm px-3 py-2 rounded-lg ${isDark ? 'bg-rose-950/50 text-rose-300' : 'bg-rose-50 text-rose-800'}`}>
+              {formError}
+            </p>
+          )}
+
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <span className={`text-xs ${isDark ? 'text-stone-500' : 'text-stone-500'}`}>
-              {text.length}/{MAX_LENGTH}
+              {text.length.toLocaleString('es-CO')}/{MAX_LENGTH.toLocaleString('es-CO')}
             </span>
-            <button
-              type="submit"
-              disabled={!canSend}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ backgroundColor: 'var(--color-brand-700)' }}
-            >
-              {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              {sending ? 'Publicando…' : 'Publicar'}
-            </button>
+            <div className="flex items-center gap-3">
+              {!isAuthenticated && (
+                <span className={`text-xs ${isDark ? 'text-stone-400' : 'text-stone-600'}`}>
+                  ¿Tienes cuenta?{' '}
+                  <Link to="/login" className="font-semibold underline" style={{ color: 'var(--color-brand-700)' }}>
+                    Inicia sesión
+                  </Link>
+                </span>
+              )}
+              <button
+                type="submit"
+                disabled={!canSend}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ backgroundColor: 'var(--color-brand-700)' }}
+              >
+                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                {sending ? 'Publicando…' : 'Publicar'}
+              </button>
+            </div>
           </div>
         </form>
-      ) : (
-        <p className={`mb-6 text-sm ${isDark ? 'text-stone-400' : 'text-stone-600'}`}>
-          <Link to="/login" className="font-semibold underline" style={{ color: 'var(--color-brand-700)' }}>
-            Inicia sesión
-          </Link>{' '}
-          para participar en la conversación.
-        </p>
       )}
 
       <div className="space-y-4">
@@ -188,8 +274,13 @@ export default function FocusGroupComments({ sessionId, comments = [], allowComm
                       </span>
                     )}
                     <div className="min-w-0">
-                      <p className={`text-sm font-semibold truncate ${isDark ? 'text-stone-100' : 'text-stone-900'}`}>
-                        {comment.userName}
+                      <p className={`flex items-center gap-2 text-sm font-semibold ${isDark ? 'text-stone-100' : 'text-stone-900'}`}>
+                        <span className="truncate">{comment.userName}</span>
+                        {comment.isGuest && (
+                          <span className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${isDark ? 'bg-stone-800 text-stone-400' : 'bg-stone-200 text-stone-600'}`}>
+                            Visitante
+                          </span>
+                        )}
                       </p>
                       <p className={`text-xs ${isDark ? 'text-stone-500' : 'text-stone-500'}`}>
                         {formatDate(comment.createdAt)}

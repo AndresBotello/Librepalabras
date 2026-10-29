@@ -9,6 +9,9 @@ import { REPORT_REASONS, createReport } from '../services/commentReport.service.
 import { deleteFile } from '../services/upload.service.js';
 import { cloudinaryPublicId } from '../utils/files.js';
 import { getAuthor } from '../services/author.service.js';
+import { contentTooLongMessage, sanitizeRichHtml } from '../utils/richText.js';
+import { FieldValue } from 'firebase-admin/firestore';
+import { purgeWorkStats, recordWorkEvent } from '../services/workAnalytics.service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -24,40 +27,11 @@ const MAX_CONTENT_LENGTH = 200000;
  * El editor de la obra guarda HTML (negrita, cursiva, alineación...), no texto
  * plano. Sin filtrar, ese HTML se re-inyecta tal cual al lector con
  * `dangerouslySetInnerHTML`: cualquier `<script>` colado en el contenido se
- * ejecutaría en el navegador de todo el que abra la obra. La lista blanca deja
- * pasar el formato de un editor de texto (párrafos, énfasis, alineación,
- * listas) y nada que pueda ejecutar código.
+ * ejecutaría en el navegador de todo el que abra la obra. La lista blanca está
+ * en `utils/richText.js`, compartida con las columnas de opinión.
  */
 function sanitizeWorkContent(value) {
-  if (typeof value !== 'string') return '';
-
-  const allowed = xss(value, {
-    whiteList: {
-      a: ['href', 'title', 'target', 'rel'],
-      b: [],
-      strong: [],
-      em: [],
-      i: [],
-      u: [],
-      p: ['style'],
-      div: ['style'],
-      span: ['style'],
-      br: [],
-      ul: [],
-      ol: [],
-      li: [],
-      blockquote: [],
-      h1: [],
-      h2: [],
-      h3: [],
-      h4: [],
-      hr: [],
-    },
-    stripIgnoreTag: true,
-    stripIgnoreTagBody: ['script', 'style'],
-  });
-
-  return allowed.trim().slice(0, MAX_CONTENT_LENGTH);
+  return sanitizeRichHtml(value);
 }
 
 /** El contenido sin etiquetas, para validar longitud mínima sin contar el HTML. */
@@ -181,12 +155,18 @@ export async function createWork(req, res) {
     // moderación existe para vigilar a terceros, no para vigilarse a sí mismo.
     const isAdmin = req.user?.role === 'admin';
 
+    const cleanContent = sanitizeWorkContent(content);
+
+    if (cleanContent.length > MAX_CONTENT_LENGTH) {
+      return res.status(413).json({ ok: false, message: contentTooLongMessage(MAX_CONTENT_LENGTH) });
+    }
+
     const now = new Date().toISOString();
     const work = {
       title: title.trim(),
       genre: genre.toLowerCase(),
       scope: scope.toLowerCase(),
-      content: sanitizeWorkContent(content),
+      content: cleanContent,
       description: description?.trim() || '',
       tags: Array.isArray(tags) ? tags.filter(t => t.trim()) : [],
       cover: cover || null,
@@ -475,7 +455,11 @@ export async function getWorkById(req, res) {
       });
     }
 
-    await doc.ref.update({ views: (work.views || 0) + 1 });
+    // Incremento atómico: leer y reescribir `views` perdía visitas cuando dos
+    // personas abrían la obra a la vez. El conteo diario alimenta el análisis
+    // del panel de administración.
+    await doc.ref.update({ views: FieldValue.increment(1) });
+    recordWorkEvent(work.id, { views: 1 });
 
     return res.json({
       ok: true,
@@ -682,7 +666,13 @@ export async function updateWork(req, res) {
       updateData.scope = scope.toLowerCase();
     }
     if (typeof content === 'string' && stripHtmlContent(content).length) {
-      updateData.content = sanitizeWorkContent(content);
+      const cleanContent = sanitizeWorkContent(content);
+
+      if (cleanContent.length > MAX_CONTENT_LENGTH) {
+        return res.status(413).json({ ok: false, message: contentTooLongMessage(MAX_CONTENT_LENGTH) });
+      }
+
+      updateData.content = cleanContent;
     }
 
     // Corregir la firma sin tener que borrar y volver a subir la obra.
@@ -771,6 +761,7 @@ export async function deleteWork(req, res) {
     }
 
     await docRef.delete();
+    await purgeWorkStats(id);
 
     // La portada y el PDF se limpian después, y sin que su suerte afecte a la
     // respuesta: la obra ya no existe, así que devolver un error aquí solo
@@ -922,6 +913,12 @@ export async function toggleWorkLike(req, res) {
 
       return { liked, likesCount: (work.likesCount || 0) + (liked ? 1 : -1) };
     });
+
+    // Solo cuentan los "me gusta" que se dan, no los que se retiran: así la
+    // serie diaria dice cuánto gustó la obra ese día y nunca sale negativa.
+    if (result.liked) {
+      recordWorkEvent(id, { likes: 1 });
+    }
 
     return res.json({
       ok: true,

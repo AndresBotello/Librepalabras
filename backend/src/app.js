@@ -78,6 +78,14 @@ app.use(cors({
   origin: allowedOrigins.length > 1 ? allowedOrigins : allowedOrigins[0],
   credentials: true,
 }));
+// El HTML que pega Word pesa varias veces más que el texto: con el límite por
+// defecto de Express (100 kb) una obra de unas pocas páginas ya fallaba al
+// guardar. Solo las rutas que reciben texto con formato admiten más; el resto
+// de la API conserva el límite de siempre. Este parser va ANTES del general:
+// el primero que lee el cuerpo es el que manda.
+const richBodyParser = express.json({ limit: '1mb' });
+app.use('/api/literature', richBodyParser);
+app.use('/api/opinion-columns', richBodyParser);
 app.use(express.json());
 app.use(cookieParser());
 
@@ -137,17 +145,27 @@ app.use('/api', (_req, res) => {
 // Último recurso: cualquier error que se escape de un controlador. El detalle
 // se queda en los logs del servidor, nunca viaja al navegador en producción.
 app.use((error, req, res, _next) => {
-  console.error('Error no controlado:', error);
+  const status = error.status || 500;
 
-  // Además de la consola, queda registrado para que el panel de salud pueda
-  // mostrarlo. No se espera al resultado: la respuesta al usuario no debe
-  // depender de que Firestore acepte la escritura del log.
-  logError(error, req);
+  // Solo los fallos del servidor se registran: un cuerpo demasiado grande o un
+  // JSON mal formado es un error de quien envía, y llenaría de ruido el panel
+  // de salud.
+  if (status >= 500) {
+    console.error('Error no controlado:', error);
 
-  res.status(error.status || 500).json({
-    ok: false,
-    message: isProduction ? 'Error interno del servidor' : error.message,
-  });
+    // Además de la consola, queda registrado para que el panel de salud pueda
+    // mostrarlo. No se espera al resultado: la respuesta al usuario no debe
+    // depender de que Firestore acepte la escritura del log.
+    logError(error, req);
+  }
+
+  // Un error del cliente (cuerpo demasiado grande, JSON roto...) se explica; solo
+  // los fallos propios del servidor se esconden tras el mensaje genérico.
+  const message = error.type === 'entity.too.large'
+    ? 'El contenido enviado es demasiado grande. Reduce el texto o divídelo en partes.'
+    : status < 500 || !isProduction ? error.message : 'Error interno del servidor';
+
+  res.status(status).json({ ok: false, message });
 });
 
 console.log('✓ Rutas registradas correctamente');

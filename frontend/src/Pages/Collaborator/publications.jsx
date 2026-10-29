@@ -1,4 +1,5 @@
 import React, { useContext, useState, useEffect, useRef } from 'react';
+import { richEditorHandlers } from '../../utils/richPaste';
 import { Link } from 'react-router-dom';
 import {
   AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, Italic, List, ListOrdered, Underline,
@@ -651,6 +652,7 @@ export default function Publications() {
                   contentEditable
                   suppressContentEditableWarning
                   onInput={handleEditorInput}
+          {...richEditorHandlers((html) => setFormData((prev) => ({ ...prev, content: html })))}
                   data-placeholder="Contenido de la obra"
                   className={`w-full min-h-56 px-4 py-2 rounded-lg border text-sm leading-relaxed transition-colors overflow-y-auto ${isDark ? 'bg-gray-800 border-gray-700 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}`}
                   style={{ whiteSpace: 'pre-wrap' }}

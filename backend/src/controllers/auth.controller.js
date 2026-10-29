@@ -3,6 +3,7 @@ import { upsertUserProfile, updateUserProfile } from '../services/user.service.j
 import { invalidateUserCache, primeUserCache } from '../middlewares/auth.middleware.js';
 import { acceptInvitation, findValidInvitation } from '../services/invitation.service.js';
 import { deleteUserAccount } from '../services/accountDeletion.service.js';
+import { verifyRecaptchaToken } from '../services/captcha.service.js';
 
 const sessionCookieOptions = {
   httpOnly: true,
@@ -168,45 +169,14 @@ function validateAndSanitizeProfile(profile) {
  * quedaría creada en Firebase sin perfil ni sesión.
  */
 export async function verifyCaptcha(req, res) {
-  const { token } = req.body;
+  const result = await verifyRecaptchaToken(req.body.token);
 
-  if (!token || typeof token !== 'string') {
-    return res.status(400).json({ ok: false, message: 'Falta completar el captcha.' });
+  if (!result.ok) {
+    const { status, ...body } = result;
+    return res.status(status).json(body);
   }
 
-  const secret = process.env.RECAPTCHA_SECRET_KEY;
-
-  if (!secret) {
-    // En producción no arrancar el servidor por esto sería desproporcionado
-    // para una sola ruta, pero tampoco se puede dejar pasar en silencio.
-    if (process.env.NODE_ENV === 'production') {
-      return res.status(503).json({ ok: false, message: 'El captcha no está configurado en el servidor.' });
-    }
-
-    return res.json({ ok: true });
-  }
-
-  try {
-    const googleResponse = await fetch('https://www.google.com/recaptcha/api/siteverify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ secret, response: token }),
-    });
-
-    const result = await googleResponse.json();
-
-    if (!result.success) {
-      return res.status(400).json({ ok: false, message: 'No se pudo verificar el captcha. Vuelve a intentarlo.' });
-    }
-
-    return res.json({ ok: true });
-  } catch (error) {
-    return res.status(502).json({
-      ok: false,
-      message: 'No se pudo verificar el captcha. Vuelve a intentarlo.',
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
+  return res.json({ ok: true });
 }
 
 export async function getCurrentUser(req, res) {

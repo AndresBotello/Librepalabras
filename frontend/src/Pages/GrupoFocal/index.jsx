@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
-import { Loader2, MessageSquare, Radio, Users } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { CalendarDays, Loader2, MessageSquare, Radio, Users, Video } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import SessionCard from './SessionCard';
@@ -11,9 +12,11 @@ import {
   FOCUS_GROUP_MOTTO,
   FOCUS_GROUP_NAME,
   FOUNDING_ESSAY,
+  MEETING_STATE_LABELS,
   SESSION_KINDS,
   meetingState,
 } from '../../config/focusGroup';
+import { formatMeetingDate, stateBadgeClasses } from './helpers';
 import focusGroupLogo from '../../assets/grupo-focal-alfredo-correa.jpeg';
 
 /** Una de las dos modalidades del grupo: su cabecera y sus tarjetas. */
@@ -44,6 +47,99 @@ function SessionSection({ kind, icon: Icon, sessions, isDark, className = '' }) 
         </div>
       )}
     </div>
+  );
+}
+
+// Cuántos encuentros activos se destacan bajo la portada. Los demás siguen en
+// las listas de más abajo; destacar muchos devolvería el problema de tener que
+// buscar.
+const MAX_ACTIVE_SESSIONS = 3;
+
+/**
+ * Lo que está abierto ahora mismo, pegado a la portada: una cátedra que no ha
+ * terminado o una tertulia que admite comentarios. Quien entra lo ve de una vez
+ * en lugar de bajar a buscarlo entre las listas.
+ */
+function ActiveSessions({ sessions, isDark }) {
+  if (sessions.length === 0) return null;
+
+  return (
+    <section
+      aria-labelledby="active-sessions-title"
+      className={`px-4 sm:px-8 py-10 border-b ${isDark ? 'bg-amber-500/5 border-stone-800' : 'bg-amber-50/60 border-stone-200'}`}
+    >
+      <div className="max-w-7xl mx-auto">
+        <h2
+          id="active-sessions-title"
+          className={`flex items-center gap-3 mb-5 text-xs font-bold tracking-widest uppercase ${isDark ? 'text-amber-300' : 'text-amber-700'}`}
+        >
+          <span className="relative flex h-2.5 w-2.5" aria-hidden="true">
+            <span className="absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-60 animate-ping" />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-500" />
+          </span>
+          {sessions.length === 1 ? 'Activo ahora' : 'Activos ahora'}
+        </h2>
+
+        <div className="flex flex-col gap-4">
+          {sessions.map((session) => {
+            const isSync = session.type === FOCUS_GROUP_TYPES.SYNC;
+            const state = isSync ? meetingState(session) : 'abierto';
+
+            return (
+              <Link
+                key={session.id}
+                to={`/grupo-focal/${session.id}`}
+                className={`group flex flex-col sm:flex-row sm:items-center gap-5 rounded-2xl border p-5 sm:p-6 transition-all duration-300 hover:shadow-xl ${
+                  isDark
+                    ? 'bg-stone-900/70 border-amber-500/30 hover:border-amber-500/60'
+                    : 'bg-white border-amber-300 hover:border-amber-500'
+                }`}
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold tracking-widest uppercase rounded-full border ${stateBadgeClasses(state, isDark)}`}>
+                      {isSync ? <Video className="w-3 h-3" /> : <MessageSquare className="w-3 h-3" />}
+                      {MEETING_STATE_LABELS[state]}
+                    </span>
+                    <span className="text-[10px] font-bold tracking-widest uppercase text-stone-500">
+                      {SESSION_KINDS[session.type]?.short}
+                    </span>
+                  </div>
+
+                  <h3 className={`text-xl sm:text-2xl font-serif font-bold leading-snug ${isDark ? 'text-stone-100' : 'text-stone-900'}`}>
+                    {session.title}
+                  </h3>
+
+                  {isSync && session.scheduledAt && (
+                    <p className={`mt-2 flex items-center gap-2 text-sm ${isDark ? 'text-amber-400' : 'text-brand-700'}`}>
+                      <CalendarDays className="w-4 h-4 flex-shrink-0" />
+                      <span className="first-letter:uppercase">{formatMeetingDate(session.scheduledAt)}</span>
+                    </p>
+                  )}
+
+                  <p className={`mt-3 text-sm leading-relaxed line-clamp-3 ${isDark ? 'text-stone-400' : 'text-stone-600'}`}>
+                    {session.description}
+                  </p>
+                </div>
+
+                <div className="flex sm:flex-col items-center sm:items-end justify-between gap-3 flex-shrink-0">
+                  <span className="inline-flex items-center gap-1.5 text-xs text-stone-500">
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    {session.commentsCount || 0}
+                  </span>
+                  <span
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition-opacity group-hover:opacity-90"
+                    style={{ backgroundColor: 'var(--color-brand-700)' }}
+                  >
+                    {isSync ? 'Ver encuentro' : 'Participar'} <span aria-hidden="true">→</span>
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -95,6 +191,13 @@ export default function GrupoFocal() {
     };
   }, [sessions]);
 
+  // Activo = una cátedra que no ha terminado (ya sea próxima o en curso) o una
+  // tertulia que admite comentarios. Primero las cátedras, que tienen hora.
+  const activeSessions = useMemo(() => [
+    ...meetings.filter((item) => meetingState(item) !== 'finalizado'),
+    ...topics.filter((item) => item.allowComments !== false),
+  ].slice(0, MAX_ACTIVE_SESSIONS), [meetings, topics]);
+
   return (
     <div className={`min-h-screen flex flex-col ${isDark ? 'bg-stone-950' : 'bg-stone-50'}`}>
       <Navbar />
@@ -128,6 +231,9 @@ export default function GrupoFocal() {
             </div>
           </div>
         </section>
+
+        {/* ================= ACTIVO AHORA ================= */}
+        {!loading && !error && <ActiveSessions sessions={activeSessions} isDark={isDark} />}
 
         {/* ================= ENCUENTROS ================= */}
         <section className="px-4 sm:px-8 py-16">

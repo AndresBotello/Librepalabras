@@ -12,6 +12,18 @@ export const commentRateLimiter = rateLimit({
   },
 });
 
+// Igual que el anterior, pero responde en JSON: los comentarios de las columnas y
+// del grupo focal los puede escribir cualquiera sin cuenta, y la interfaz muestra el `message`
+// tal cual, no el texto plano que el limitador manda por defecto.
+export const publicCommentRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 10, // máximo 10 comentarios por IP
+  message: { ok: false, message: 'Has comentado demasiadas veces seguidas. Espera unos minutos e intenta de nuevo.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.user?.role === 'admin',
+});
+
 // Las subidas son caras (ancho de banda + cuota de Cloudinary). A diferencia de
 // los otros limitadores, este NO exime a los admins: subir es justamente una
 // acción de admin, eximirlos lo dejaría sin efecto.

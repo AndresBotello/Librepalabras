@@ -28,6 +28,7 @@ import AdminHome from '../Pages/Admin/home.jsx';
 import AdminInvitaciones from '../Pages/Admin/invitaciones.jsx';
 import AdminAutores from '../Pages/Admin/autores.jsx';
 import AdminSalud from '../Pages/Admin/salud.jsx';
+import AdminAnalisis from '../Pages/Admin/analisis.jsx';
 import CollaboratorDashboard from '../Pages/Collaborator/dashboard.jsx';
 import CollaboratorPublications from '../Pages/Collaborator/publications.jsx';
 import CollaboratorAnalytics from '../Pages/Collaborator/analytics.jsx';
@@ -104,6 +105,7 @@ export default function AppRoutes() {
       <Route path="/concursos/:slug" element={<Concurso />} />
 
       <Route path="/admin/dashboard" element={<AdminRoute><Admin /></AdminRoute>} />
+      <Route path="/admin/analisis" element={<AdminRoute><AdminAnalisis /></AdminRoute>} />
       <Route path="/admin/moderation" element={<AdminRoute><Moderation /></AdminRoute>} />
       <Route path="/admin/users" element={<AdminRoute><Users /></AdminRoute>} />
       <Route path="/admin/autores" element={<AdminRoute><AdminAutores /></AdminRoute>} />

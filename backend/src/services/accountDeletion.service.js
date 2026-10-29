@@ -2,6 +2,7 @@ import { adminAuth, adminDb } from '../config/firebaseAdmin.js';
 import { deleteFile } from './upload.service.js';
 import { cloudinaryPublicId } from '../utils/files.js';
 import { computeStatus, deleteStoryWithRatings } from './contest.service.js';
+import { purgeWorkStats } from './workAnalytics.service.js';
 
 /**
  * Borrado de cuenta a petición del propio usuario (derecho al olvido).
@@ -57,6 +58,11 @@ async function purgeOwnLiteratureWorks(db, uid) {
   }
 
   await batchDeleteRefs(snapshot.docs.map((doc) => doc.ref));
+
+  // Sus estadísticas diarias viven en otra colección y no se van solas.
+  for (const doc of snapshot.docs) {
+    await purgeWorkStats(doc.id);
+  }
 
   return new Set(snapshot.docs.map((doc) => doc.id));
 }
@@ -183,9 +189,23 @@ async function purgeOpinionColumns(db, uid) {
 
   for (const doc of snapshot.docs) {
     await discardCloudinaryAsset(doc.data().coverUrl);
+    // Con sus comentarios: borrar solo el documento los dejaría huérfanos.
+    await db.recursiveDelete(doc.ref);
   }
+}
 
-  await batchDeleteRefs(snapshot.docs.map((doc) => doc.ref));
+/** Comentarios dejados en columnas ajenas. Viven en una subcolección de cada columna. */
+async function purgeOpinionColumnComments(db, uid) {
+  const { FieldValue } = await import('firebase-admin/firestore');
+  const columns = await db.collection('opinionColumns').get();
+
+  for (const column of columns.docs) {
+    const comments = await column.ref.collection('comments').where('userId', '==', uid).get();
+    if (comments.empty) continue;
+
+    await batchDeleteRefs(comments.docs.map((doc) => doc.ref));
+    await column.ref.update({ commentsCount: FieldValue.increment(-comments.size) }).catch(() => null);
+  }
 }
 
 /**
@@ -275,6 +295,9 @@ export async function deleteUserAccount(uid) {
   await purgeOwnContestStories(db, uid);
   await purgeJudgeRatings(db, uid);
   await purgeLegacyStories(db, uid);
+  // Primero los comentarios en columnas ajenas, luego las propias (que ya se
+  // llevan los suyos por delante).
+  await purgeOpinionColumnComments(db, uid);
   await purgeOpinionColumns(db, uid);
   await purgeFocusGroupTraces(db, uid);
   await purgeBookFavorites(db, uid);

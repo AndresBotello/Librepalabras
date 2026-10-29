@@ -18,11 +18,17 @@ import {
   updateSession,
 } from '../services/focusGroup.service.js';
 import { NOTIFICATION_TYPES, createNotification } from '../services/notification.service.js';
+import { verifyRecaptchaToken } from '../services/captcha.service.js';
 
 const MAX_TITLE_LENGTH = 160;
 const MAX_DESCRIPTION_LENGTH = 4000;
-const MAX_COMMENT_LENGTH = 1000;
+// Cinco mil caracteres (~800 palabras) caben tres párrafos de siete renglones
+// con saludo y conclusiones, que es lo que pide la rúbrica de los foros
+// académicos que se alojan aquí.
+const MAX_COMMENT_LENGTH = 5000;
 const MIN_COMMENT_LENGTH = 3;
+const MIN_GUEST_NAME_LENGTH = 2;
+const MAX_GUEST_NAME_LENGTH = 60;
 
 const VALID_TYPES = Object.values(SESSION_TYPES);
 
@@ -60,6 +66,18 @@ function parseDuration(value) {
 
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed >= 15 && parsed <= 480 ? parsed : null;
+}
+
+// El nombre de un visitante se pinta como texto, pero se le quitan etiquetas y
+// espacios sobrantes para que lo guardado no dependa de quién lo muestre.
+function sanitizeGuestName(value) {
+  if (typeof value !== 'string') return '';
+
+  return xss(value, { whiteList: {}, stripIgnoreTag: true, stripIgnoreTagBody: ['script', 'style'] })
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, MAX_GUEST_NAME_LENGTH)
+    .trim();
 }
 
 function displayName(user) {
@@ -319,7 +337,13 @@ export async function deleteFocusGroupSession(req, res) {
 export async function addSessionComment(req, res) {
   try {
     const { id } = req.params;
-    const { text } = req.body;
+    const { text, name, captchaToken, website } = req.body || {};
+
+    // Campo trampa: oculto para las personas, solo lo rellenan los bots. Se
+    // responde como si hubiera funcionado para no darles pistas.
+    if (website) {
+      return res.status(201).json({ ok: true, message: 'Comentario publicado' });
+    }
 
     const session = await getSessionById(id);
 
@@ -329,6 +353,24 @@ export async function addSessionComment(req, res) {
 
     if (session.allowComments === false) {
       return res.status(403).json({ ok: false, message: 'Este encuentro no admite comentarios' });
+    }
+
+    // Sin sesión se comenta como visitante: con captcha y con un nombre
+    // obligatorio, porque en un foro académico hay que saber quién participa.
+    // El captcha se comprueba al final, tras validar nombre y texto, para no
+    // gastar una consulta a Google en una petición que va a fallar igual.
+    const isGuest = !req.auth;
+    let guestName = '';
+
+    if (isGuest) {
+      guestName = sanitizeGuestName(name);
+
+      if (guestName.length < MIN_GUEST_NAME_LENGTH) {
+        return res.status(400).json({
+          ok: false,
+          message: 'Escribe tu nombre para poder comentar sin iniciar sesión',
+        });
+      }
     }
 
     const trimmed = (text || '').trim();
@@ -347,10 +389,19 @@ export async function addSessionComment(req, res) {
       });
     }
 
+    if (isGuest) {
+      const captcha = await verifyRecaptchaToken(captchaToken);
+
+      if (!captcha.ok) {
+        return res.status(captcha.status).json({ ok: false, message: captcha.message });
+      }
+    }
+
     const comment = await addComment(id, {
-      userId: req.auth.uid,
-      userName: displayName(req.user),
-      userPhoto: req.user?.photoURL || null,
+      userId: isGuest ? null : req.auth.uid,
+      userName: isGuest ? guestName : displayName(req.user),
+      userPhoto: isGuest ? null : req.user?.photoURL || null,
+      isGuest,
       text: xss(trimmed),
       createdAt: new Date().toISOString(),
       likedBy: [],
