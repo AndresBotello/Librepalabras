@@ -37,6 +37,11 @@ async function statsByAuthor(authors = []) {
 
   snapshot.docs.forEach((doc) => {
     const work = doc.data();
+
+    // Las obras de las secciones especiales no cuentan en la ficha de autor: las
+    // sube un admin o colaborador en nombre de otros.
+    if (work.section) return;
+
     const profileId = profileIds.has(work.authorProfileId)
       ? work.authorProfileId
       : byUserId.get(work.authorId);

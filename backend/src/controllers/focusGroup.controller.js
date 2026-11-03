@@ -190,9 +190,10 @@ export async function createFocusGroupSession(req, res) {
       meetingUrl: link,
       scheduledAt: startsAt,
       duration: durationMinutes,
-      // El tema asincrónico existe para que la gente comente; cerrarle los
-      // comentarios lo dejaría sin propósito.
-      allowComments: isSync ? allowComments !== false : true,
+      // Abierto por defecto. Un tema asincrónico existe para que la gente
+      // comente, pero el admin puede cerrarlo después (ver `allowComments` en
+      // `updateFocusGroupSession`) cuando la conversación ya terminó.
+      allowComments: allowComments !== false,
       isPublished: isPublished !== false,
       views: 0,
       commentsCount: 0,
@@ -287,10 +288,12 @@ export async function updateFocusGroupSession(req, res) {
         }
         updates.duration = durationMinutes;
       }
+    }
 
-      if (allowComments !== undefined) {
-        updates.allowComments = Boolean(allowComments);
-      }
+    // Abrir o cerrar la conversación vale para los dos tipos: es lo que permite
+    // cerrar el foro de una tertulia. Los comentarios ya escritos se conservan.
+    if (allowComments !== undefined) {
+      updates.allowComments = Boolean(allowComments);
     }
 
     if (isPublished !== undefined) {

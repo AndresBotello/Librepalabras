@@ -115,6 +115,23 @@ const SECTIONS = [
     ],
   },
   {
+    title: 'Los niños cuentan',
+    paragraphs: [
+      'Los niños cuentan es la sección donde se publican cuentos, poemas y dibujos de niñas y niños. Los menores no publican por sí mismos: los aportes los sube únicamente el equipo administrador de la plataforma, después de contar con la autorización expresa y por escrito de la madre, el padre o el acudiente legal.',
+      'Esa autorización cubre la publicación del aporte en la plataforma, con el nombre de pila y la edad del menor. Nunca mostramos apellidos, fotografías del rostro, centro educativo, dirección, teléfono ni ningún otro dato que permita localizar a un menor, y pedimos a quien nos entrega el material que tampoco los incluya en el texto o en el dibujo.',
+      'Estas obras admiten comentarios, igual que las columnas de opinión, y los modera el equipo: eliminamos cualquier comentario que incumpla estos términos y, en particular, los que incluyan datos personales del menor o sean ofensivos hacia él o su familia. El acudiente puede pedir en cualquier momento, escribiendo al correo de contacto, que el aporte se retire o se corrija, y lo hacemos sin necesidad de justificación. Los derechos de autor del aporte siguen perteneciendo al menor, ejercidos por su acudiente, en los mismos términos del apartado sobre las obras.',
+      'El material debe ser creación propia del menor. Al entregarlo, quien lo remite declara que lo es y que cuenta con la autorización descrita; el equipo puede rechazar o retirar cualquier aporte que no cumpla estas condiciones.',
+    ],
+  },
+  {
+    title: 'Palabras sin dueños',
+    paragraphs: [
+      'Palabras sin dueños reúne vivencias, historias y obras de escritores del territorio. Solo pueden publicar en ella los colaboradores y los administradores; los lectores con cuenta de usuario pueden leerla.',
+      'Aquí la firma es libre: quien publica puede hacerlo con su nombre, con un seudónimo o como “Anónimo”. Eso no cambia la responsabilidad: la plataforma sabe qué cuenta subió cada texto, y quien lo sube responde por él conforme al apartado sobre lo que garantizas al publicar. Si firmas con un nombre que no es el tuyo, debes tener autorización de esa persona o ser la autora de la obra.',
+      'Las vivencias y los testimonios que mencionen a personas reales solo pueden publicarse si no las hacen identificables sin su consentimiento. Los aportes de colaboradores pasan por la misma revisión editorial que el resto de las obras antes de ser visibles.',
+    ],
+  },
+  {
     title: 'Grupo Focal y encuentros',
     paragraphs: [
       'El grupo focal organiza encuentros presenciales y actividades con inscripción a través de la plataforma. Al inscribirte, tus datos de contacto se usan para gestionar la asistencia y avisarte de cambios.',

@@ -3,6 +3,8 @@ import {
   CalendarDays,
   Eye,
   Loader2,
+  Lock,
+  LockOpen,
   MessageSquare,
   Pencil,
   Plus,
@@ -138,6 +140,33 @@ export default function AdminGrupoFocal() {
     setIsFormOpen(true);
   };
 
+  // Cierra o reabre la conversación sin pasar por el formulario. Cerrar es lo
+  // único con consecuencias visibles para el público, así que pide confirmación;
+  // reabrir no.
+  const handleToggleComments = async (session) => {
+    const closing = session.allowComments !== false;
+
+    if (closing) {
+      const confirmed = await confirm({
+        title: `¿Cerrar los comentarios de "${session.title}"?`,
+        message: 'Nadie podrá escribir nuevos comentarios en este encuentro.',
+        detail: 'Los comentarios que ya hay siguen visibles. Puedes reabrirlo cuando quieras.',
+        confirmLabel: 'Cerrar foro',
+        variant: 'danger',
+      });
+
+      if (!confirmed) return;
+    }
+
+    try {
+      await updateFocusGroupSession(session.id, { allowComments: !closing });
+      notify.success(closing ? 'Foro cerrado.' : 'Foro reabierto.');
+      await loadSessions();
+    } catch (error) {
+      notify.error(error.message);
+    }
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
 
@@ -161,8 +190,9 @@ export default function AdminGrupoFocal() {
       payload.scheduledAt = localInputToIso(form.scheduledAt);
       payload.duration = Number(form.duration) || 90;
       payload.meetingUrl = form.meetingUrl.trim();
-      payload.allowComments = form.allowComments;
     }
+
+    payload.allowComments = form.allowComments;
 
     setSubmitting(true);
     try {
@@ -362,17 +392,20 @@ export default function AdminGrupoFocal() {
                       </p>
                     </div>
 
-                    <label className={`flex items-center gap-2 mb-4 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                      <input
-                        type="checkbox"
-                        checked={form.allowComments}
-                        onChange={(event) => setForm({ ...form, allowComments: event.target.checked })}
-                        className="w-4 h-4 accent-amber-600"
-                      />
-                      Permitir comentarios antes y después de la reunión
-                    </label>
                   </>
                 )}
+
+                <label className={`flex items-center gap-2 mb-4 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <input
+                    type="checkbox"
+                    checked={form.allowComments}
+                    onChange={(event) => setForm({ ...form, allowComments: event.target.checked })}
+                    className="w-4 h-4 accent-amber-600"
+                  />
+                  {isSync
+                    ? 'Permitir comentarios antes y después de la reunión'
+                    : 'Foro abierto: permitir comentarios (desmárcalo para cerrarlo)'}
+                </label>
 
                 <label className={`flex items-center gap-2 mb-6 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                   <input
@@ -439,6 +472,15 @@ export default function AdminGrupoFocal() {
                               {SESSION_KINDS[session.type]?.short || 'Encuentro'}
                             </span>
 
+                            {session.allowComments === false && (
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold tracking-widest uppercase rounded-full ${
+                                isDark ? 'bg-rose-500/15 text-rose-300' : 'bg-rose-50 text-rose-700'
+                              }`}>
+                                <Lock className="w-3 h-3" />
+                                {sync ? 'Comentarios cerrados' : 'Foro cerrado'}
+                              </span>
+                            )}
+
                             {session.isPublished === false && (
                               <span className={`px-2.5 py-1 text-[10px] font-bold tracking-widest uppercase rounded-full ${
                                 isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'
@@ -487,6 +529,17 @@ export default function AdminGrupoFocal() {
                         </div>
 
                         <div className="flex gap-2 flex-shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleComments(session)}
+                            aria-label={session.allowComments === false ? 'Reabrir comentarios' : 'Cerrar comentarios'}
+                            title={session.allowComments === false ? 'Reabrir el foro' : 'Cerrar el foro'}
+                            className={`p-2 rounded-lg transition-colors ${
+                              isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                          >
+                            {session.allowComments === false ? <LockOpen className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                          </button>
                           <button
                             type="button"
                             onClick={() => openEdit(session)}

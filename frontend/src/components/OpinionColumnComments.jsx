@@ -14,6 +14,15 @@ const MIN_TEXT = 3;
 const MAX_NAME = 40;
 const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
 
+// Por defecto, el hilo es el de las columnas de opinión. Otra sección que use
+// el mismo formato de comentarios pasa su propio `api` (con las mismas tres
+// operaciones) y el nombre de lo que se comenta.
+const COLUMN_API = {
+  list: getOpinionColumnComments,
+  add: addOpinionColumnComment,
+  remove: deleteOpinionColumnComment,
+};
+
 function formatDateTime(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
@@ -33,8 +42,12 @@ function formatDateTime(value) {
  * captcha, y su comentario lleva la etiqueta «Visitante».
  *
  * `columnId` es el id del documento, no el slug de la URL.
+ *
+ * `api` y `subject` permiten reutilizarlo en otra sección: `api` debe ser estable
+ * (un objeto de módulo o memoizado) y `subject` es el nombre de lo que se
+ * comenta, en femenino singular ("columna", "obra").
  */
-export default function OpinionColumnComments({ columnId, isDark }) {
+export default function OpinionColumnComments({ columnId, isDark, api = COLUMN_API, subject = 'columna' }) {
   const { user, isAuthenticated } = useAuth();
   const { confirm, notify } = useDialog();
   const captchaRef = useRef(null);
@@ -66,7 +79,7 @@ export default function OpinionColumnComments({ columnId, isDark }) {
 
     async function loadComments() {
       try {
-        const response = await getOpinionColumnComments(columnId);
+        const response = await api.list(columnId);
         if (cancelled) return;
         setComments(response.comments || []);
         setTotal(response.total || 0);
@@ -84,7 +97,7 @@ export default function OpinionColumnComments({ columnId, isDark }) {
     return () => {
       cancelled = true;
     };
-  }, [columnId, userId, reloadKey]);
+  }, [api, columnId, userId, reloadKey]);
 
   const handleRetry = () => {
     setLoading(true);
@@ -97,7 +110,7 @@ export default function OpinionColumnComments({ columnId, isDark }) {
 
     setLoadingMore(true);
     try {
-      const response = await getOpinionColumnComments(columnId, { before: last.createdAt });
+      const response = await api.list(columnId, { before: last.createdAt });
       setComments((prev) => [...prev, ...(response.comments || [])]);
       setHasMore(Boolean(response.hasMore));
     } catch (error) {
@@ -130,7 +143,7 @@ export default function OpinionColumnComments({ columnId, isDark }) {
         payload.captchaToken = captchaToken;
       }
 
-      const response = await addOpinionColumnComment(columnId, payload);
+      const response = await api.add(columnId, payload);
 
       if (response.comment) {
         setComments((prev) => [response.comment, ...prev]);
@@ -152,7 +165,7 @@ export default function OpinionColumnComments({ columnId, isDark }) {
   const handleDelete = async (comment) => {
     const confirmed = await confirm({
       title: 'Eliminar comentario',
-      message: 'El comentario desaparecerá de la columna. No se puede deshacer.',
+      message: `El comentario desaparecerá de la ${subject}. No se puede deshacer.`,
       detail: comment.text,
       confirmLabel: 'Eliminar',
       variant: 'danger',
@@ -161,7 +174,7 @@ export default function OpinionColumnComments({ columnId, isDark }) {
     if (!confirmed) return;
 
     try {
-      await deleteOpinionColumnComment(columnId, comment.id);
+      await api.remove(columnId, comment.id);
       setComments((prev) => prev.filter((item) => item.id !== comment.id));
       setTotal((prev) => Math.max(0, prev - 1));
     } catch (error) {
@@ -187,7 +200,7 @@ export default function OpinionColumnComments({ columnId, isDark }) {
         Comentarios{total > 0 ? ` (${total})` : ''}
       </h2>
       <p className={`mt-1 text-sm ${mutedText}`}>
-        Comparte tu opinión sobre esta columna. {isAuthenticated ? 'Comentas con tu cuenta.' : 'No necesitas cuenta para comentar.'}
+        Comparte tu opinión sobre esta {subject}. {isAuthenticated ? 'Comentas con tu cuenta.' : 'No necesitas cuenta para comentar.'}
       </p>
 
       <form onSubmit={handleSubmit} className={`mt-5 space-y-3 rounded-2xl border p-4 sm:p-5 ${surface}`}>

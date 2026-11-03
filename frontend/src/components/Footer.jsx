@@ -20,6 +20,8 @@ const FOOTER_LINKS = [
   { to: '/concursos', label: 'Concursos' },
   { to: '/poleversia', label: 'Poleversia' },
   { to: '/grupo-focal', label: 'Grupo Focal' },
+  { to: '/los-ninos-cuentan', label: 'Los niños cuentan' },
+  { to: '/palabras-sin-duenos', label: 'Palabras sin dueños' },
 ];
 
 /**

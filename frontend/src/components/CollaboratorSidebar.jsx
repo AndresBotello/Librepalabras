@@ -2,6 +2,7 @@ import React, { useContext, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ThemeContext } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { SECTIONS, canPublishIn, newWorkPath } from '../config/sections';
 import { ROLE_LABELS, canPublishWorks, contestRouteForRole, profileRouteForRole } from '../utils/roles';
 
 const IconPublish = ({ active, isDark }) => (
@@ -75,6 +76,9 @@ export default function CollaboratorSidebar() {
         { icon: IconPublish, label: 'Nueva Publicación', path: '/collaborator/create' },
         { icon: IconPublish, label: 'Mis Publicaciones', path: '/collaborator/publications' },
         { icon: IconPublish, label: 'Columnas de Opinión', path: '/collaborator/columnas' },
+        ...(canPublishIn(SECTIONS.palabras, user?.role)
+          ? [{ icon: IconPublish, label: 'Palabras sin dueños', path: newWorkPath(SECTIONS.palabras) }]
+          : []),
       ]
       : []),
     isJudge

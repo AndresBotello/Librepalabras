@@ -148,7 +148,7 @@ export default function FocusGroupComments({ sessionId, comments = [], allowComm
 
       {!allowComments ? (
         <p className={`text-sm ${isDark ? 'text-stone-400' : 'text-stone-600'}`}>
-          Los comentarios están cerrados en este encuentro.
+          Este foro está cerrado: puedes leer la conversación, pero ya no se aceptan nuevos comentarios.
         </p>
       ) : (
         <form onSubmit={handleSubmit} className="mb-6 space-y-3">

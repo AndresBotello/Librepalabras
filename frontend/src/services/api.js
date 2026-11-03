@@ -254,6 +254,70 @@ export function getWorkById(id) {
   return request(`/literature/${id}`);
 }
 
+// Secciones especiales (Los niños cuentan / Palabras sin dueños)
+export function getSectionWorks(section, { kind, limit } = {}) {
+  const params = new URLSearchParams();
+  if (kind) params.set('kind', kind);
+  if (limit) params.set('limit', String(limit));
+
+  const query = params.toString();
+  return request(`/sections/${section}/works${query ? `?${query}` : ''}`);
+}
+
+export function getSectionWork(section, id) {
+  return request(`/sections/${section}/works/${encodeURIComponent(id)}`);
+}
+
+// Gestión (admin): todo lo de una sección, en cualquier estado.
+export function getAdminSectionWorks(section) {
+  return request(`/sections/admin/works?section=${encodeURIComponent(section)}`);
+}
+
+export function deleteSectionWork(section, id) {
+  return request(`/sections/${section}/works/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+// Comentarios de una obra de sección (mismo formato que los de las columnas).
+export function getSectionWorkComments(section, id, { before, limit } = {}) {
+  const params = new URLSearchParams();
+  if (before) params.set('before', before);
+  if (limit) params.set('limit', String(limit));
+
+  const query = params.toString();
+  return request(`/sections/${section}/works/${encodeURIComponent(id)}/comments${query ? `?${query}` : ''}`);
+}
+
+export function addSectionWorkComment(section, id, payload) {
+  return request(`/sections/${section}/works/${encodeURIComponent(id)}/comments`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteSectionWorkComment(section, id, commentId) {
+  return request(`/sections/${section}/works/${encodeURIComponent(id)}/comments/${commentId}`, {
+    method: 'DELETE',
+  });
+}
+
+export function getSectionWorkForEdit(section, id) {
+  return request(`/sections/${section}/works/${encodeURIComponent(id)}/edit`);
+}
+
+export function updateSectionWork(section, id, payload) {
+  return request(`/sections/${section}/works/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function createSectionWork(section, payload) {
+  return request(`/sections/${section}/works`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
 export function getMyWorks() {
   return request('/literature/user/my-works');
 }

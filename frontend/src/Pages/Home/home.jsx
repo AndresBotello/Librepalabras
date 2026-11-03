@@ -111,7 +111,10 @@ export default function Home() {
     .filter((item) => item.type === FOCUS_GROUP_TYPES.SYNC && meetingState(item) !== 'finalizado')
     .sort((a, b) => (a.scheduledAt || '').localeCompare(b.scheduledAt || ''))[0];
 
-  const openTopicsCount = focusSessions.filter((item) => item.type === FOCUS_GROUP_TYPES.ASYNC).length;
+  // Un tema cerrado ya no espera comentarios: no cuenta como abierto.
+  const openTopicsCount = focusSessions.filter(
+    (item) => item.type === FOCUS_GROUP_TYPES.ASYNC && item.allowComments !== false
+  ).length;
 
   const heroImage = home?.heroImage || DEFAULT_HERO_IMAGE;
   const customTitle = home?.heroTitle?.trim();

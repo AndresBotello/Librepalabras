@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { ROLE_LABELS, homeRouteForRole, profileRouteForRole } from '../utils/roles';
 import NotificationBell from './NotificationBell';
 import GenreNavMenu, { GenreNavAccordion } from './GenreNavMenu';
+import CommunityNavMenu, { CommunityNavAccordion } from './CommunityNavMenu';
 import logo from '../assets/Libera-Palabras.ico';
 
 export default function Navbar() {
@@ -130,12 +131,7 @@ export default function Navbar() {
             <Link to="/columnas" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700'}`}>
               Columnas
             </Link>
-            <Link to="/poleversia" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700'}`}>
-              Revista Poleversia
-            </Link>
-            <Link to="/grupo-focal" className={`text-xs lg:text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700'}`}>
-              Grupo Focal
-            </Link>
+            <CommunityNavMenu isDark={isDark} />
           </div>
 
           {/* Auth Buttons & Theme Toggle */}
@@ -293,12 +289,7 @@ export default function Navbar() {
             <Link to="/columnas" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700 hover:text-gray-900'}`}>
               Columnas
             </Link>
-            <Link to="/poleversia" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700 hover:text-gray-900'}`}>
-              Revista Poleversia
-            </Link>
-            <Link to="/grupo-focal" onClick={() => setIsMenuOpen(false)} className={`block text-sm font-medium transition-colors ${isDark ? 'text-gray-300 hover:text-white' : 'text-brand-700 hover:text-gray-900'}`}>
-              Grupo Focal
-            </Link>
+            <CommunityNavAccordion isDark={isDark} onNavigate={() => setIsMenuOpen(false)} />
             <div className="pt-4 space-y-3 border-t" style={{borderColor: isDark ? 'var(--color-gray-700)' : 'var(--color-gray-200)'}}>
               {isAuthenticated ? (
                 <>

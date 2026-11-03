@@ -29,6 +29,7 @@ import AdminInvitaciones from '../Pages/Admin/invitaciones.jsx';
 import AdminAutores from '../Pages/Admin/autores.jsx';
 import AdminSalud from '../Pages/Admin/salud.jsx';
 import AdminAnalisis from '../Pages/Admin/analisis.jsx';
+import AdminSecciones from '../Pages/Admin/secciones.jsx';
 import CollaboratorDashboard from '../Pages/Collaborator/dashboard.jsx';
 import CollaboratorPublications from '../Pages/Collaborator/publications.jsx';
 import CollaboratorAnalytics from '../Pages/Collaborator/analytics.jsx';
@@ -39,6 +40,10 @@ import OpinionColumnsPage from '../Pages/Collaborator/columnas.jsx';
 import PublicOpinionColumnsPage from '../Pages/OpinionColumns/PublicOpinionColumnsPage.jsx';
 import OpinionColumnDetailPage from '../Pages/OpinionColumns/OpinionColumnDetailPage.jsx';
 import UsuarioDashboard from '../Pages/Usuario/dashboard.jsx';
+import SectionPage from '../Pages/Sections/SectionPage.jsx';
+import SectionNewPage from '../Pages/Sections/SectionNewPage.jsx';
+import SectionEditPage from '../Pages/Sections/SectionEditPage.jsx';
+import { SECTIONS } from '../config/sections.js';
 import Terminos from '../Pages/Legal/terminos.jsx';
 import ProtectedRoute, { GuestRoute } from './ProtectedRoute.jsx';
 
@@ -90,6 +95,35 @@ export default function AppRoutes() {
       <Route path="/columnas" element={<PublicOpinionColumnsPage />} />
       <Route path="/columnas/:slug" element={<OpinionColumnDetailPage />} />
 
+      {/* Secciones especiales. Cada una tiene su página pública y su formulario;
+          el formulario solo lo abre quien puede publicar ahí (y el servidor lo
+          vuelve a comprobar en cada envío). */}
+      {Object.values(SECTIONS).map((section) => (
+        <Route key={section.value} path={section.path} element={<SectionPage key={section.value} section={section} />} />
+      ))}
+      {Object.values(SECTIONS).map((section) => (
+        <Route
+          key={`${section.value}-nueva`}
+          path={`${section.path}/nueva`}
+          element={
+            <ProtectedRoute allowedRoles={section.uploadRoles}>
+              <SectionNewPage key={section.value} section={section} />
+            </ProtectedRoute>
+          }
+        />
+      ))}
+      {Object.values(SECTIONS).map((section) => (
+        <Route
+          key={`${section.value}-editar`}
+          path={`${section.path}/:id/editar`}
+          element={
+            <ProtectedRoute allowedRoles={section.uploadRoles}>
+              <SectionEditPage key={section.value} section={section} />
+            </ProtectedRoute>
+          }
+        />
+      ))}
+
       {/* Panel de calificación: compartido por administradores y jueces. */}
       <Route
         path="/concursos/panel"
@@ -106,6 +140,7 @@ export default function AppRoutes() {
 
       <Route path="/admin/dashboard" element={<AdminRoute><Admin /></AdminRoute>} />
       <Route path="/admin/analisis" element={<AdminRoute><AdminAnalisis /></AdminRoute>} />
+      <Route path="/admin/secciones" element={<AdminRoute><AdminSecciones /></AdminRoute>} />
       <Route path="/admin/moderation" element={<AdminRoute><Moderation /></AdminRoute>} />
       <Route path="/admin/users" element={<AdminRoute><Users /></AdminRoute>} />
       <Route path="/admin/autores" element={<AdminRoute><AdminAutores /></AdminRoute>} />

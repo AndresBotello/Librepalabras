@@ -1,6 +1,7 @@
 import { adminDb } from '../config/firebaseAdmin.js';
 import { mergeContestStates, normalizeContestId } from '../config/contests.js';
 import { pickPodium, readContestStates } from './contest.service.js';
+import { workPath } from '../config/sections.js';
 
 /**
  * Buscador del sitio.
@@ -148,14 +149,14 @@ const SOURCES = [
     label: 'Obras',
     collection: 'literature',
     filter: ['status', '==', 'approved'],
-    fields: ['title', 'author', 'genre', 'scope', 'tags', 'description', 'cover'],
+    fields: ['title', 'author', 'genre', 'scope', 'tags', 'description', 'cover', 'section'],
     toEntry: (id, data) => ({
       title: data.title,
       subtitle: excerpt(data.description),
       author: data.author,
       image: data.cover,
       keywords: [data.genre, data.scope, ...(Array.isArray(data.tags) ? data.tags : [])],
-      url: `/stories?obra=${encodeURIComponent(id)}`,
+      url: workPath({ id, section: data.section }),
     }),
   },
   {

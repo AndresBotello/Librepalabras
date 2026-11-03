@@ -1,0 +1,30 @@
+{
+  "sections": [
+    {
+      "value": "ninos",
+      "label": "Los niños cuentan",
+      "path": "/los-ninos-cuentan",
+      "description": "Cuentos, poemas y dibujos de los más pequeños del territorio.",
+      "uploadRoles": ["admin"],
+      "interactions": true,
+      "kinds": [
+        { "value": "cuento", "label": "Cuento", "emoji": "📖", "genre": "cuento" },
+        { "value": "poema", "label": "Poema", "emoji": "✨", "genre": "poesía" },
+        { "value": "dibujo", "label": "Dibujo", "emoji": "🎨", "genre": "otro", "imageRequired": true }
+      ]
+    },
+    {
+      "value": "palabras",
+      "label": "Palabras sin dueños",
+      "path": "/palabras-sin-duenos",
+      "description": "Vivencias, historias y obras de escritores del territorio.",
+      "uploadRoles": ["admin", "collaborator"],
+      "interactions": true,
+      "kinds": [
+        { "value": "vivencia", "label": "Vivencia", "emoji": "🌿", "genre": "crónica" },
+        { "value": "historia", "label": "Historia", "emoji": "📜", "genre": "cuento" },
+        { "value": "obra", "label": "Obra", "emoji": "🖋️", "genre": "otro" }
+      ]
+    }
+  ]
+}

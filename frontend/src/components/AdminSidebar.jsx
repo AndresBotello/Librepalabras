@@ -166,6 +166,7 @@ export default function AdminSidebar() {
     // AuthorRoute que ya cubre a admin), solo faltaba el enlace aquí.
     { icon: IconBooks, label: 'Mis obras publicadas', path: '/collaborator/publications' },
     { icon: IconPublish, label: 'Columnas de Opinión', path: '/admin/columnas' },
+    { icon: IconBooks, label: 'Niños y Palabras', path: '/admin/secciones' },
     { icon: IconAnalytics, label: 'Análisis de obras', path: '/admin/analisis' },
     { icon: IconModeration, label: 'Moderación de obras', path: '/admin/moderation' },
     { icon: IconComments, label: 'Comentarios reportados', path: '/admin/comentarios', badge: pendingReports },

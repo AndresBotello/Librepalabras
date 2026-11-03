@@ -19,6 +19,7 @@ import siteRoutes from './routes/site.routes.js';
 import invitationRoutes from './routes/invitation.routes.js';
 import opinionColumnRoutes from './routes/opinionColumn.routes.js';
 import searchRoutes from './routes/search.routes.js';
+import sectionRoutes from './routes/section.routes.js';
 import { maintenanceGuard } from './middlewares/maintenance.middleware.js';
 import { logError } from './services/errorLog.service.js';
 
@@ -86,6 +87,9 @@ app.use(cors({
 const richBodyParser = express.json({ limit: '1mb' });
 app.use('/api/literature', richBodyParser);
 app.use('/api/opinion-columns', richBodyParser);
+// Las secciones aceptan textos aún más largos (testimonios, historias de vida), así
+// que tienen su propio tope, mayor que el de las obras.
+app.use('/api/sections', express.json({ limit: '3mb' }));
 app.use(express.json());
 app.use(cookieParser());
 
@@ -135,6 +139,7 @@ app.use('/api/site', siteRoutes);
 app.use('/api/invitations', invitationRoutes);
 app.use('/api/opinion-columns', opinionColumnRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/sections', sectionRoutes);
 
 // Una ruta /api inexistente devolvía el HTML de error de Express, que el
 // frontend intenta parsear como JSON y acaba en "Unexpected token <".

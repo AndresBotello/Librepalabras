@@ -11,10 +11,10 @@
  * como aceptantes de la versión vieja, en lugar de que parezca que todo el mundo
  * aceptó siempre lo mismo.
  */
-export const TERMS_VERSION = '1.0';
+export const TERMS_VERSION = '1.1';
 
 /** Última revisión del texto, tal y como se muestra en la página. */
-export const TERMS_UPDATED_AT = '13 de agosto de 2026';
+export const TERMS_UPDATED_AT = '3 de noviembre de 2026';
 
 /**
  * PENDIENTE: sustituir por el correo real de la plataforma antes de publicar.

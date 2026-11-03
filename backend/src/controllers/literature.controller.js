@@ -12,6 +12,7 @@ import { getAuthor } from '../services/author.service.js';
 import { contentTooLongMessage, sanitizeRichHtml } from '../utils/richText.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { purgeWorkStats, recordWorkEvent } from '../services/workAnalytics.service.js';
+import { getSection, workPath } from '../config/sections.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -222,6 +223,12 @@ export async function createWork(req, res) {
   }
 }
 
+/** Las secciones pueden cerrar comentarios y calificaciones (las de niños lo hacen). */
+function interactionsOpen(work) {
+  const section = getSection(work.section);
+  return !section || section.interactions;
+}
+
 export async function addRating(req, res) {
   try {
     const { id } = req.params;
@@ -244,6 +251,11 @@ export async function addRating(req, res) {
     }
 
     const work = doc.data();
+
+    if (!interactionsOpen(work)) {
+      return res.status(403).json({ ok: false, message: 'Esta obra no admite calificaciones' });
+    }
+
     const existingRating = work.ratings?.findIndex(r => r.userId === userId) ?? -1;
 
     const newRating = {
@@ -308,6 +320,10 @@ export async function addComment(req, res) {
 
     if (!doc.exists) {
       return res.status(404).json({ ok: false, message: 'Obra no encontrada' });
+    }
+
+    if (!interactionsOpen(doc.data())) {
+      return res.status(403).json({ ok: false, message: 'Esta obra no admite comentarios' });
     }
 
     const sanitizedText = xss(text.trim());
@@ -404,10 +420,14 @@ export async function getApprovedWorks(req, res) {
 
     const snapshot = await query.get();
 
-    let allDocs = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    // Las obras de "Los niños cuentan" y "Palabras sin dueños" (`section`) se
+    // leen en su propia página, no en la biblioteca general.
+    let allDocs = snapshot.docs
+      .map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }))
+      .filter(work => !work.section);
 
     // Filtrado en memoria y no con otro `where`: combinarlo con el de género
     // exigiría un índice compuesto en Firestore, igual que ordenar por fecha.
@@ -641,6 +661,16 @@ export async function updateWork(req, res) {
       return res.status(403).json({
         ok: false,
         message: 'Solo puedes editar tus propias obras',
+      });
+    }
+
+    // Las obras de las secciones especiales se editan desde su propia pantalla:
+    // allí se aplican sus reglas y la nueva revisión. Por esta vía quedarían
+    // fuera de ellas.
+    if (work.section) {
+      return res.status(409).json({
+        ok: false,
+        message: 'Esta obra se edita desde su sección',
       });
     }
 
@@ -943,8 +973,8 @@ export async function toggleWorkLike(req, res) {
  * `createNotification` ya absorbe sus propios errores, así que un fallo aquí no
  * revierte la revisión: la obra queda aprobada aunque el aviso no salga.
  */
-async function notifyWorkReviewed(work, status, reason) {
-  const workLink = `/stories?obra=${work.id}`;
+export async function notifyWorkReviewed(work, status, reason) {
+  const workLink = workPath(work);
 
   if (status === 'approved') {
     await Promise.all([

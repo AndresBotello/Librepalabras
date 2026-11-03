@@ -13,6 +13,7 @@ import AreaSidebar from '../../components/AreaSidebar';
 import PdfViewer from '../../components/PdfViewer';
 import { getMyWorks, updateLiteraryWork, deleteLiteraryWork, getAllAuthors, uploadPdf, uploadCover } from '../../services/api';
 import genresData from '../../config/genres.json';
+import { SECTIONS, editWorkPath } from '../../config/sections';
 import scopesData from '../../config/scopes.json';
 
 // Los mismos topes que aplica el servidor en backend/src/utils/files.js. Aquí
@@ -450,12 +451,23 @@ export default function Publications() {
                               </td>
                               <td className={`px-6 py-4 text-sm`}>
                                 <div className="flex items-center gap-4">
-                                  <button
-                                    onClick={() => handleEditClick(pub)}
-                                    className={`font-semibold transition-colors ${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}
-                                  >
-                                    Editar
-                                  </button>
+                                  {/* Las obras de "Los niños cuentan" y "Palabras sin
+                                      dueños" se editan en su propia pantalla. */}
+                                  {pub.section && SECTIONS[pub.section] ? (
+                                    <Link
+                                      to={editWorkPath(SECTIONS[pub.section], pub.id)}
+                                      className={`font-semibold transition-colors ${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}
+                                    >
+                                      Editar
+                                    </Link>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleEditClick(pub)}
+                                      className={`font-semibold transition-colors ${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}
+                                    >
+                                      Editar
+                                    </button>
+                                  )}
                                   <button
                                     onClick={() => handleDeleteClick(pub)}
                                     disabled={deletingId === pub.id}
