@@ -5,6 +5,7 @@ import {
   updateHomeContent,
   updateSettings,
 } from '../services/siteConfig.service.js';
+import { getRegisteredUsersCount } from '../services/siteStats.service.js';
 
 /**
  * Configuración pública. La consume el frontend antes de pintar nada, así que
@@ -60,6 +61,26 @@ export async function getHome(_req, res) {
       error: error.message,
     });
   }
+}
+
+/**
+ * Cuántos usuarios hay registrados, para presumirlo en la portada. La respuesta
+ * es únicamente `{ totalUsers }`: ningún dato de las cuentas sale de aquí.
+ */
+export async function getPublicStats(_req, res) {
+  const totalUsers = await getRegisteredUsersCount();
+
+  if (totalUsers === null) {
+    // Sin dato no se inventa uno: el frontend simplemente no pinta la cifra.
+    return res.status(503).json({ ok: false, message: 'Estadísticas no disponibles' });
+  }
+
+  // La cifra es igual para todos, así que sí puede cachearse (el resto de la API
+  // va con no-store). Solo unos segundos: la portada la consulta cada poco para
+  // mostrar los registros nuevos, y una caché larga los escondería.
+  res.set('Cache-Control', 'public, max-age=10');
+
+  return res.json({ ok: true, stats: { totalUsers } });
 }
 
 async function resolveFeaturedWorks(ids = []) {

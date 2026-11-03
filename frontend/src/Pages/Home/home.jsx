@@ -4,6 +4,7 @@ import { ThemeContext } from '../../context/ThemeContext';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import EventAgenda from '../../components/EventAgenda';
+import CommunityCounter from '../../components/CommunityCounter';
 import HomeEditorial from '../../components/HomeEditorial';
 import HomeInvitationPopup from '../../components/HomeInvitationPopup';
 import SiteSearch from '../../components/SiteSearch';
@@ -295,6 +296,9 @@ export default function Home() {
             tiene fecha de caducidad, y anunciarlo por debajo del catálogo es no
             anunciarlo. */}
         <EventAgenda events={events} isDark={isDark} />
+
+        {/* ================= CIFRA DE LA COMUNIDAD ================= */}
+        <CommunityCounter isDark={isDark} />
 
         {/* ================= ESCRITO DE ENTRADA =================
             La editorial que abre la portada. Va por debajo de la agenda —un

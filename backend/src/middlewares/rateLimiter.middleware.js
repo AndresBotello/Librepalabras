@@ -68,7 +68,17 @@ export const searchRateLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-export const likeRateLimiter = rateLimit({
+// Cifra pública de la portada. Se responde desde memoria, así que el límite solo
+// corta a quien la pida en bucle.
+export const publicStatsRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: { ok: false, message: 'Demasiadas solicitudes. Intenta de nuevo en un momento.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+export const likeRateLimiter =rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minuto
   max: 30, // máximo 30 likes por IP en 1 minuto
   message: 'Demasiadas acciones. Intenta más tarde.',

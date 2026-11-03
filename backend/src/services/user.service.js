@@ -1,5 +1,7 @@
 import { adminAuth, adminDb, defaultUserRole, getRoleForEmail, isValidRole } from '../config/firebaseAdmin.js';
 
+import { invalidateRegisteredUsersCount } from './siteStats.service.js';
+
 function usersCollection() {
   if (!adminDb) {
     throw new Error('Firebase Admin no está configurado.');
@@ -88,6 +90,9 @@ export async function upsertUserProfile(decodedClaims, additionalData = {}, opti
     };
 
     await docRef.set(profile);
+    // La portada muestra esta cifra casi en vivo: sin esto tardaría lo que dure
+    // la caché en reflejar el registro.
+    invalidateRegisteredUsersCount();
     return profile;
   }
 

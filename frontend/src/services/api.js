@@ -761,6 +761,10 @@ export function getHomeContent() {
   return request('/site/home');
 }
 
+export function getPublicStats() {
+  return request('/site/stats');
+}
+
 export function getAdminSettings() {
   return request('/site/admin/settings');
 }

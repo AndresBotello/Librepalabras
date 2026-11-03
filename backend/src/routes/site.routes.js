@@ -1,10 +1,12 @@
 import { Router } from 'express';
 import { authenticateRequest } from '../middlewares/auth.middleware.js';
 import { authorizeRoles } from '../middlewares/role.middleware.js';
+import { publicStatsRateLimiter } from '../middlewares/rateLimiter.middleware.js';
 import {
   getAdminSettings,
   getHome,
   getPublicConfig,
+  getPublicStats,
   patchHome,
   patchSettings,
 } from '../controllers/site.controller.js';
@@ -15,6 +17,7 @@ const router = Router();
 // en mantenimiento, y la portada para pintarse.
 router.get('/config', getPublicConfig);
 router.get('/home', getHome);
+router.get('/stats', publicStatsRateLimiter, getPublicStats);
 
 // Escritura: solo administradores.
 router.get('/admin/settings', authenticateRequest, authorizeRoles(['admin']), getAdminSettings);
