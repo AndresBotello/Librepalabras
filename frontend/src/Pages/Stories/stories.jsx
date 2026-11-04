@@ -1,6 +1,6 @@
-import React, { useState, useContext, useEffect, useMemo, useCallback } from 'react';
+import { useState, useContext, useEffect, useMemo, useCallback } from 'react';
 import {
-  Heart, MessageCircle, Share2, Download, ChevronLeft, ChevronRight, BookOpen, Eye, ArrowLeft, Bookmark,
+  Heart, MessageCircle, Download, ChevronLeft, ChevronRight, BookOpen, Eye, ArrowLeft,
 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { Document, Page, pdfjs } from 'react-pdf';
@@ -38,13 +38,19 @@ export default function Stories() {
   const { isDark } = useContext(ThemeContext);
   const { fontScale, highContrast, dyslexiaFont } = useReadingPreferences();
   const [works, setWorks] = useState([]);
+  // Total de obras que cumplen el filtro, no las de esta página: el backend solo
+  // manda WORKS_PER_PAGE por petición.
+  const [total, setTotal] = useState(0);
   const [loadedWork, setLoadedWork] = useState(null);
   const [currentPdfPage, setCurrentPdfPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [likeLoading, setLikeLoading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  // La página se guarda junto al filtro con el que se eligió. Al cambiar de
+  // género o alcance la clave ya no coincide y se vuelve a la 1 sin necesitar un
+  // efecto que reinicie el estado.
+  const [pageState, setPageState] = useState({ key: '', page: 1 });
 
   /**
    * La categoría vive en la URL (?genero=poesía) en vez de en el estado.
@@ -76,6 +82,13 @@ export default function Stories() {
    */
   const scopeParam = searchParams.get('alcance');
   const selectedScope = scopesData.scopes.some((s) => s.value === scopeParam) ? scopeParam : 'all';
+
+  const filterKey = `${selectedGenre}|${selectedScope}`;
+  const currentPage = pageState.key === filterKey ? pageState.page : 1;
+  const setCurrentPage = useCallback(
+    (page) => setPageState({ key: filterKey, page }),
+    [filterKey]
+  );
 
   const setSelectedScope = useCallback((value) => {
     setSearchParams((previous) => {
@@ -140,32 +153,57 @@ export default function Stories() {
     };
   }, [workParam]);
 
+  // El género, el alcance y la página se filtran y recortan en el backend: traer
+  // todo el catálogo para enseñar 15 obras costaba lecturas y ancho de banda.
   useEffect(() => {
-    loadWorks();
-  }, []);
+    let cancelled = false;
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedGenre, selectedScope]);
+    const loadWorks = async () => {
+      try {
+        setError('');
+        const response = await getApprovedWorks(selectedGenre === 'all' ? '' : selectedGenre, {
+          scope: selectedScope === 'all' ? '' : selectedScope,
+          limit: WORKS_PER_PAGE,
+          offset: (currentPage - 1) * WORKS_PER_PAGE,
+        });
 
-  const loadWorks = async () => {
-    try {
-      setError('');
-      const response = await getApprovedWorks();
-      if (response.ok && response.works && response.works.length > 0) {
+        if (cancelled) return;
+
         // Ojo: aquí NO se cierra la obra abierta. Cargar el listado y abrir una
         // obra por su enlace ocurren a la vez, y ganaba el que terminara último.
-        setWorks(response.works);
-      } else {
-        setError('No hay obras publicadas aún');
+        if (response.ok) {
+          const received = response.works || [];
+
+          // Una página que ya no existe (se borraron obras) vuelve a la primera.
+          if (received.length === 0 && currentPage > 1) {
+            setCurrentPage(1);
+            return;
+          }
+
+          setWorks(received);
+          setTotal(response.total ?? received.length);
+
+          // Un filtro sin resultados tiene su propio aviso más abajo; el error
+          // global es solo para cuando no hay ninguna obra en todo el sitio.
+          if (received.length === 0 && selectedGenre === 'all' && selectedScope === 'all') {
+            setError('No hay obras publicadas aún');
+          }
+        }
+      } catch (err) {
+        if (cancelled) return;
+        console.error('Error:', err);
+        setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    } catch (err) {
-      console.error('Error:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    loadWorks();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedGenre, selectedScope, currentPage, setCurrentPage]);
 
   const getGenreInfo = useCallback((genre) => {
     return genresData.genres.find(g => g.value === genre);
@@ -175,20 +213,9 @@ export default function Stories() {
     return scopesData.scopes.find(s => s.value === scope);
   }, []);
 
-  const filteredWorks = useMemo(() => {
-    return works
-      .filter(w => selectedGenre === 'all' || w.genre === selectedGenre)
-      .filter(w => selectedScope === 'all' || w.scope === selectedScope);
-  }, [works, selectedGenre, selectedScope]);
-
-  const paginatedWorks = useMemo(() => {
-    const startIndex = (currentPage - 1) * WORKS_PER_PAGE;
-    return filteredWorks.slice(startIndex, startIndex + WORKS_PER_PAGE);
-  }, [filteredWorks, currentPage]);
-
   const totalPages_Gallery = useMemo(() => {
-    return Math.ceil(filteredWorks.length / WORKS_PER_PAGE);
-  }, [filteredWorks.length]);
+    return Math.ceil(total / WORKS_PER_PAGE);
+  }, [total]);
 
   const handleToggleLike = async () => {
     if (!selectedWork) return;
@@ -327,7 +354,7 @@ export default function Stories() {
                     <GenreIcon genre={selectedGenre} />
                     {getGenreInfo(selectedGenre)?.label || selectedGenre}
                     <span className="text-[11px] font-sans tabular-nums opacity-70">
-                      {filteredWorks.length}
+                      {total}
                     </span>
                   </span>
 
@@ -387,7 +414,7 @@ export default function Stories() {
             {/* Categoría sin obras: al menú de categorías de la barra superior
                 se puede llegar a una vacía, y sin esto la página se quedaba en
                 blanco como si estuviera rota. */}
-            {filteredWorks.length === 0 && (
+            {works.length === 0 && (
               <div className={`py-20 text-center ${isDark ? 'text-slate-400' : 'text-stone-500'}`}>
                 <p className="font-serif text-xl mb-2">
                   Todavía no hay obras en {getGenreInfo(selectedGenre)?.label || 'esta categoría'}.
@@ -413,7 +440,7 @@ export default function Stories() {
                 cada una crecía por encima de los 280px y la tapa dejaba de
                 leerse como la de un libro para parecer una foto de portada. */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-x-5 gap-y-8">
-              {paginatedWorks.map((work) => {
+              {works.map((work) => {
                 const genre = getGenreInfo(work.genre);
                 return (
                   <div

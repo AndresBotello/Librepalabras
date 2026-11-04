@@ -1,4 +1,5 @@
 import { adminDb } from '../config/firebaseAdmin.js';
+import { getApprovedWorksCached } from '../services/approvedWorks.service.js';
 import {
   createAuthor,
   deleteAuthor,
@@ -33,15 +34,12 @@ async function statsByAuthor(authors = []) {
     authors.filter((author) => author.userId).map((author) => [author.userId, author.id])
   );
 
-  const snapshot = await adminDb.collection('literature').where('status', '==', 'approved').get();
+  // De la caché compartida con la biblioteca: ya excluye las obras de las
+  // secciones especiales, que no cuentan en la ficha de autor porque las sube
+  // un admin o colaborador en nombre de otros.
+  const works = await getApprovedWorksCached();
 
-  snapshot.docs.forEach((doc) => {
-    const work = doc.data();
-
-    // Las obras de las secciones especiales no cuentan en la ficha de autor: las
-    // sube un admin o colaborador en nombre de otros.
-    if (work.section) return;
-
+  works.forEach((work) => {
     const profileId = profileIds.has(work.authorProfileId)
       ? work.authorProfileId
       : byUserId.get(work.authorId);

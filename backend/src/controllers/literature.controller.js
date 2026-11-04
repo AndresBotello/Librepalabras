@@ -13,6 +13,7 @@ import { contentTooLongMessage, sanitizeRichHtml } from '../utils/richText.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { purgeWorkStats, recordWorkEvent } from '../services/workAnalytics.service.js';
 import { getSection, workPath } from '../config/sections.js';
+import { getApprovedWorksCached, invalidateApprovedWorks } from '../services/approvedWorks.service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -200,6 +201,7 @@ export async function createWork(req, res) {
     };
 
     const docRef = await adminDb.collection('literature').add(work);
+    invalidateApprovedWorks();
 
     // Sin revisión pendiente no hay paso por `reviewWork`, que es quien
     // normalmente avisa de la obra nueva: hay que hacerlo aquí para que no se
@@ -279,6 +281,7 @@ export async function addRating(req, res) {
       averageRating: Math.round(averageRating * 10) / 10,
       totalRatings: ratings.length,
     });
+    invalidateApprovedWorks();
 
     return res.json({
       ok: true,
@@ -345,6 +348,7 @@ export async function addComment(req, res) {
       comments,
       totalComments: comments.length,
     });
+    invalidateApprovedWorks();
 
     return res.json({
       ok: true,
@@ -392,6 +396,7 @@ export async function deleteComment(req, res) {
       comments,
       totalComments: comments.length,
     });
+    invalidateApprovedWorks();
 
     return res.json({
       ok: true,
@@ -412,30 +417,19 @@ export async function getApprovedWorks(req, res) {
     const limitNum = Math.min(parseInt(limit) || 50, 100);
     const offsetNum = parseInt(offset) || 0;
 
-    let query = adminDb.collection('literature').where('status', '==', 'approved');
+    // La lista completa sale de la caché (ver approvedWorks.service.js): ya viene
+    // sin las obras de sección y ordenada de la más reciente a la más antigua.
+    // Género y alcance se filtran en memoria; `filter` crea un arreglo nuevo, así
+    // que la copia compartida no se toca.
+    let allDocs = await getApprovedWorksCached();
 
     if (genre) {
-      query = query.where('genre', '==', genre.toLowerCase());
+      allDocs = allDocs.filter(work => work.genre === genre.toLowerCase());
     }
 
-    const snapshot = await query.get();
-
-    // Las obras de "Los niños cuentan" y "Palabras sin dueños" (`section`) se
-    // leen en su propia página, no en la biblioteca general.
-    let allDocs = snapshot.docs
-      .map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }))
-      .filter(work => !work.section);
-
-    // Filtrado en memoria y no con otro `where`: combinarlo con el de género
-    // exigiría un índice compuesto en Firestore, igual que ordenar por fecha.
     if (scope) {
       allDocs = allDocs.filter(work => work.scope === scope.toLowerCase());
     }
-
-    allDocs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     const paginatedDocs = allDocs.slice(offsetNum, offsetNum + limitNum);
 
@@ -619,6 +613,7 @@ export async function reviewWork(req, res) {
     }
 
     await docRef.update(updateData);
+    invalidateApprovedWorks();
 
     const work = doc.data();
     const updated = { id: doc.id, ...work, ...updateData };
@@ -743,6 +738,7 @@ export async function updateWork(req, res) {
     updateData.updatedAt = new Date().toISOString();
 
     await docRef.update(updateData);
+    invalidateApprovedWorks();
 
     return res.json({
       ok: true,
@@ -791,6 +787,7 @@ export async function deleteWork(req, res) {
     }
 
     await docRef.delete();
+    invalidateApprovedWorks();
     await purgeWorkStats(id);
 
     // La portada y el PDF se limpian después, y sin que su suerte afecte a la
@@ -883,6 +880,7 @@ export async function toggleCommentLike(req, res) {
 
       return { liked, likesCount: comment.likesCount };
     });
+    invalidateApprovedWorks();
 
     return res.json({
       ok: true,
@@ -943,6 +941,7 @@ export async function toggleWorkLike(req, res) {
 
       return { liked, likesCount: (work.likesCount || 0) + (liked ? 1 : -1) };
     });
+    invalidateApprovedWorks();
 
     // Solo cuentan los "me gusta" que se dan, no los que se retiran: así la
     // serie diaria dice cuánto gustó la obra ese día y nunca sale negativa.

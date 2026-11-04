@@ -26,6 +26,22 @@ export async function getUserProfile(uid) {
   };
 }
 
+// El listado completo de usuarios lo piden el panel, la gestión de usuarios y el
+// catálogo de autores, y cada vez cuesta una lectura por cuenta. Se guarda en
+// memoria un minuto y se descarta al crear, cambiar de rol, desactivar, editar o
+// borrar una cuenta. Lo único que puede ir algo atrasado es `lastLoginAt`.
+const USERS_CACHE_TTL_MS = 60 * 1000;
+
+let usersCache = null; // { users, loadedAt }
+let usersInFlight = null;
+let usersVersion = 0;
+
+export function invalidateUsersList() {
+  usersVersion += 1;
+  usersCache = null;
+  usersInFlight = null;
+}
+
 const MAX_DISPLAY_NAME_LENGTH = 100;
 
 /**
@@ -90,6 +106,7 @@ export async function upsertUserProfile(decodedClaims, additionalData = {}, opti
     };
 
     await docRef.set(profile);
+    invalidateUsersList();
     // La portada muestra esta cifra casi en vivo: sin esto tardaría lo que dure
     // la caché en reflejar el registro.
     invalidateRegisteredUsersCount();
@@ -144,6 +161,7 @@ export async function setUserRole(uid, role) {
     role: normalizedRole,
     updatedAt: new Date().toISOString(),
   }, { merge: true });
+  invalidateUsersList();
 
   return getUserProfile(uid);
 }
@@ -169,6 +187,7 @@ export async function setUserDisabled(uid, disabled) {
     disabledAt: disabled ? now : null,
     updatedAt: now,
   }, { merge: true });
+  invalidateUsersList();
 
   if (adminAuth) {
     try {
@@ -208,6 +227,7 @@ export async function updateUserProfile(uid, updateData) {
 
   const docRef = usersCollection().doc(uid);
   await docRef.set(safeUpdate, { merge: true });
+  invalidateUsersList();
 
   return getUserProfile(uid);
 }
@@ -217,9 +237,34 @@ export async function listUsers() {
     return [];
   }
 
-  const snapshot = await usersCollection().get();
-  return snapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  }));
+  if (usersCache && Date.now() - usersCache.loadedAt < USERS_CACHE_TTL_MS) {
+    return usersCache.users;
+  }
+
+  // Las peticiones simultáneas comparten una sola consulta. Si se invalida
+  // mientras está en vuelo, ese resultado no repone la caché.
+  if (!usersInFlight) {
+    const startedAt = usersVersion;
+
+    const pending = usersCollection()
+      .get()
+      .then((snapshot) => {
+        const users = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+        if (startedAt === usersVersion) {
+          usersCache = { users, loadedAt: Date.now() };
+        }
+
+        return users;
+      })
+      .finally(() => {
+        if (usersInFlight === pending) {
+          usersInFlight = null;
+        }
+      });
+
+    usersInFlight = pending;
+  }
+
+  return usersInFlight;
 }

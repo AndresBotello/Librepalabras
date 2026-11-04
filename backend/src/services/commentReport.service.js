@@ -1,5 +1,6 @@
 import { adminDb } from '../config/firebaseAdmin.js';
 import { queryOrderedWithFallback } from '../utils/firestoreQuery.js';
+import { invalidateApprovedWorks } from './approvedWorks.service.js';
 
 /**
  * Los comentarios viven dentro del documento de la obra, en un array. Un
@@ -178,7 +179,7 @@ export async function removeCommentFromWork(workId, commentId) {
 
   const docRef = adminDb.collection('literature').doc(workId);
 
-  return adminDb.runTransaction(async (transaction) => {
+  const removed = await adminDb.runTransaction(async (transaction) => {
     const snapshot = await transaction.get(docRef);
 
     if (!snapshot.exists) {
@@ -200,4 +201,7 @@ export async function removeCommentFromWork(workId, commentId) {
 
     return true;
   });
+
+  invalidateApprovedWorks();
+  return removed;
 }

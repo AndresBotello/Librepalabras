@@ -1,7 +1,8 @@
-import { getUserProfile, listUsers, setUserDisabled, setUserRole } from '../services/user.service.js';
+import { getUserProfile, invalidateUsersList, listUsers, setUserDisabled, setUserRole } from '../services/user.service.js';
 import { adminDb, VALID_ROLES, defaultUserRole, isValidRole } from '../config/firebaseAdmin.js';
 import { invalidateUserCache } from '../middlewares/auth.middleware.js';
 import { deleteFile } from '../services/upload.service.js';
+import { invalidateApprovedWorks } from '../services/approvedWorks.service.js';
 
 export async function testAdminAuth(req, res) {
   return res.json({
@@ -211,6 +212,7 @@ export async function updateUserById(req, res) {
     }
 
     await adminDb.collection('users').doc(uid).set(updateData, { merge: true });
+    invalidateUsersList();
 
     const { getUserProfile } = await import('../services/user.service.js');
     const updatedUser = await getUserProfile(uid);
@@ -437,6 +439,7 @@ export async function deletePdfFile(req, res) {
       pdfUrl: null,
       updatedAt: new Date().toISOString(),
     });
+    invalidateApprovedWorks();
 
     return res.json({
       ok: true,

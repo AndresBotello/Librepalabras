@@ -4,6 +4,30 @@ import { contentTooLongMessage, sanitizeRichHtml } from '../utils/richText.js';
 
 const VALID_STATUSES = ['draft', 'pending_review', 'changes_requested', 'published', 'rejected'];
 const REVIEW_STATUSES = ['published', 'rejected', 'changes_requested'];
+// Cuando un id no existe ni como documento ni como slug, el último recurso es
+// recorrer toda la colección buscando columnas antiguas sin slug. Un enlace roto
+// repetido (un bot, un favorito viejo) pagaba ese recorrido en cada visita; el
+// fallo se recuerda un minuto. Una columna creada después se encuentra igual por
+// su id o su slug, que no pasan por aquí.
+const MISSING_COLUMN_TTL_MS = 60 * 1000;
+const MISSING_COLUMN_MAX = 200;
+const missingColumns = new Map();
+
+function isKnownMissing(id) {
+  const at = missingColumns.get(id);
+  if (at === undefined) return false;
+  if (Date.now() - at < MISSING_COLUMN_TTL_MS) return true;
+  missingColumns.delete(id);
+  return false;
+}
+
+function rememberMissing(id) {
+  if (missingColumns.size >= MISSING_COLUMN_MAX) {
+    missingColumns.delete(missingColumns.keys().next().value);
+  }
+  missingColumns.set(id, Date.now());
+}
+
 const MAX_TITLE_LENGTH = 180;
 const MAX_SUBTITLE_LENGTH = 320;
 const MAX_AUTHOR_LENGTH = 140;
@@ -194,6 +218,8 @@ export async function getOpinionColumnById(req, res) {
       const directMatch = await adminDb.collection('opinionColumns').where('slug', '==', id).limit(1).get();
       if (!directMatch.empty) {
         doc = directMatch.docs[0];
+      } else if (isKnownMissing(id)) {
+        return res.status(404).json({ ok: false, message: 'Columna no encontrada' });
       } else {
         const fallbackSnapshot = await adminDb.collection('opinionColumns').get();
         const fallbackDoc = fallbackSnapshot.docs.find((item) => {
@@ -202,6 +228,7 @@ export async function getOpinionColumnById(req, res) {
         });
 
         if (!fallbackDoc) {
+          rememberMissing(id);
           return res.status(404).json({ ok: false, message: 'Columna no encontrada' });
         }
 

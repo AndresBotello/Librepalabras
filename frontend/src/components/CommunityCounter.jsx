@@ -7,7 +7,7 @@ const MIN_TO_SHOW = 20;
 
 // Cada cuánto se vuelve a preguntar mientras la pestaña está a la vista. Es lo
 // que permite ver crecer la cifra en vivo cuando alguien se registra.
-const POLL_INTERVAL_MS = 20 * 1000;
+const POLL_INTERVAL_MS = 60 * 1000;
 
 const numberFormat = new Intl.NumberFormat('es-CO');
 

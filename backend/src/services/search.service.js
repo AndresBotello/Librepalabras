@@ -35,7 +35,7 @@ import { workPath } from '../config/sections.js';
 // Cinco minutos: lo que puede tardar en aparecer en el buscador algo recién
 // publicado. A cambio, mil visitantes buscando cuestan las mismas lecturas que
 // uno solo.
-const INDEX_TTL = 5 * 60 * 1000;
+const INDEX_TTL = 20 * 60 * 1000;
 
 // Si Firestore falla se sigue sirviendo el índice anterior y se reintenta
 // pronto, pero no en cada petición: eso convertiría una caída de la base de

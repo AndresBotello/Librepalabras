@@ -3,6 +3,8 @@ import { deleteFile } from './upload.service.js';
 import { cloudinaryPublicId } from '../utils/files.js';
 import { computeStatus, deleteStoryWithRatings } from './contest.service.js';
 import { purgeWorkStats } from './workAnalytics.service.js';
+import { invalidateApprovedWorks } from './approvedWorks.service.js';
+import { invalidateUsersList } from './user.service.js';
 
 /**
  * Borrado de cuenta a petición del propio usuario (derecho al olvido).
@@ -292,6 +294,7 @@ export async function deleteUserAccount(uid) {
 
   const ownWorkIds = await purgeOwnLiteratureWorks(db, uid);
   await purgeLiteratureTraces(db, uid, ownWorkIds);
+  invalidateApprovedWorks();
   await purgeOwnContestStories(db, uid);
   await purgeJudgeRatings(db, uid);
   await purgeLegacyStories(db, uid);
@@ -311,6 +314,7 @@ export async function deleteUserAccount(uid) {
   }
 
   await db.collection('users').doc(uid).delete();
+  invalidateUsersList();
 
   if (adminAuth) {
     try {

@@ -241,10 +241,12 @@ export function deleteLiteraryWork(id) {
  * `limit` sube hasta 100 (tope del backend). La respuesta trae además `total`
  * con el número real de obras, que puede ser mayor que las devueltas.
  */
-export function getApprovedWorks(genre = '', { limit } = {}) {
+export function getApprovedWorks(genre = '', { limit, offset, scope } = {}) {
   const params = new URLSearchParams();
   if (genre) params.set('genre', genre);
+  if (scope) params.set('scope', scope);
   if (limit) params.set('limit', String(limit));
+  if (offset) params.set('offset', String(offset));
 
   const query = params.toString();
   return request(query ? `/literature/approved?${query}` : '/literature/approved');
