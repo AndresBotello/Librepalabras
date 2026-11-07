@@ -59,6 +59,23 @@ function parseDateTime(value) {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
+/**
+ * Fecha opcional (apertura o cierre de la conversación). Vacía → `null` (sin
+ * límite); con texto inválido → `undefined`, para distinguirla de "sin fecha".
+ */
+function parseOptionalDateTime(value) {
+  if (value === undefined || value === null || value === '') return null;
+  return parseDateTime(value) || undefined;
+}
+
+/** ¿Admite comentarios ahora? Manual (`allowComments`) y ventana opcional. */
+function isCommentingOpen(session, now = Date.now()) {
+  if (session.allowComments === false) return false;
+  if (session.opensAt && now < new Date(session.opensAt).getTime()) return false;
+  if (session.closesAt && now > new Date(session.closesAt).getTime()) return false;
+  return true;
+}
+
 function parseDuration(value) {
   if (value === undefined || value === null || value === '') {
     return 90; // Lo que dura un encuentro típico; el admin puede cambiarlo.
@@ -136,7 +153,18 @@ export async function getSession(req, res) {
 
 export async function createFocusGroupSession(req, res) {
   try {
-    const { type, title, description, meetingUrl, scheduledAt, duration, isPublished, allowComments } = req.body;
+    const { type, title, description, meetingUrl, scheduledAt, duration, isPublished, allowComments, opensAt, closesAt } = req.body;
+
+    const opensAtIso = parseOptionalDateTime(opensAt);
+    const closesAtIso = parseOptionalDateTime(closesAt);
+
+    if (opensAtIso === undefined || closesAtIso === undefined) {
+      return res.status(400).json({ ok: false, message: 'La fecha de inicio o de cierre no es válida' });
+    }
+
+    if (opensAtIso && closesAtIso && closesAtIso <= opensAtIso) {
+      return res.status(400).json({ ok: false, message: 'La fecha de cierre debe ser posterior a la de inicio' });
+    }
 
     if (!VALID_TYPES.includes(type)) {
       return res.status(400).json({
@@ -194,6 +222,8 @@ export async function createFocusGroupSession(req, res) {
       // comente, pero el admin puede cerrarlo después (ver `allowComments` en
       // `updateFocusGroupSession`) cuando la conversación ya terminó.
       allowComments: allowComments !== false,
+      opensAt: opensAtIso,
+      closesAt: closesAtIso,
       isPublished: isPublished !== false,
       views: 0,
       commentsCount: 0,
@@ -228,8 +258,30 @@ export async function updateFocusGroupSession(req, res) {
       return res.status(404).json({ ok: false, message: 'Encuentro no encontrado' });
     }
 
-    const { title, description, meetingUrl, scheduledAt, duration, isPublished, allowComments } = req.body;
+    const { title, description, meetingUrl, scheduledAt, duration, isPublished, allowComments, opensAt, closesAt } = req.body;
     const updates = { updatedAt: new Date().toISOString() };
+
+    if (opensAt !== undefined) {
+      const parsed = parseOptionalDateTime(opensAt);
+      if (parsed === undefined) {
+        return res.status(400).json({ ok: false, message: 'La fecha de inicio no es válida' });
+      }
+      updates.opensAt = parsed;
+    }
+
+    if (closesAt !== undefined) {
+      const parsed = parseOptionalDateTime(closesAt);
+      if (parsed === undefined) {
+        return res.status(400).json({ ok: false, message: 'La fecha de cierre no es válida' });
+      }
+      updates.closesAt = parsed;
+    }
+
+    const finalOpens = updates.opensAt !== undefined ? updates.opensAt : existing.opensAt;
+    const finalCloses = updates.closesAt !== undefined ? updates.closesAt : existing.closesAt;
+    if (finalOpens && finalCloses && finalCloses <= finalOpens) {
+      return res.status(400).json({ ok: false, message: 'La fecha de cierre debe ser posterior a la de inicio' });
+    }
 
     // El tipo no se cambia después de crear: un tema con conversación abierta
     // convertido en reunión dejaría los comentarios colgando de algo que ya no
@@ -354,7 +406,7 @@ export async function addSessionComment(req, res) {
       return res.status(404).json({ ok: false, message: 'Encuentro no encontrado' });
     }
 
-    if (session.allowComments === false) {
+    if (!isCommentingOpen(session)) {
       return res.status(403).json({ ok: false, message: 'Este encuentro no admite comentarios' });
     }
 

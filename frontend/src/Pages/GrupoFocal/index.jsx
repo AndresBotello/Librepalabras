@@ -14,7 +14,9 @@ import {
   FOUNDING_ESSAY,
   MEETING_STATE_LABELS,
   SESSION_KINDS,
+  commentsStatus,
   meetingState,
+  sessionState,
 } from '../../config/focusGroup';
 import { formatMeetingDate, stateBadgeClasses } from './helpers';
 import focusGroupLogo from '../../assets/grupo-focal-alfredo-correa.jpeg';
@@ -83,7 +85,7 @@ function ActiveSessions({ sessions, isDark }) {
         <div className="flex flex-col gap-4">
           {sessions.map((session) => {
             const isSync = session.type === FOCUS_GROUP_TYPES.SYNC;
-            const state = isSync ? meetingState(session) : 'abierto';
+            const state = sessionState(session, isSync);
 
             return (
               <Link
@@ -194,8 +196,8 @@ export default function GrupoFocal() {
   // Activo = una cátedra que no ha terminado (ya sea próxima o en curso) o una
   // tertulia que admite comentarios. Primero las cátedras, que tienen hora.
   const activeSessions = useMemo(() => [
-    ...meetings.filter((item) => meetingState(item) !== 'finalizado'),
-    ...topics.filter((item) => item.allowComments !== false),
+    ...meetings.filter((item) => meetingState(item) !== 'finalizado' && commentsStatus(item) !== 'cerrado'),
+    ...topics.filter((item) => commentsStatus(item) !== 'cerrado'),
   ].slice(0, MAX_ACTIVE_SESSIONS), [meetings, topics]);
 
   return (

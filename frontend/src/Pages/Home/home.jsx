@@ -9,7 +9,7 @@ import HomeEditorial from '../../components/HomeEditorial';
 import HomeInvitationPopup from '../../components/HomeInvitationPopup';
 import SiteSearch from '../../components/SiteSearch';
 import { FOCUS_GROUP_TYPES, getAllAuthors, getFocusGroupSessions, getHomeContent } from '../../services/api';
-import { FOCUS_GROUP_NAME, meetingState } from '../../config/focusGroup';
+import { FOCUS_GROUP_NAME, commentsStatus, meetingState } from '../../config/focusGroup';
 import focusGroupLogo from '../../assets/grupo-focal-alfredo-correa.jpeg';
 
 // Imagen original del banner. Se usa mientras el admin no suba otra desde
@@ -113,7 +113,7 @@ export default function Home() {
 
   // Un tema cerrado ya no espera comentarios: no cuenta como abierto.
   const openTopicsCount = focusSessions.filter(
-    (item) => item.type === FOCUS_GROUP_TYPES.ASYNC && item.allowComments !== false
+    (item) => item.type === FOCUS_GROUP_TYPES.ASYNC && commentsStatus(item) !== 'cerrado'
   ).length;
 
   const heroImage = home?.heroImage || DEFAULT_HERO_IMAGE;

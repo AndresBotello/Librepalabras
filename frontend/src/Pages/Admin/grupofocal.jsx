@@ -27,7 +27,7 @@ import {
   getFocusGroupSessions,
   updateFocusGroupSession,
 } from '../../services/api';
-import { FOCUS_GROUP_NAME, SESSION_KINDS } from '../../config/focusGroup';
+import { FOCUS_GROUP_NAME, SESSION_KINDS, commentsStatus } from '../../config/focusGroup';
 import { isoToLocalInput, localInputToIso } from '../../utils/datetime';
 
 const EMPTY_FORM = {
@@ -38,6 +38,8 @@ const EMPTY_FORM = {
   duration: 90,
   meetingUrl: '',
   allowComments: true,
+  opensAt: '',
+  closesAt: '',
   isPublished: true,
 };
 
@@ -135,6 +137,8 @@ export default function AdminGrupoFocal() {
       duration: session.duration || 90,
       meetingUrl: session.meetingUrl || '',
       allowComments: session.allowComments !== false,
+      opensAt: isoToLocalInput(session.opensAt),
+      closesAt: isoToLocalInput(session.closesAt),
       isPublished: session.isPublished !== false,
     });
     setIsFormOpen(true);
@@ -192,7 +196,15 @@ export default function AdminGrupoFocal() {
       payload.meetingUrl = form.meetingUrl.trim();
     }
 
+    if (form.opensAt && form.closesAt && form.closesAt <= form.opensAt) {
+      notify.error('La fecha de cierre debe ser posterior a la de inicio.');
+      return;
+    }
+
     payload.allowComments = form.allowComments;
+    // Vacío = sin límite; se envía igual para poder quitar una fecha ya puesta.
+    payload.opensAt = form.opensAt ? localInputToIso(form.opensAt) : null;
+    payload.closesAt = form.closesAt ? localInputToIso(form.closesAt) : null;
 
     setSubmitting(true);
     try {
@@ -407,6 +419,30 @@ export default function AdminGrupoFocal() {
                     : 'Foro abierto: permitir comentarios (desmárcalo para cerrarlo)'}
                 </label>
 
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-2">
+                  <div>
+                    <label className={labelClasses}>Abrir comentarios el (opcional)</label>
+                    <input
+                      type="datetime-local"
+                      value={form.opensAt}
+                      onChange={(event) => setForm({ ...form, opensAt: event.target.value })}
+                      className={inputClasses}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClasses}>Cerrar comentarios el (opcional)</label>
+                    <input
+                      type="datetime-local"
+                      value={form.closesAt}
+                      onChange={(event) => setForm({ ...form, closesAt: event.target.value })}
+                      className={inputClasses}
+                    />
+                  </div>
+                </div>
+                <p className={`mb-4 text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                  Déjalas vacías para no limitar. Al llegar la fecha de cierre se muestra «Cerrado» y nadie puede comentar más.
+                </p>
+
                 <label className={`flex items-center gap-2 mb-6 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                   <input
                     type="checkbox"
@@ -472,12 +508,12 @@ export default function AdminGrupoFocal() {
                               {SESSION_KINDS[session.type]?.short || 'Encuentro'}
                             </span>
 
-                            {session.allowComments === false && (
+                            {commentsStatus(session) === 'cerrado' && (
                               <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold tracking-widest uppercase rounded-full ${
                                 isDark ? 'bg-rose-500/15 text-rose-300' : 'bg-rose-50 text-rose-700'
                               }`}>
                                 <Lock className="w-3 h-3" />
-                                {sync ? 'Comentarios cerrados' : 'Foro cerrado'}
+                                Cerrado
                               </span>
                             )}
 

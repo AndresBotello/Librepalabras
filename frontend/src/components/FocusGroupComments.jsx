@@ -40,7 +40,7 @@ function formatDate(value) {
  * El estado de la lista lo lleva la página, no este componente: así el contador
  * de comentarios de la cabecera y la lista no pueden discrepar.
  */
-export default function FocusGroupComments({ sessionId, comments = [], allowComments = true, onChange }) {
+export default function FocusGroupComments({ sessionId, comments = [], allowComments = true, commentsStatus, opensAt, onChange }) {
   const { isDark } = useContext(ThemeContext);
   const { user, isAuthenticated } = useAuth();
   const { confirm, notify } = useDialog();
@@ -148,7 +148,9 @@ export default function FocusGroupComments({ sessionId, comments = [], allowComm
 
       {!allowComments ? (
         <p className={`text-sm ${isDark ? 'text-stone-400' : 'text-stone-600'}`}>
-          Este foro está cerrado: puedes leer la conversación, pero ya no se aceptan nuevos comentarios.
+          {commentsStatus === 'por_abrir' && opensAt
+            ? `La conversación se abrirá el ${new Date(opensAt).toLocaleString('es-CO', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}.`
+            : 'Este foro está cerrado: puedes leer la conversación, pero ya no se aceptan nuevos comentarios.'}
         </p>
       ) : (
         <form onSubmit={handleSubmit} className="mb-6 space-y-3">

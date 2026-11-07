@@ -2,13 +2,13 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { CalendarDays, MessageSquare, Users, Video } from 'lucide-react';
 import { FOCUS_GROUP_TYPES } from '../../services/api';
-import { MEETING_STATE_LABELS, meetingState } from '../../config/focusGroup';
+import { MEETING_STATE_LABELS, sessionState } from '../../config/focusGroup';
 import { formatMeetingDate, stateBadgeClasses } from './helpers';
 
 /** La tarjeta de un encuentro, compartida por el listado del grupo focal. */
 export default function SessionCard({ session, isDark }) {
   const isSync = session.type === FOCUS_GROUP_TYPES.SYNC;
-  const state = isSync ? meetingState(session) : 'abierto';
+  const state = sessionState(session, isSync);
 
   return (
     <Link

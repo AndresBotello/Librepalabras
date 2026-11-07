@@ -29,6 +29,12 @@ export function stateBadgeClasses(state, isDark) {
       : 'bg-emerald-50 text-emerald-700 border-emerald-200';
   }
 
+  if (state === 'cerrado') {
+    return isDark
+      ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+      : 'bg-rose-50 text-rose-700 border-rose-200';
+  }
+
   if (state === 'finalizado') {
     return isDark
       ? 'bg-stone-800 text-stone-400 border-stone-700'

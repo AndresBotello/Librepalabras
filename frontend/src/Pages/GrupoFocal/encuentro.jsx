@@ -8,7 +8,7 @@ import { ThemeContext } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useDialog } from '../../context/DialogContext';
 import { FOCUS_GROUP_TYPES, getFocusGroupSession, toggleFocusGroupAttendance } from '../../services/api';
-import { FOCUS_GROUP_NAME, MEETING_STATE_LABELS, meetingState } from '../../config/focusGroup';
+import { FOCUS_GROUP_NAME, MEETING_STATE_LABELS, canComment, commentsStatus, meetingState, sessionState } from '../../config/focusGroup';
 import { formatMeetingDate, stateBadgeClasses } from './helpers';
 import { downloadSessionIcs } from '../../utils/calendar';
 
@@ -51,7 +51,10 @@ export default function GrupoFocalEncuentro() {
   }, [id]);
 
   const isSync = session?.type === FOCUS_GROUP_TYPES.SYNC;
-  const state = isSync ? meetingState(session) : 'abierto';
+  const state = session ? sessionState(session, isSync) : 'abierto';
+  // El estado real de la reunión (hora), aparte de la insignia, que puede decir
+  // «Cerrado» aunque la cátedra no haya terminado.
+  const meetingPhase = isSync ? meetingState(session) : 'abierto';
 
   const handleToggleAttendance = async () => {
     if (!isAuthenticated) {
@@ -141,7 +144,7 @@ export default function GrupoFocalEncuentro() {
                 para una cátedra que todavía no ha pasado. Después de terminada,
                 el enlace de más abajo sigue disponible por si se reutiliza la
                 sala, pero ya no hay nada que "confirmar". */}
-            {isSync && state !== 'finalizado' && (
+            {isSync && meetingPhase !== 'finalizado' && (
               <div className={`mb-8 rounded-2xl border p-5 flex flex-wrap items-center justify-between gap-4 ${
                 isDark ? 'bg-stone-900/50 border-stone-800' : 'bg-white border-stone-200'
               }`}>
@@ -211,7 +214,7 @@ export default function GrupoFocalEncuentro() {
               >
                 <div>
                   <p className={`font-semibold ${isDark ? 'text-stone-100' : 'text-stone-900'}`}>
-                    {state === 'en_curso' ? 'La reunión está en curso' : 'Enlace de la reunión'}
+                    {meetingPhase === 'en_curso' ? 'La reunión está en curso' : 'Enlace de la reunión'}
                   </p>
                   <p className={`text-sm mt-1 break-all ${isDark ? 'text-stone-500' : 'text-stone-500'}`}>
                     {session.meetingUrl}
@@ -233,7 +236,9 @@ export default function GrupoFocalEncuentro() {
             <FocusGroupComments
               sessionId={session.id}
               comments={comments}
-              allowComments={session.allowComments !== false}
+              allowComments={canComment(session)}
+              commentsStatus={commentsStatus(session)}
+              opensAt={session.opensAt}
               onChange={setComments}
             />
           </>

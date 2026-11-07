@@ -101,7 +101,41 @@ export function meetingState(session, now = Date.now()) {
   return 'finalizado';
 }
 
+/**
+ * Estado de la conversación de un encuentro (cátedra o tertulia): cerrada a
+ * mano por el admin (`allowComments === false`), todavía sin abrir
+ * (`opensAt` en el futuro) o ya cerrada por fecha (`closesAt` pasada). Las dos
+ * fechas son opcionales. Se calcula en el navegador por la misma razón que
+ * `meetingState`: se cierra sola cuando llega la fecha.
+ *
+ * Devuelve 'abierto', 'por_abrir' o 'cerrado'.
+ */
+export function commentsStatus(session, now = Date.now()) {
+  if (!session || session.allowComments === false) return 'cerrado';
+
+  const opensAt = session.opensAt ? new Date(session.opensAt).getTime() : NaN;
+  const closesAt = session.closesAt ? new Date(session.closesAt).getTime() : NaN;
+
+  if (!Number.isNaN(opensAt) && now < opensAt) return 'por_abrir';
+  if (!Number.isNaN(closesAt) && now > closesAt) return 'cerrado';
+  return 'abierto';
+}
+
+export function canComment(session, now = Date.now()) {
+  return commentsStatus(session, now) === 'abierto';
+}
+
+/**
+ * Estado que se pinta en la insignia de un encuentro: «Cerrado» manda sobre
+ * cualquier otro, para las dos modalidades.
+ */
+export function sessionState(session, isSync, now = Date.now()) {
+  if (commentsStatus(session, now) === 'cerrado') return 'cerrado';
+  return isSync ? meetingState(session, now) : 'abierto';
+}
+
 export const MEETING_STATE_LABELS = {
+  cerrado: 'Cerrado',
   proximo: 'Próximo encuentro',
   en_curso: 'En curso ahora',
   finalizado: 'Encuentro finalizado',
