@@ -156,6 +156,7 @@ export default function AppRoutes() {
       <Route path="/admin/salud" element={<AdminRoute><AdminSalud /></AdminRoute>} />
       <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
       <Route path="/admin/columnas" element={<AdminRoute><OpinionColumnsPage /></AdminRoute>} />
+      <Route path="/admin/columnas/lista" element={<AdminRoute><OpinionColumnsPage view="list" /></AdminRoute>} />
 
       {/* Autoría: abierta también al juez. */}
       <Route path="/collaborator/dashboard" element={<AuthorRoute><CollaboratorDashboard /></AuthorRoute>} />
@@ -164,6 +165,7 @@ export default function AppRoutes() {
       <Route path="/collaborator/profile" element={<AuthorRoute><CollaboratorProfile /></AuthorRoute>} />
       <Route path="/collaborator/create" element={<AuthorRoute><CollaboratorCreatePost /></AuthorRoute>} />
       <Route path="/collaborator/columnas" element={<AuthorRoute><OpinionColumnsPage /></AuthorRoute>} />
+      <Route path="/collaborator/columnas/lista" element={<AuthorRoute><OpinionColumnsPage view="list" /></AuthorRoute>} />
 
       {/* Inscripción al concurso: sin jueces. */}
       <Route path="/collaborator/concurso" element={<ContestantRoute><CollaboratorConcurso /></ContestantRoute>} />

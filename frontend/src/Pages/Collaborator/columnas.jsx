@@ -1,12 +1,15 @@
 import { useContext } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { ThemeContext } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import AreaSidebar from '../../components/AreaSidebar';
 import OpinionColumnsManager from '../../components/OpinionColumnsManager';
+import OpinionColumnsList from '../../components/OpinionColumnsList';
 
-export default function OpinionColumnsPage() {
+export default function OpinionColumnsPage({ view = 'editor' }) {
+  const [searchParams] = useSearchParams();
   const { isDark } = useContext(ThemeContext);
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
@@ -18,8 +21,8 @@ export default function OpinionColumnsPage() {
       <div className="flex flex-1">
         <AreaSidebar />
 
-        <main className={`flex-1 px-5 py-8 sm:px-8 lg:px-10 ${isDark ? 'bg-gray-950 text-white' : 'bg-slate-100 text-slate-900'}`}>
-          <div className="mx-auto max-w-7xl space-y-8">
+        <main className={`min-w-0 flex-1 px-5 py-8 sm:px-8 lg:px-10 ${isDark ? 'bg-gray-950 text-white' : 'bg-slate-100 text-slate-900'}`}>
+          <div className="mx-auto w-full min-w-0 max-w-7xl space-y-8">
             <header className={`rounded-[28px] border p-6 shadow-sm sm:p-8 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-white'}`}>
               <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                 <div>
@@ -37,7 +40,10 @@ export default function OpinionColumnsPage() {
               </p>
             </header>
 
-            <OpinionColumnsManager />
+            {/* La clave reinicia el formulario al pasar de editar a crear. */}
+            {view === 'list'
+              ? <OpinionColumnsList />
+              : <OpinionColumnsManager key={searchParams.get('editar') || 'nueva'} />}
           </div>
         </main>
       </div>

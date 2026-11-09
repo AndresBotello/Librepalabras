@@ -3,7 +3,7 @@ import { createTtlCache } from '../utils/ttlCache.js';
 
 // Cola de moderación: un TTL corto por estado; se vacía junto con la caché de
 // aprobadas en cualquier escritura sobre obras.
-const WORKS_BY_STATUS_TTL_MS = 15 * 1000;
+const WORKS_BY_STATUS_TTL_MS = 60 * 1000;
 const byStatusCaches = new Map();
 
 /**

@@ -29,6 +29,8 @@ function stripHtml(value = '') {
 
 export default function LiteraryWorkForm({ isDark, onSuccess }) {
   const { user } = useAuth();
+  // Al admin no le revisa nadie la obra: el servidor la publica directamente.
+  const isAdmin = user?.role === 'admin';
   const ownName = user?.name || '';
 
   const [formData, setFormData] = useState({
@@ -620,7 +622,7 @@ export default function LiteraryWorkForm({ isDark, onSuccess }) {
         disabled={loading || uploading}
         className="w-full px-6 py-2 rounded-lg font-semibold text-white bg-brand-700 hover:bg-brand-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {uploading ? 'Subiendo archivos...' : loading ? 'Enviando...' : 'Enviar para Revisión'}
+        {uploading ? 'Subiendo archivos...' : loading ? (isAdmin ? 'Publicando...' : 'Enviando...') : isAdmin ? 'Publicar' : 'Enviar para Revisión'}
       </button>
     </form>
   );

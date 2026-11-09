@@ -328,16 +328,23 @@ export function getPublishedOpinionColumns() {
   return request('/opinion-columns?view=public');
 }
 
-export function getOpinionColumns(status = '') {
+// `summary` pide solo lo que pinta la lista (sin el texto de cada columna): con
+// decenas de columnas, traer el contenido completo de todas pesa muchísimo.
+function opinionColumnsQuery(status, summary) {
   const resolvedStatus = typeof status === 'object' && status ? status.status : status;
-  const query = resolvedStatus && resolvedStatus !== 'all' ? `?status=${encodeURIComponent(resolvedStatus)}` : '';
-  return request(`/opinion-columns${query}`);
+  const params = new URLSearchParams();
+  if (resolvedStatus && resolvedStatus !== 'all') params.set('status', resolvedStatus);
+  if (summary) params.set('summary', '1');
+  const query = params.toString();
+  return query ? `?${query}` : '';
 }
 
-export function getMyOpinionColumns(status = '') {
-  const resolvedStatus = typeof status === 'object' && status ? status.status : status;
-  const query = resolvedStatus && resolvedStatus !== 'all' ? `?status=${encodeURIComponent(resolvedStatus)}` : '';
-  return request(`/opinion-columns/mine${query}`);
+export function getOpinionColumns(status = '', { summary = false } = {}) {
+  return request(`/opinion-columns${opinionColumnsQuery(status, summary)}`);
+}
+
+export function getMyOpinionColumns(status = '', { summary = false } = {}) {
+  return request(`/opinion-columns/mine${opinionColumnsQuery(status, summary)}`);
 }
 
 export function getOpinionColumnById(id) {

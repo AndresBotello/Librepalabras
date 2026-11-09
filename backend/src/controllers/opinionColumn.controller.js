@@ -1,6 +1,7 @@
 import xss from 'xss';
 import { adminDb } from '../config/firebaseAdmin.js';
 import { contentTooLongMessage, sanitizeRichHtml } from '../utils/richText.js';
+import { createTtlCache } from '../utils/ttlCache.js';
 
 const VALID_STATUSES = ['draft', 'pending_review', 'changes_requested', 'published', 'rejected'];
 const REVIEW_STATUSES = ['published', 'rejected', 'changes_requested'];
@@ -27,6 +28,43 @@ function rememberMissing(id) {
   }
   missingColumns.set(id, Date.now());
 }
+
+// El listado público y la ficha de una columna publicada son idénticos para todos
+// los visitantes y cambian solo cuando un administrador escribe. Se leen una vez
+// por TTL y se vacían en cualquier escritura sobre columnas (los contadores de
+// comentarios se refrescan con el TTL).
+const PUBLIC_TTL_MS = 60 * 1000;
+const publicListCache = createTtlCache(PUBLIC_TTL_MS);
+const publishedByKey = new Map(); // id o slug -> { column, at }
+const PUBLISHED_BY_KEY_MAX = 200;
+
+function invalidateColumns() {
+  publicListCache.invalidate();
+  publishedByKey.clear();
+}
+
+function readPublishedByKey(key) {
+  const hit = publishedByKey.get(key);
+  if (!hit) return null;
+  if (Date.now() - hit.at < PUBLIC_TTL_MS) return hit.column;
+  publishedByKey.delete(key);
+  return null;
+}
+
+function rememberPublished(column, keys) {
+  if (publishedByKey.size >= PUBLISHED_BY_KEY_MAX) {
+    publishedByKey.delete(publishedByKey.keys().next().value);
+  }
+  const entry = { column, at: Date.now() };
+  keys.forEach((key) => key && publishedByKey.set(key, entry));
+}
+
+// Campos que necesita una lista de gestión: todo menos el texto de la columna
+// (hasta 100 KB cada una) y el historial de revisión.
+const SUMMARY_FIELDS = [
+  'title', 'subtitle', 'author', 'slug', 'coverUrl', 'status', 'createdBy',
+  'createdAt', 'updatedAt', 'publishedAt', 'reviewNotes', 'commentsCount',
+];
 
 const MAX_TITLE_LENGTH = 180;
 const MAX_SUBTITLE_LENGTH = 320;
@@ -173,13 +211,21 @@ export async function getOpinionColumns(req, res) {
       query = query.where('status', '==', status);
     }
 
-    const snapshot = await query.get();
-    const columns = snapshot.docs
-      .map((doc) => {
-        const data = doc.data();
-        return { id: doc.id, ...data, slug: data.slug || buildSlug(data.title || '') };
-      })
-      .sort((a, b) => new Date(b.publishedAt || b.updatedAt || b.createdAt || 0) - new Date(a.publishedAt || a.updatedAt || a.createdAt || 0));
+    if (req.query.summary === '1' && !isPublicView) {
+      query = query.select(...SUMMARY_FIELDS);
+    }
+
+    const load = async () => {
+      const snapshot = await query.get();
+      return snapshot.docs
+        .map((doc) => {
+          const data = doc.data();
+          return { id: doc.id, ...data, slug: data.slug || buildSlug(data.title || '') };
+        })
+        .sort((a, b) => new Date(b.publishedAt || b.updatedAt || b.createdAt || 0) - new Date(a.publishedAt || a.updatedAt || a.createdAt || 0));
+    };
+
+    const columns = isPublicView ? await publicListCache.get(load) : await load();
 
     return res.json({ ok: true, columns, total: columns.length });
   } catch (error) {
@@ -197,6 +243,10 @@ export async function getMyOpinionColumns(req, res) {
       query = query.where('status', '==', status);
     }
 
+    if (req.query.summary === '1') {
+      query = query.select(...SUMMARY_FIELDS);
+    }
+
     const snapshot = await query.get();
     const columns = snapshot.docs
       .map((doc) => ({ id: doc.id, ...doc.data() }))
@@ -212,6 +262,12 @@ export async function getMyOpinionColumns(req, res) {
 export async function getOpinionColumnById(req, res) {
   try {
     const { id } = req.params;
+
+    const cachedColumn = readPublishedByKey(id);
+    if (cachedColumn) {
+      return res.json({ ok: true, column: cachedColumn });
+    }
+
     let doc = await adminDb.collection('opinionColumns').doc(id).get();
 
     if (!doc.exists) {
@@ -242,6 +298,10 @@ export async function getOpinionColumnById(req, res) {
 
     if (!isAdmin && !isOwner && column.status !== 'published') {
       return res.status(403).json({ ok: false, message: 'No tienes permisos para ver esta columna' });
+    }
+
+    if (column.status === 'published') {
+      rememberPublished(column, [id, doc.id, column.slug]);
     }
 
     return res.json({ ok: true, column });
@@ -288,7 +348,7 @@ export async function createOpinionColumn(req, res) {
 
     const payload = baseColumnPayload(req.user, input, new Date().toISOString());
     payload.slug = await ensureUniqueSlug(payload.title, null);
-    payload.status = normalizedStatus(status, req.user?.role === 'admin');
+    payload.status = status === undefined && req.user?.role === 'admin' ? 'published' : normalizedStatus(status, req.user?.role === 'admin');
 
     if (req.user?.role !== 'admin' && ['published', 'rejected', 'changes_requested'].includes(payload.status)) {
       return res.status(403).json({ ok: false, message: 'Solo un administrador puede publicar o rechazar una columna' });
@@ -308,6 +368,7 @@ export async function createOpinionColumn(req, res) {
     }
 
     const docRef = await adminDb.collection('opinionColumns').add(payload);
+    invalidateColumns();
     return res.status(201).json({ ok: true, message: 'Columna creada correctamente', id: docRef.id, column: { id: docRef.id, ...payload } });
   } catch (error) {
     console.error('Error al crear la columna:', error);
@@ -417,6 +478,7 @@ export async function updateOpinionColumn(req, res) {
     }
 
     await adminDb.collection('opinionColumns').doc(id).update(updates);
+    invalidateColumns();
 
     const updated = { id, ...existing, ...updates };
     return res.json({ ok: true, message: 'Columna actualizada correctamente', column: updated });
@@ -464,6 +526,7 @@ export async function reviewOpinionColumn(req, res) {
     };
 
     await adminDb.collection('opinionColumns').doc(id).update(updates);
+    invalidateColumns();
 
     return res.json({ ok: true, message: nextStatus === 'published' ? 'Columna publicada' : nextStatus === 'rejected' ? 'Columna rechazada' : 'Se solicitaron cambios', column: { id, ...existing, ...updates } });
   } catch (error) {
@@ -492,6 +555,7 @@ export async function deleteOpinionColumn(req, res) {
     // `recursiveDelete` también borra la subcolección de comentarios: un
     // `delete()` simple dejaría los comentarios huérfanos en Firestore.
     await adminDb.recursiveDelete(adminDb.collection('opinionColumns').doc(id));
+    invalidateColumns();
     return res.json({ ok: true, message: 'Columna eliminada correctamente' });
   } catch (error) {
     console.error('Error al eliminar la columna:', error);
