@@ -5,6 +5,7 @@ import { computeStatus, deleteStoryWithRatings } from './contest.service.js';
 import { purgeWorkStats } from './workAnalytics.service.js';
 import { invalidateApprovedWorks } from './approvedWorks.service.js';
 import { invalidateUsersList } from './user.service.js';
+import { invalidateAuthors } from './author.service.js';
 
 /**
  * Borrado de cuenta a petición del propio usuario (derecho al olvido).
@@ -265,6 +266,7 @@ async function unlinkAuthorProfile(db, uid) {
   await Promise.all(
     snapshot.docs.map((doc) => doc.ref.update({ userId: null, updatedAt: new Date().toISOString() }))
   );
+  invalidateAuthors();
 }
 
 /** Denuncias de comentarios, tanto las que puso como las que recibió. */

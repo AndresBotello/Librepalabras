@@ -1,5 +1,6 @@
 import { adminDb } from '../config/firebaseAdmin.js';
 import { queryOrderedWithFallback } from '../utils/firestoreQuery.js';
+import { createTtlCache } from '../utils/ttlCache.js';
 
 /**
  * Modelo de difusión, no de bandeja de entrada.
@@ -36,6 +37,10 @@ export const NOTIFICATION_TYPES = {
 };
 
 const VALID_TYPES = Object.values(NOTIFICATION_TYPES);
+
+// Los avisos generales son idénticos para todos los usuarios y la campana los
+// sondea sin parar: se leen una vez por TTL y se invalidan al crear o borrar.
+const broadcastCache = createTtlCache(60 * 1000);
 
 function collection() {
   if (!adminDb) {
@@ -90,6 +95,7 @@ export async function createNotification({
     };
 
     const docRef = await collection().add(notification);
+    if (!targetUid) broadcastCache.invalidate();
 
     return { id: docRef.id, ...notification };
   } catch (error) {
@@ -111,10 +117,13 @@ export async function listNotificationsForUser(uid, userProfile = null) {
     return { notifications: [], unreadCount: 0 };
   }
 
-  const [broadcastSnap, personalSnap] = await Promise.all([
-    queryOrderedWithFallback(collection().where('audience', '==', 'all'), {
-      orderField: 'createdAt',
-      limit: FEED_LIMIT,
+  const [broadcastItems, personalSnap] = await Promise.all([
+    broadcastCache.get(async () => {
+      const snap = await queryOrderedWithFallback(collection().where('audience', '==', 'all'), {
+        orderField: 'createdAt',
+        limit: FEED_LIMIT,
+      });
+      return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
     }),
     uid
       ? queryOrderedWithFallback(collection().where('targetUid', '==', uid), {
@@ -126,8 +135,10 @@ export async function listNotificationsForUser(uid, userProfile = null) {
 
   const readState = await resolveReadState(uid, userProfile);
 
-  const merged = [...broadcastSnap.docs, ...personalSnap.docs]
-    .map((doc) => ({ id: doc.id, ...doc.data() }))
+  const merged = [
+    ...broadcastItems,
+    ...personalSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
+  ]
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
     .slice(0, FEED_LIMIT)
     .map((item) => ({
@@ -224,6 +235,7 @@ export async function deleteNotification(id) {
   }
 
   await collection().doc(id).delete();
+  broadcastCache.invalidate();
   return true;
 }
 

@@ -1,4 +1,10 @@
 import { adminDb } from '../config/firebaseAdmin.js';
+import { createTtlCache } from '../utils/ttlCache.js';
+
+// Cola de moderación: un TTL corto por estado; se vacía junto con la caché de
+// aprobadas en cualquier escritura sobre obras.
+const WORKS_BY_STATUS_TTL_MS = 15 * 1000;
+const byStatusCaches = new Map();
 
 /**
  * Caché en memoria de las obras aprobadas de la biblioteca general.
@@ -28,7 +34,22 @@ let cached = null; // { works, loadedAt }
 let inFlight = null;
 let version = 0;
 
+export async function getWorksByStatusCached(status) {
+  if (!byStatusCaches.has(status)) {
+    byStatusCaches.set(status, createTtlCache(WORKS_BY_STATUS_TTL_MS));
+  }
+
+  const works = await byStatusCaches.get(status).get(async () => {
+    const snapshot = await adminDb.collection('literature').where('status', '==', status).get();
+    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  });
+
+  // Copias: quien llama ordena y recorta, y no debe tocar lo compartido.
+  return works.map((work) => ({ ...work }));
+}
+
 export function invalidateApprovedWorks() {
+  byStatusCaches.forEach((cache) => cache.invalidate());
   version += 1;
   cached = null;
   inFlight = null;

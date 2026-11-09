@@ -13,7 +13,7 @@ import { contentTooLongMessage, sanitizeRichHtml } from '../utils/richText.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { purgeWorkStats, recordWorkEvent } from '../services/workAnalytics.service.js';
 import { getSection, workPath } from '../config/sections.js';
-import { getApprovedWorksCached, invalidateApprovedWorks } from '../services/approvedWorks.service.js';
+import { getApprovedWorksCached, getWorksByStatusCached, invalidateApprovedWorks } from '../services/approvedWorks.service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -548,15 +548,7 @@ export async function getPendingWorks(req, res) {
     const limitNum = Math.min(parseInt(limit) || 50, 100);
     const offsetNum = parseInt(offset) || 0;
 
-    const snapshot = await adminDb
-      .collection('literature')
-      .where('status', '==', status)
-      .get();
-
-    const works = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    const works = await getWorksByStatusCached(status);
 
     // Lo pendiente interesa por fecha de envío; lo ya resuelto, por fecha de
     // revisión, que es la que pone `reviewWork` en `updatedAt`. Ordenar las

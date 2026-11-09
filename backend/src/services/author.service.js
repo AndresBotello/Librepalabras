@@ -1,4 +1,13 @@
 import { adminDb } from '../config/firebaseAdmin.js';
+import { createTtlCache } from '../utils/ttlCache.js';
+
+// El catálogo lo arma un administrador a mano y casi nunca cambia, pero se lee
+// entero en cada visita a /authors. Se invalida en toda escritura.
+const authorsCache = createTtlCache(60 * 1000);
+
+export function invalidateAuthors() {
+  authorsCache.invalidate();
+}
 
 /**
  * El catálogo de autores que se ve en /authors.
@@ -191,8 +200,13 @@ export async function listAuthors() {
 
   // Por orden de alta en el catálogo: quien se sumó primero aparece primero,
   // no por orden alfabético del nombre.
-  const snapshot = await collection().orderBy('createdAt').get();
-  return snapshot.docs.map(toAuthor);
+  const authors = await authorsCache.get(async () => {
+    const snapshot = await collection().orderBy('createdAt').get();
+    return snapshot.docs.map(toAuthor);
+  });
+
+  // Copias, para que ningún llamador mute lo que comparte la caché.
+  return authors.map((author) => ({ ...author }));
 }
 
 export async function getAuthor(id) {
@@ -217,6 +231,7 @@ export async function createAuthor(input = {}, createdBy = null) {
   };
 
   const ref = await collection().add(payload);
+  authorsCache.invalidate();
   return { id: ref.id, ...payload };
 }
 
@@ -239,6 +254,7 @@ export async function updateAuthor(id, input = {}) {
 
   const payload = { ...updates, updatedAt: new Date().toISOString() };
   await collection().doc(id).set(payload, { merge: true });
+  authorsCache.invalidate();
 
   return { ...existing, ...payload };
 }
@@ -253,5 +269,6 @@ export async function deleteAuthor(id) {
   // Solo desaparece del catálogo. Ni la cuenta ni las obras se tocan: las obras
   // guardan su propio `authorId` y siguen publicadas.
   await collection().doc(id).delete();
+  authorsCache.invalidate();
   return existing;
 }

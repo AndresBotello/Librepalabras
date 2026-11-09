@@ -1,4 +1,16 @@
 import { adminDb } from '../config/firebaseAdmin.js';
+import { createTtlCache } from '../utils/ttlCache.js';
+
+// Listados de encuentros: se leen en cada visita y cambian poco. Toda escritura
+// que toque el documento de la sesión invalida (menos las vistas, que solo
+// llegan a la lista con el TTL).
+const publishedCache = createTtlCache(30 * 1000);
+const allCache = createTtlCache(30 * 1000);
+
+function invalidateSessions() {
+  publishedCache.invalidate();
+  allCache.invalidate();
+}
 
 /**
  * Grupo Focal Alfredo Correa De Andreís.
@@ -51,19 +63,25 @@ function toDoc(doc) {
  * cuando existe y `createdAt` cuando no.
  */
 export async function listSessions({ onlyPublished = true } = {}) {
-  const query = onlyPublished
-    ? sessionsCollection().where('isPublished', '==', true)
-    : sessionsCollection();
+  const cache = onlyPublished ? publishedCache : allCache;
 
-  const snapshot = await query.get();
+  const sessions = await cache.get(async () => {
+    const query = onlyPublished
+      ? sessionsCollection().where('isPublished', '==', true)
+      : sessionsCollection();
 
-  return snapshot.docs
-    .map(toDoc)
-    .sort((a, b) => {
-      const left = a.scheduledAt || a.createdAt || '';
-      const right = b.scheduledAt || b.createdAt || '';
-      return right.localeCompare(left);
-    });
+    const snapshot = await query.get();
+
+    return snapshot.docs
+      .map(toDoc)
+      .sort((a, b) => {
+        const left = a.scheduledAt || a.createdAt || '';
+        const right = b.scheduledAt || b.createdAt || '';
+        return right.localeCompare(left);
+      });
+  });
+
+  return sessions.map((session) => ({ ...session }));
 }
 
 export async function getSessionById(id) {
@@ -73,12 +91,14 @@ export async function getSessionById(id) {
 
 export async function createSession(data) {
   const docRef = await sessionsCollection().add(data);
+  invalidateSessions();
   return { id: docRef.id, ...data };
 }
 
 export async function updateSession(id, updates) {
   const docRef = sessionsCollection().doc(id);
   await docRef.update(updates);
+  invalidateSessions();
 
   const updated = await docRef.get();
   return toDoc(updated);
@@ -110,6 +130,7 @@ export async function deleteSession(id) {
   await deleteSubcollection(docRef, ATTENDEES);
 
   await docRef.delete();
+  invalidateSessions();
 }
 
 /** Las visitas no deben hacer esperar a nadie ni tumbar la petición si fallan. */
@@ -149,6 +170,7 @@ export async function addComment(sessionId, comment) {
     lastCommentAt: comment.createdAt,
   });
   await batch.commit();
+  invalidateSessions();
 
   return { id: commentRef.id, ...comment };
 }
@@ -171,6 +193,7 @@ export async function deleteComment(sessionId, commentId) {
   batch.delete(sessionRef.collection(COMMENTS).doc(commentId));
   batch.update(sessionRef, { commentsCount: FieldValue.increment(-1) });
   await batch.commit();
+  invalidateSessions();
 }
 
 /**
@@ -216,7 +239,7 @@ export async function setAttendance(sessionId, uid, attendee) {
   const sessionRef = sessionsCollection().doc(sessionId);
   const attendeeRef = sessionRef.collection(ATTENDEES).doc(uid);
 
-  return adminDb.runTransaction(async (transaction) => {
+  const result = await adminDb.runTransaction(async (transaction) => {
     const existing = await transaction.get(attendeeRef);
 
     if (existing.exists) {
@@ -228,6 +251,9 @@ export async function setAttendance(sessionId, uid, attendee) {
 
     return { attending: attendee };
   });
+
+  invalidateSessions();
+  return result;
 }
 
 export async function removeAttendance(sessionId, uid) {
@@ -235,7 +261,7 @@ export async function removeAttendance(sessionId, uid) {
   const sessionRef = sessionsCollection().doc(sessionId);
   const attendeeRef = sessionRef.collection(ATTENDEES).doc(uid);
 
-  return adminDb.runTransaction(async (transaction) => {
+  const result = await adminDb.runTransaction(async (transaction) => {
     const existing = await transaction.get(attendeeRef);
 
     if (!existing.exists) {
@@ -247,6 +273,9 @@ export async function removeAttendance(sessionId, uid) {
 
     return true;
   });
+
+  invalidateSessions();
+  return result;
 }
 
 export async function getAttendance(sessionId, uid) {
@@ -261,6 +290,7 @@ export async function listAttendees(sessionId) {
 
 export async function markReminderSent(sessionId) {
   await sessionsCollection().doc(sessionId).update({ reminderSentAt: new Date().toISOString() });
+  invalidateSessions();
 }
 
 /**
