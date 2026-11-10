@@ -3,7 +3,7 @@ import { createTtlCache } from '../utils/ttlCache.js';
 
 // El catálogo lo arma un administrador a mano y casi nunca cambia, pero se lee
 // entero en cada visita a /authors. Se invalida en toda escritura.
-const authorsCache = createTtlCache(60 * 1000);
+const authorsCache = createTtlCache(5 * 60 * 1000);
 
 export function invalidateAuthors() {
   authorsCache.invalidate();

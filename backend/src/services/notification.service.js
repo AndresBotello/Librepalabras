@@ -19,7 +19,7 @@ const COLLECTION = 'notifications';
 
 // Los avisos viejos no se muestran: sin este tope la consulta crecería sin
 // límite y la campana acabaría trayendo el historial completo del sitio.
-const FEED_LIMIT = 30;
+const FEED_LIMIT = 20;
 
 // El array de leídos individualmente se poda a este tamaño. Más allá, el
 // `readAt` global ya cubre todo lo anterior.
@@ -40,7 +40,32 @@ const VALID_TYPES = Object.values(NOTIFICATION_TYPES);
 
 // Los avisos generales son idénticos para todos los usuarios y la campana los
 // sondea sin parar: se leen una vez por TTL y se invalidan al crear o borrar.
-const broadcastCache = createTtlCache(60 * 1000);
+// Crear o borrar un aviso general invalida la caché en esta instancia, así que
+// el TTL solo cubre otras instancias o ediciones manuales.
+const broadcastCache = createTtlCache(5 * 60 * 1000);
+
+// Los avisos personales también se sondeaban sin caché: una consulta por usuario
+// y por ciclo. Una caché por uid (acotada) la reduce a una por TTL; crear un
+// aviso para ese uid la invalida al instante.
+const PERSONAL_TTL_MS = 2 * 60 * 1000;
+const MAX_PERSONAL_CACHES = 500;
+const personalCaches = new Map();
+
+function personalCacheFor(uid) {
+  let cache = personalCaches.get(uid);
+
+  if (!cache) {
+    // Tope para que la memoria no crezca con el número de cuentas.
+    if (personalCaches.size >= MAX_PERSONAL_CACHES) {
+      personalCaches.clear();
+    }
+
+    cache = createTtlCache(PERSONAL_TTL_MS);
+    personalCaches.set(uid, cache);
+  }
+
+  return cache;
+}
 
 function collection() {
   if (!adminDb) {
@@ -96,6 +121,7 @@ export async function createNotification({
 
     const docRef = await collection().add(notification);
     if (!targetUid) broadcastCache.invalidate();
+    else personalCaches.get(targetUid)?.invalidate();
 
     return { id: docRef.id, ...notification };
   } catch (error) {
@@ -117,7 +143,7 @@ export async function listNotificationsForUser(uid, userProfile = null) {
     return { notifications: [], unreadCount: 0 };
   }
 
-  const [broadcastItems, personalSnap] = await Promise.all([
+  const [broadcastItems, personalItems] = await Promise.all([
     broadcastCache.get(async () => {
       const snap = await queryOrderedWithFallback(collection().where('audience', '==', 'all'), {
         orderField: 'createdAt',
@@ -126,18 +152,21 @@ export async function listNotificationsForUser(uid, userProfile = null) {
       return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
     }),
     uid
-      ? queryOrderedWithFallback(collection().where('targetUid', '==', uid), {
-          orderField: 'createdAt',
-          limit: FEED_LIMIT,
+      ? personalCacheFor(uid).get(async () => {
+          const snap = await queryOrderedWithFallback(
+            collection().where('targetUid', '==', uid),
+            { orderField: 'createdAt', limit: FEED_LIMIT }
+          );
+          return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
         })
-      : Promise.resolve({ docs: [] }),
+      : Promise.resolve([]),
   ]);
 
   const readState = await resolveReadState(uid, userProfile);
 
   const merged = [
     ...broadcastItems,
-    ...personalSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
+    ...personalItems,
   ]
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
     .slice(0, FEED_LIMIT)

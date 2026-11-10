@@ -20,7 +20,7 @@ import {
  * pestaña olvidada seguiría pegándole al backend indefinidamente.
  */
 
-const POLL_MS = 120000;
+const POLL_MS = 300000;
 
 const TYPE_ICONS = {
   work_published: '📖',

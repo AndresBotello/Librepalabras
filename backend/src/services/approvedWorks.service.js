@@ -28,7 +28,7 @@ const byStatusCaches = new Map();
  * ni la biblioteca ni las fichas de autor las cuentan.
  */
 
-const CACHE_TTL_MS = 60 * 1000;
+const CACHE_TTL_MS = 5 * 60 * 1000;
 
 let cached = null; // { works, loadedAt }
 let inFlight = null;
