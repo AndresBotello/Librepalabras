@@ -17,6 +17,35 @@ function formatDate(value) {
   return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
+function formatCount(value) {
+  return new Intl.NumberFormat('es-ES').format(Number(value) || 0);
+}
+
+// Vistas y comentarios ya vienen en cada columna (`views`, `commentsCount`): no
+// cuestan ninguna consulta extra.
+function ColumnStats({ column, isDark }) {
+  const views = Number(column.views) || 0;
+  const comments = Number(column.commentsCount) || 0;
+
+  return (
+    <div className={`flex items-center gap-4 text-xs font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+      <span className="inline-flex items-center gap-1.5" title="Vistas">
+        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+        {formatCount(views)} {views === 1 ? 'vista' : 'vistas'}
+      </span>
+      <span className="inline-flex items-center gap-1.5" title="Comentarios">
+        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z" />
+        </svg>
+        {formatCount(comments)} {comments === 1 ? 'comentario' : 'comentarios'}
+      </span>
+    </div>
+  );
+}
+
 function toColumnSlug(column) {
   return column?.slug || column?.id;
 }
@@ -140,7 +169,8 @@ export default function PublicOpinionColumnsPage() {
                               </p>
                             </div>
 
-                            <div className="mt-5 sm:mt-6">
+                            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 sm:mt-6">
+                              <ColumnStats column={featuredColumn} isDark={isDark} />
                               <span className="inline-flex items-center rounded-full bg-brand-700 px-4 py-2.5 text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-white transition hover:bg-brand-800 sm:px-5 sm:text-sm">
                                 Leer columna
                               </span>
@@ -184,10 +214,13 @@ export default function PublicOpinionColumnsPage() {
                               {stripHtml(column.content).slice(0, 150)}{stripHtml(column.content).length > 150 ? '…' : ''}
                             </p>
 
-                            <span className={`inline-flex items-center gap-2 text-[0.7rem] font-semibold uppercase tracking-[0.12em] sm:text-sm ${isDark ? 'text-amber-300 hover:text-amber-200' : 'text-brand-700 hover:text-brand-800'}`}>
-                              Leer más
-                              <span aria-hidden="true">→</span>
-                            </span>
+                            <div className={`flex items-center justify-between gap-3 border-t pt-3 ${isDark ? 'border-slate-700' : 'border-slate-200'}`}>
+                              <ColumnStats column={column} isDark={isDark} />
+                              <span className={`inline-flex items-center gap-2 text-[0.7rem] font-semibold uppercase tracking-[0.12em] sm:text-sm ${isDark ? 'text-amber-300 hover:text-amber-200' : 'text-brand-700 hover:text-brand-800'}`}>
+                                Leer más
+                                <span aria-hidden="true">→</span>
+                              </span>
+                            </div>
                           </div>
                         </article>
                       </Link>

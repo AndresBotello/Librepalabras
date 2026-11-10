@@ -1,4 +1,5 @@
 import xss from 'xss';
+import { FieldValue } from 'firebase-admin/firestore';
 import { adminDb } from '../config/firebaseAdmin.js';
 import { contentTooLongMessage, sanitizeRichHtml } from '../utils/richText.js';
 import { createTtlCache } from '../utils/ttlCache.js';
@@ -63,8 +64,52 @@ function rememberPublished(column, keys) {
 // (hasta 100 KB cada una) y el historial de revisión.
 const SUMMARY_FIELDS = [
   'title', 'subtitle', 'author', 'slug', 'coverUrl', 'status', 'createdBy',
-  'createdAt', 'updatedAt', 'publishedAt', 'reviewNotes', 'commentsCount',
+  'createdAt', 'updatedAt', 'publishedAt', 'reviewNotes', 'commentsCount', 'views',
 ];
+
+// Vistas. Una escritura por visita sería el gasto más grande de la sección, así
+// que se acumulan en memoria y se vuelcan cada VIEW_FLUSH_MS con un solo
+// `increment` por columna, sin importar cuántas visitas hayan llegado. Además,
+// una misma IP cuenta una vez por columna cada VIEW_DEDUPE_MS (recargar o dejar
+// la pestaña abierta no infla el número). Si el servidor se reinicia se pierde,
+// como mucho, lo acumulado en esos segundos.
+const VIEW_FLUSH_MS = 30 * 1000;
+const VIEW_DEDUPE_MS = 30 * 60 * 1000;
+const RECENT_VIEWERS_MAX = 5000;
+const pendingViews = new Map(); // id de columna -> visitas por volcar
+const recentViewers = new Map(); // `${ip}|${id}` -> instante de la última visita contada
+
+function countView(req, columnId) {
+  if (!columnId) return;
+
+  const key = `${req.ip}|${columnId}`;
+  const now = Date.now();
+  const last = recentViewers.get(key);
+  if (last && now - last < VIEW_DEDUPE_MS) return;
+
+  if (recentViewers.size >= RECENT_VIEWERS_MAX) {
+    recentViewers.delete(recentViewers.keys().next().value);
+  }
+  recentViewers.set(key, now);
+  pendingViews.set(columnId, (pendingViews.get(columnId) || 0) + 1);
+}
+
+async function flushViews() {
+  if (!adminDb || pendingViews.size === 0) return;
+
+  const entries = [...pendingViews];
+  pendingViews.clear();
+
+  // `update` (no `set`) a propósito: si la columna se borró mientras tanto, falla
+  // en vez de resucitar un documento vacío. Ese fallo se descarta.
+  await Promise.allSettled(
+    entries.map(([id, count]) => (
+      adminDb.collection('opinionColumns').doc(id).update({ views: FieldValue.increment(count) })
+    ))
+  );
+}
+
+setInterval(flushViews, VIEW_FLUSH_MS).unref();
 
 const MAX_TITLE_LENGTH = 180;
 const MAX_SUBTITLE_LENGTH = 320;
@@ -178,6 +223,8 @@ function baseColumnPayload(user, raw, createdAt) {
     createdAt: now,
     updatedAt: now,
     publishedAt: null,
+    views: 0,
+    commentsCount: 0,
     reviewNotes: '',
     reviewHistory: status === 'pending_review' || status === 'published' || status === 'rejected' || status === 'changes_requested'
       ? [buildAuditEntry(status === 'pending_review' ? 'enviado_a_revision' : status === 'published' ? 'publicada' : status === 'rejected' ? 'rechazada' : 'solicitud_de_cambios', user, raw.reviewNotes || '')]
@@ -263,8 +310,13 @@ export async function getOpinionColumnById(req, res) {
   try {
     const { id } = req.params;
 
+    // Solo cuenta la lectura pública (la ficha de /columnas/:slug la pide con
+    // `?track=1`): el editor del panel carga la misma columna sin sumar vistas.
+    const track = req.query.track === '1';
+
     const cachedColumn = readPublishedByKey(id);
     if (cachedColumn) {
+      if (track) countView(req, cachedColumn.id);
       return res.json({ ok: true, column: cachedColumn });
     }
 
@@ -302,6 +354,7 @@ export async function getOpinionColumnById(req, res) {
 
     if (column.status === 'published') {
       rememberPublished(column, [id, doc.id, column.slug]);
+      if (track) countView(req, column.id);
     }
 
     return res.json({ ok: true, column });

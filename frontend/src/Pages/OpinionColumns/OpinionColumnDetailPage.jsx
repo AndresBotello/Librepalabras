@@ -26,7 +26,7 @@ export default function OpinionColumnDetailPage() {
   useEffect(() => {
     async function loadColumn() {
       try {
-        const response = await getOpinionColumnById(slug);
+        const response = await getOpinionColumnById(slug, { track: true });
         setColumn(response.column || null);
       } catch (error) {
         console.error('Error cargando la columna:', error);

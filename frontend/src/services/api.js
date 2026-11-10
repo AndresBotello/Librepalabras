@@ -347,8 +347,9 @@ export function getMyOpinionColumns(status = '', { summary = false } = {}) {
   return request(`/opinion-columns/mine${opinionColumnsQuery(status, summary)}`);
 }
 
-export function getOpinionColumnById(id) {
-  return request(`/opinion-columns/${id}`);
+// `track` suma una vista: solo lo pide la página pública de la columna.
+export function getOpinionColumnById(id, { track = false } = {}) {
+  return request(`/opinion-columns/${id}${track ? '?track=1' : ''}`);
 }
 
 export function createOpinionColumn(payload) {
