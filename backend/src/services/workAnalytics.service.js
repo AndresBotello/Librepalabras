@@ -1,5 +1,6 @@
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminDb } from '../config/firebaseAdmin.js';
+import { getWorksByStatusCached } from './approvedWorks.service.js';
 
 /**
  * Análisis de las obras de la biblioteca para el panel de administración.
@@ -103,7 +104,29 @@ function emptyDailySeries(days) {
   return series;
 }
 
+// El panel de administración se refresca a menudo y cada recarga leía cientos
+// de documentos diarios; unos segundos de caché por combinación de filtros
+// bastan para que un administrador no note la diferencia.
+const DAILY_CACHE_TTL_MS = 60 * 1000;
+const dailyCache = new Map();
+
 async function loadDailySeries(days, { workIds = null, workId = null } = {}) {
+  const key = `${days}|${workId || ''}|${workIds ? [...workIds].sort().join(',') : ''}`;
+  const hit = dailyCache.get(key);
+
+  if (hit && Date.now() - hit.loadedAt < DAILY_CACHE_TTL_MS) {
+    return hit.value;
+  }
+
+  const value = await readDailySeries(days, { workIds, workId });
+
+  if (dailyCache.size > 50) dailyCache.clear();
+  dailyCache.set(key, { value, loadedAt: Date.now() });
+
+  return value;
+}
+
+async function readDailySeries(days, { workIds = null, workId = null } = {}) {
   const series = emptyDailySeries(days);
   const byDate = new Map(series.map((item) => [item.date, item]));
 
@@ -173,9 +196,9 @@ function preview(text) {
   return value.length > COMMENT_PREVIEW_LENGTH ? `${value.slice(0, COMMENT_PREVIEW_LENGTH).trim()}…` : value;
 }
 
-async function loadApprovedWorks() {
-  const snapshot = await adminDb.collection('literature').where('status', '==', 'approved').get();
-  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+// Comparte la caché de obras aprobadas (incluye las de sección, como antes).
+function loadApprovedWorks() {
+  return getWorksByStatusCached('approved');
 }
 
 /** Panorama de todas las obras aprobadas, o de las de un autor si se indica. */

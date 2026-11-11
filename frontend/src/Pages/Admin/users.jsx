@@ -178,6 +178,30 @@ export default function Users() {
   const startIndex = (currentPage - 1) * usersPerPage;
   const paginatedUsers = filteredUsers.slice(startIndex, startIndex + usersPerPage);
 
+  // Ventana compacta: primera, última y las vecinas de la actual, con «…» en los
+  // huecos. Pintar todas las páginas se salía del contenedor con muchos usuarios.
+  const getPageItems = () => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    const pages = new Set([1, totalPages, currentPage - 1, currentPage, currentPage + 1]);
+    if (currentPage <= 3) [2, 3, 4].forEach((p) => pages.add(p));
+    if (currentPage >= totalPages - 2) [totalPages - 3, totalPages - 2, totalPages - 1].forEach((p) => pages.add(p));
+
+    const sorted = [...pages].filter((p) => p >= 1 && p <= totalPages).sort((a, b) => a - b);
+    const items = [];
+
+    sorted.forEach((page, index) => {
+      if (index > 0 && page - sorted[index - 1] > 1) {
+        items.push(`gap-${page}`);
+      }
+      items.push(page);
+    });
+
+    return items;
+  };
+
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
@@ -404,7 +428,7 @@ export default function Users() {
                         <span className="font-medium text-slate-700 dark:text-slate-300">{Math.min(startIndex + usersPerPage, filteredUsers.length)}</span> de{' '}
                         <span className="font-medium text-slate-700 dark:text-slate-300">{filteredUsers.length}</span> resultados
                       </div>
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex flex-wrap items-center justify-center gap-1.5">
                         <button
                           onClick={() => handlePageChange(currentPage - 1)}
                           disabled={currentPage === 1}
@@ -418,7 +442,10 @@ export default function Users() {
                         >
                           Anterior
                         </button>
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                        {getPageItems().map((page) => (
+                          typeof page === 'string' ? (
+                            <span key={page} className={`px-1 text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>…</span>
+                          ) : (
                           <button
                             key={page}
                             onClick={() => handlePageChange(page)}
@@ -432,6 +459,7 @@ export default function Users() {
                           >
                             {page}
                           </button>
+                          )
                         ))}
                         <button
                           onClick={() => handlePageChange(currentPage + 1)}

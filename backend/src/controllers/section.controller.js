@@ -7,6 +7,7 @@ import { purgeWorkStats, recordWorkEvent } from '../services/workAnalytics.servi
 import { deleteFile } from '../services/upload.service.js';
 import { cloudinaryPublicId } from '../utils/files.js';
 import { notifyWorkReviewed } from './literature.controller.js';
+import { getWorksByStatusCached, invalidateApprovedWorks } from '../services/approvedWorks.service.js';
 import { createCommentThread } from './commentThread.js';
 
 const MAX_TITLE_LENGTH = 150;
@@ -228,6 +229,7 @@ export async function createSectionWork(req, res) {
     };
 
     const docRef = await adminDb.collection('literature').add(work);
+    invalidateApprovedWorks();
 
     if (isAdmin) {
       await notifyWorkReviewed({ ...work, id: docRef.id }, 'approved');
@@ -258,14 +260,12 @@ export async function getSectionWorks(req, res) {
 
     // Dos igualdades: no necesita índice compuesto. El orden y el filtro por
     // tipo van en memoria, como en la biblioteca general.
-    const snapshot = await adminDb
-      .collection('literature')
-      .where('section', '==', section.value)
-      .where('status', '==', 'approved')
-      .get();
+    // Sale de la caché compartida de obras aprobadas (se vacía en cualquier
+    // escritura sobre obras), en vez de una consulta por visita.
+    const approved = await getWorksByStatusCached('approved');
 
-    const works = snapshot.docs
-      .map((doc) => ({ id: doc.id, ...doc.data() }))
+    const works = approved
+      .filter((work) => work.section === section.value)
       .filter((work) => !kind || work.kind === kind)
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
@@ -476,6 +476,7 @@ export async function updateSectionWork(req, res) {
       ...(isAdmin ? {} : { status: 'pending_review' }),
       updatedAt: new Date().toISOString(),
     });
+    invalidateApprovedWorks();
 
     // Si se cambió la imagen, la anterior queda huérfana en Cloudinary.
     if (work.cover && work.cover !== submission.fields.cover) {

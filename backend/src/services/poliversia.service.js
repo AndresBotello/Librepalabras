@@ -1,4 +1,5 @@
 import { adminDb } from '../config/firebaseAdmin.js';
+import { createTtlCache } from '../utils/ttlCache.js';
 
 const COLLECTION = 'poliversiaEditions';
 
@@ -19,16 +20,30 @@ function toEdition(doc) {
  * un índice compuesto en Firestore. El catálogo de una revista son decenas de
  * documentos, no miles.
  */
+const publishedCache = createTtlCache(60 * 1000);
+const allCache = createTtlCache(60 * 1000);
+
+function invalidateEditions() {
+  publishedCache.invalidate();
+  allCache.invalidate();
+}
+
 export async function listEditions({ onlyPublished = true } = {}) {
-  const query = onlyPublished
-    ? editionsCollection().where('isPublished', '==', true)
-    : editionsCollection();
+  const cache = onlyPublished ? publishedCache : allCache;
 
-  const snapshot = await query.get();
+  const editions = await cache.get(async () => {
+    const query = onlyPublished
+      ? editionsCollection().where('isPublished', '==', true)
+      : editionsCollection();
 
-  return snapshot.docs
-    .map(toEdition)
-    .sort((a, b) => (b.edition || 0) - (a.edition || 0));
+    const snapshot = await query.get();
+
+    return snapshot.docs
+      .map(toEdition)
+      .sort((a, b) => (b.edition || 0) - (a.edition || 0));
+  });
+
+  return editions.map((edition) => ({ ...edition }));
 }
 
 export async function getEditionById(id) {
@@ -46,12 +61,14 @@ export async function findEditionByNumber(edition, { excludeId = null } = {}) {
 
 export async function createEdition(data) {
   const docRef = await editionsCollection().add(data);
+  invalidateEditions();
   return { id: docRef.id, ...data };
 }
 
 export async function updateEdition(id, updates) {
   const docRef = editionsCollection().doc(id);
   await docRef.update(updates);
+  invalidateEditions();
 
   const updated = await docRef.get();
   return toEdition(updated);
@@ -59,6 +76,7 @@ export async function updateEdition(id, updates) {
 
 export async function deleteEdition(id) {
   await editionsCollection().doc(id).delete();
+  invalidateEditions();
 }
 
 /** Las visitas no deben hacer esperar al lector ni tumbar la petición si fallan. */
